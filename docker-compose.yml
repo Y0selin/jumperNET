@@ -13,23 +13,93 @@ x-nodo: &nodo
   build: ./servicios/nodo
   image: jumpernat/nodo
   restart: unless-stopped
+  environment:
+    NODO_PORT: "9000"
+    API_URL: http://api:8000
+    INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+    INTERVALO_HB_SEG: "10"
   networks: [red_jumper]
   <<: *limites
 
 services:
+  api:
+    build: ./servicios/api
+    image: jumpernat/api
+    restart: unless-stopped
+    environment:
+      DB_PATH: /data/jumpernat.db
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      UMBRAL_CAIDO_SEG: "35"
+    volumes:
+      - ./data:/data
+    # Regla 2: la API NO se publica en el host. Binding a 127.0.0.1 para
+    # poder depurar desde el propio servidor; solo Caddy la expone (Fase 4).
+    ports:
+      - "127.0.0.1:8000:8000"
+    networks: [red_jumper]
+    <<: *limites
+
+  # Cada nodo se registra en la API con su NODO_NOMBRE; compose no permite
+  # templates en el environment, asi que se declara por nodo
   nodo1:
     <<: *nodo
+    environment:
+      NODO_PORT: "9000"
+      NODO_NOMBRE: nodo1
+      API_URL: http://api:8000
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      INTERVALO_HB_SEG: "10"
   nodo2:
     <<: *nodo
+    environment:
+      NODO_PORT: "9000"
+      NODO_NOMBRE: nodo2
+      API_URL: http://api:8000
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      INTERVALO_HB_SEG: "10"
   nodo3:
     <<: *nodo
+    environment:
+      NODO_PORT: "9000"
+      NODO_NOMBRE: nodo3
+      API_URL: http://api:8000
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      INTERVALO_HB_SEG: "10"
+  nodo4:
+    <<: *nodo
+    environment:
+      NODO_PORT: "9000"
+      NODO_NOMBRE: nodo4
+      API_URL: http://api:8000
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      INTERVALO_HB_SEG: "10"
+  nodo5:
+    <<: *nodo
+    environment:
+      NODO_PORT: "9000"
+      NODO_NOMBRE: nodo5
+      API_URL: http://api:8000
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      INTERVALO_HB_SEG: "10"
+  nodo6:
+    <<: *nodo
+    environment:
+      NODO_PORT: "9000"
+      NODO_NOMBRE: nodo6
+      API_URL: http://api:8000
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      INTERVALO_HB_SEG: "10"
+
   web-destino:
     image: nginx:1.27-alpine
     restart: unless-stopped
     volumes:
       - ./config/web-destino:/etc/nginx/conf.d:ro
-    networks: [red_jumper]
+    networks:
+      red_jumper:
+        aliases: [web-destino]
     <<: *limites
+
   cliente-test:
     image: python:3.12-slim
     restart: "no"

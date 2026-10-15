@@ -1,0 +1,59 @@
+# Evidencia Fase 2 — 2026-10-15T18:45:36Z
+
+## Lista de nodos con heartbeat (GET /nodos)
+[{"nombre":"nodo1","direccion":"nodo1:9000","estado":"vivo"},{"nombre":"nodo2","direccion":"nodo2:9000","estado":"vivo"},{"nombre":"nodo3","direccion":"nodo3:9000","estado":"vivo"},{"nombre":"nodo4","direccion":"nodo4:9000","estado":"vivo"},{"nombre":"nodo5","direccion":"nodo5:9000","estado":"vivo"},{"nombre":"nodo6","direccion":"nodo6:9000","estado":"vivo"}]
+
+## Prueba de circuitos aleatorios (5 peticiones)
+nodos registrados: ['nodo1', 'nodo2', 'nodo3', 'nodo4', 'nodo5', 'nodo6']
+circuito 1: saltos=['nodo6', 'nodo4', 'nodo1'] ruta_restante=nodo4:9000,nodo1:9000
+circuito 2: saltos=['nodo1', 'nodo5', 'nodo4'] ruta_restante=nodo5:9000,nodo4:9000
+circuito 3: saltos=['nodo3', 'nodo2', 'nodo4'] ruta_restante=nodo2:9000,nodo4:9000
+circuito 4: saltos=['nodo5', 'nodo3', 'nodo4'] ruta_restante=nodo3:9000,nodo4:9000
+circuito 5: saltos=['nodo1', 'nodo3', 'nodo6'] ruta_restante=nodo3:9000,nodo6:9000
+OK fase2: circuitos validos y aleatorios
+
+## Prueba de nodo caido: paro nodo4, espero umbral (35s) y vuelvo a pedir circuitos
+-- /nodos tras 40s sin heartbeat de nodo4:
+[{"nombre":"nodo1","direccion":"nodo1:9000","estado":"vivo"},{"nombre":"nodo2","direccion":"nodo2:9000","estado":"vivo"},{"nombre":"nodo3","direccion":"nodo3:9000","estado":"vivo"},{"nombre":"nodo4","direccion":"nodo4:9000","estado":"caido"},{"nombre":"nodo5","direccion":"nodo5:9000","estado":"vivo"},{"nombre":"nodo6","direccion":"nodo6:9000","estado":"vivo"}]
+-- 4 circuitos nuevos (ninguno debe contener nodo4):
+{"saltos":["nodo1","nodo6","nodo3"],"ruta_restante":"nodo6:9000,nodo3:9000","exit":"nodo3"}
+{"saltos":["nodo5","nodo2","nodo1"],"ruta_restante":"nodo2:9000,nodo1:9000","exit":"nodo1"}
+{"saltos":["nodo6","nodo1","nodo5"],"ruta_restante":"nodo1:9000,nodo5:9000","exit":"nodo5"}
+{"saltos":["nodo3","nodo6","nodo2"],"ruta_restante":"nodo6:9000,nodo2:9000","exit":"nodo2"}
+
+-- Reactivando nodo4:
+[{"nombre":"nodo1","direccion":"nodo1:9000","estado":"vivo"},{"nombre":"nodo2","direccion":"nodo2:9000","estado":"vivo"},{"nombre":"nodo3","direccion":"nodo3:9000","estado":"vivo"},{"nombre":"nodo4","direccion":"nodo4:9000","estado":"vivo"},{"nombre":"nodo5","direccion":"nodo5:9000","estado":"vivo"},{"nombre":"nodo6","direccion":"nodo6:9000","estado":"vivo"}]
+
+## Circuito aleatorio end-to-end (la ruta sale de POST /circuito)
+circuito: nodo4,nodo6,nodo5
+
+template parsing error: template: :1: unclosed action
+template parsing error: template: :1: unclosed action
+template parsing error: template: :1: unclosed action
+template parsing error: template: :1: unclosed action
+template parsing error: template: :1: unclosed action
+template parsing error: template: :1: unclosed action
+IPs: nodo1= nodo2= nodo3= nodo4= nodo5= nodo6= 
+## Circuito aleatorio end-to-end (la ruta sale de POST /circuito)
+circuito elegido por la API: nodo6,nodo4,nodo1 (exit: nodo1)
+respuesta de web-destino:
+
+IPs internas actuales de los nodos:
+  nodo1 = 172.18.0.7
+  nodo2 = 172.18.0.3
+  nodo3 = 172.18.0.9
+  nodo4 = 172.18.0.8
+  nodo5 = 172.18.0.5
+  nodo6 = 172.18.0.2
+Para verificar: la IP que ve web-destino debe coincidir con la IP de 'nodo1'.
+circuito elegido por la API: nodo3,nodo4,nodo5 (exit: nodo5)
+respuesta de web-destino:
+IP de origen vista por web-destino: 172.18.0.5
+IPs internas actuales de los nodos:
+  nodo1 = 172.18.0.7
+  nodo2 = 172.18.0.3
+  nodo3 = 172.18.0.9
+  nodo4 = 172.18.0.8
+  nodo5 = 172.18.0.5
+  nodo6 = 172.18.0.2
+Para verificar: la IP que ve web-destino debe coincidir con la IP de 'nodo5'.

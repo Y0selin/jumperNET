@@ -1,4 +1,4 @@
-"""Nodo de reenvio de JumperNAT (Fase 1).
+"""Nodo de reenvio de JumperNAT (Fase 1 + heartbeat de Fase 2).
 
 Protocolo: al conectarse, el cliente envia UNA primera linea con la ruta restante:
     nodoX:9000,nodoY:9000,destino:puerto
@@ -9,11 +9,44 @@ este nodo es el "exit": se conecta al destino y no envia linea de ruta.
 Despues reenvia bytes en ambos sentidos con asyncio (sin interpretar contenido).
 Solo registra [HOP] con el origen interno y el siguiente interno; nunca el
 contenido ni el destino final del usuario.
+
+Ademas envia un heartbeat periodico a la API para que esta mantenga el
+registro de nodos vivos (Fase 2).
 """
 import asyncio
+import json
 import os
+import socket
+import threading
+import time
+import urllib.request
 
 LISTEN_PORT = int(os.environ.get("NODO_PORT", "9000"))
+API_URL = os.environ.get("API_URL", "")
+INTERNAL_TOKEN = os.environ.get("INTERNAL_TOKEN", "")
+INTERVALO_HB = int(os.environ.get("INTERVALO_HB_SEG", "10"))
+
+
+def hilo_heartbeat():
+    """Avisa a la API de forma periodica de que este nodo esta vivo."""
+    if not API_URL:
+        return
+    nombre = os.environ.get("NODO_NOMBRE", socket.gethostname())
+    cuerpo = json.dumps(
+        {"nombre": nombre, "direccion": f"{nombre}:{LISTEN_PORT}"}
+    ).encode()
+    req = urllib.request.Request(
+        f"{API_URL}/nodos/heartbeat",
+        data=cuerpo,
+        headers={"Content-Type": "application/json", "X-Interno": INTERNAL_TOKEN},
+    )
+    while True:
+        try:
+            with urllib.request.urlopen(req, timeout=5) as r:
+                r.read()
+        except Exception as e:
+            print(f"[HB] sin respuesta de la API: {e}", flush=True)
+        time.sleep(INTERVALO_HB)
 
 
 async def pipe(reader, writer):
@@ -69,6 +102,7 @@ async def hop_handler(reader, writer):
 
 
 async def main():
+    threading.Thread(target=hilo_heartbeat, daemon=True).start()
     servidor = await asyncio.start_server(hop_handler, "0.0.0.0", LISTEN_PORT)
     print(f"nodo listo, escuchando en 0.0.0.0:{LISTEN_PORT}", flush=True)
     async with servidor:
