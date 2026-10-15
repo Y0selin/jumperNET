@@ -1,0 +1,41 @@
+name: jumpernat
+
+networks:
+  red_jumper:
+    name: red_jumper
+
+# Limites de recursos (regla 6): cada contenedor no puede comerse el servidor
+x-limites: &limites
+  mem_limit: 96m
+  cpus: "0.25"
+
+x-nodo: &nodo
+  build: ./servicios/nodo
+  image: jumpernat/nodo
+  restart: unless-stopped
+  networks: [red_jumper]
+  <<: *limites
+
+services:
+  nodo1:
+    <<: *nodo
+  nodo2:
+    <<: *nodo
+  nodo3:
+    <<: *nodo
+  web-destino:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - ./config/web-destino:/etc/nginx/conf.d:ro
+    networks: [red_jumper]
+    <<: *limites
+  cliente-test:
+    image: python:3.12-slim
+    restart: "no"
+    profiles: ["test"]  # solo se ejecuta cuando lo llamamos: docker compose run cliente-test
+    volumes:
+      - ./tests:/tests:ro
+    working_dir: /tests
+    entrypoint: ["python"]
+    networks: [red_jumper]

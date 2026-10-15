@@ -1,0 +1,56 @@
+# Evidencia Fase 1 — 2026-10-15T18:41:27Z
+
+## Prueba A: nodo1 -> nodo2 -> nodo3 -> web-destino
+HTTP/1.1 200 OK
+Server: nginx/1.27.5
+Date: Thu, 15 Oct 2026 18:41:28 GMT
+Content-Type: text/plain
+Content-Length: 47
+Connection: close
+
+IP de origen vista por web-destino: 172.18.0.2
+
+
+## Prueba B: orden distinto nodo3 -> nodo1 -> nodo2
+HTTP/1.1 200 OK
+Server: nginx/1.27.5
+Date: Thu, 15 Oct 2026 18:41:29 GMT
+Content-Type: text/plain
+Content-Length: 47
+Connection: close
+
+IP de origen vista por web-destino: 172.18.0.5
+
+
+## IPs de contenedores (docker inspect)
+nodo1: 172.18.0.4
+
+nodo2: 172.18.0.5
+
+nodo3: 172.18.0.2
+
+cliente: 
+
+
+## Logs [HOP] de cada nodo (5 ultimas lineas)
+--- nodo1
+[HOP] origen=('172.18.0.6', 36368) -> siguiente=nodo2:9000 restosaltos=nodo3:9000,web-destino:80
+[HOP] origen=('172.18.0.2', 37418) -> siguiente=nodo2:9000 restosaltos=web-destino:80
+[HOP] origen=('172.18.0.6', 45076) -> siguiente=nodo2:9000 restosaltos=nodo3:9000,web-destino:80
+[HOP] origen=('172.18.0.2', 58090) -> siguiente=nodo2:9000 restosaltos=web-destino:80
+--- nodo2
+[HOP] origen=('172.18.0.4', 54140) -> siguiente=nodo3:9000 restosaltos=web-destino:80
+[HOP] origen=('172.18.0.4', 37322) -> siguiente=web-destino:80 restosaltos=(exit)
+[HOP] origen=('172.18.0.4', 36948) -> siguiente=nodo3:9000 restosaltos=web-destino:80
+[HOP] origen=('172.18.0.4', 36960) -> siguiente=web-destino:80 restosaltos=(exit)
+--- nodo3
+[HOP] origen=('172.18.0.5', 51510) -> siguiente=web-destino:80 restosaltos=(exit)
+[HOP] origen=('172.18.0.6', 39696) -> siguiente=nodo1:9000 restosaltos=nodo2:9000,web-destino:80
+[HOP] origen=('172.18.0.5', 38462) -> siguiente=web-destino:80 restosaltos=(exit)
+[HOP] origen=('172.18.0.6', 60246) -> siguiente=nodo1:9000 restosaltos=nodo2:9000,web-destino:80
+
+## Access log de nginx (web-destino): IP de origen de cada petición
+172.18.0.2 - - [15/Oct/2026:18:41:04 +0000] "GET / HTTP/1.1" 200 47 "-" "-"
+172.18.0.5 - - [15/Oct/2026:18:41:05 +0000] "GET / HTTP/1.1" 200 47 "-" "-"
+172.18.0.2 - - [15/Oct/2026:18:41:28 +0000] "GET / HTTP/1.1" 200 47 "-" "-"
+172.18.0.5 - - [15/Oct/2026:18:41:29 +0000] "GET / HTTP/1.1" 200 47 "-" "-"
