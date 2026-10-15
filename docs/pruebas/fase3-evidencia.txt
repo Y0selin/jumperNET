@@ -1,0 +1,35 @@
+# Evidencia Fase 3 — 2026-10-15T18:54:31Z
+
+## Test completo de ciclo de usuario (fase3_usuarios.py)
+OK   register {'ok': True, 'id': 3, 'email': 'fase3test8568@prueba.es'}
+OK   register duplicado -> 409 {'detail': 'ese email ya esta registrado'}
+OK   register password corta -> 422 {'detail': 'la contrasena debe tener al menos 8 caracteres'}
+OK   register email invalido -> 422 {'detail': 'email no valido'}
+OK   login password mala -> 401 {'detail': 'credenciales no validas'}
+OK   login -> token {'token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzIiwiZW1haWwiOiJmYXNlM3Rlc3Q4NTY4QHBydWViYS5lcyIsImV4cCI6MTc5MjA5NzY3Mn0.9Ogbbv9eW3psHOlVDWmObcSsg5OAaywIkBT47E3nk0A', 'expira_en': 7200}
+OK   /me sin token -> 401 {'detail': 'falta token (Authorization: Bearer)'}
+OK   /me token invalido -> 401 {'detail': 'token invalido o caducado'}
+OK   /me -> datos {'id': 3, 'email': 'fase3test8568@prueba.es', 'ip_real': None, 'ip_salida': None, 'circuito': None, 'activo': False, 'ultimo_cambio': None}
+OK   connect -> circuito de 3 {'id': 3, 'email': 'fase3test8568@prueba.es', 'ip_real': None, 'ip_salida': 'nodo1', 'circuito': ['nodo2', 'nodo6', 'nodo1'], 'activo': True, 'ultimo_cambio': 1792090472.4006853}
+OK   rotate -> circuito valido {'id': 3, 'email': 'fase3test8568@prueba.es', 'ip_real': None, 'ip_salida': 'nodo2', 'circuito': ['nodo1', 'nodo5', 'nodo2'], 'activo': True, 'ultimo_cambio': 1792090472.6078978}
+OK   rotate cambia ip_salida nodo1 -> nodo2
+OK   disconnect -> activo False {'id': 3, 'email': 'fase3test8568@prueba.es', 'ip_real': None, 'ip_salida': None, 'circuito': None, 'activo': False, 'ultimo_cambio': 1792090472.614295}
+OK   rotate desconectado -> 409 {'detail': 'no estas conectado; usa /connect'}
+OK   delete me {'ok': True, 'borrado': 'fase3test8568@prueba.es'}
+OK   /me tras borrar -> 401 {'detail': 'usuario inexistente'}
+OK fase3: ciclo completo de usuario funciona
+
+## Verificacion de mem_limit efectivo de la API (268435456 = 256 MiB)
+mem=268435456 bytes
+
+## Rate limiting login: 7 intentos mal de la misma IP (límite 5/min -> 429 en el 6º y 7º)
+intento 1: 401
+intento 2: 401
+intento 3: 401
+intento 4: 401
+intento 5: 401
+intento 6: 429
+intento 7: 429
+
+## Hash argon2 guardado (nunca en claro)
+curltest3@prueba.es $argon2id$v=19$m=16384,t=2,p=2$1/ap...

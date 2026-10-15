@@ -25,6 +25,8 @@ services:
   api:
     build: ./servicios/api
     image: jumpernat/api
+    # argon2 necesita RAM para calcular hashes: el limite de 256m evita el OOM del cgroup
+    mem_limit: 256m
     restart: unless-stopped
     environment:
       DB_PATH: /data/jumpernat.db
