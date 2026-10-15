@@ -22,6 +22,24 @@ x-nodo: &nodo
   <<: *limites
 
 services:
+  # HTTPS y proxy inverso: unico servicio publicado junto con la entrada (1080)
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMINIO: ${DOMINIO}
+    volumes:
+      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data/caddy:/data
+      - ./data/caddy-config:/config
+    depends_on:
+      - api
+    networks: [red_jumper]
+    <<: *limites
+
   api:
     build: ./servicios/api
     image: jumpernat/api

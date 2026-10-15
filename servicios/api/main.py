@@ -27,6 +27,7 @@ import uvicorn
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError, InvalidHashError
 from fastapi import FastAPI, HTTPException, Header, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 DB = os.environ.get("DB_PATH", "/data/jumpernat.db")
@@ -45,6 +46,17 @@ N_SALTOS = 3
 hasher = PasswordHasher(time_cost=2, memory_cost=16384, parallelism=2)
 
 app = FastAPI(title="JumperNAT API", docs_url=None, redoc_url=None)
+
+# CORS: solo los origenes permitidos (la web de GitHub Pages). Cualquier
+# otro origen no recibira cabeceras CORS y el navegador bloqueara la peticion.
+CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "https://y0selin.github.io").split(",") if o.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
+    allow_credentials=False,
+)
 
 
 # ---------------------------------------------------------------- base de datos
