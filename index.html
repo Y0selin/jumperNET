@@ -4,15 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JumperNAT — control de circuitos</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root{
     --bg:#0b0e14; --panel:#12161f; --panel2:#1a2030; --borde:#27304a;
     --texto:#e6eaf2; --apagado:#8b94ab; --azul:#4f8cff; --verde:#2ecc71;
-    --rojo:#e74c3c; --amarillo:#f5b83d; --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+    --rojo:#e74c3c; --amarillo:#f5b83d;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--texto);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
-  .contenedor{max-width:820px;margin:0 auto;padding:24px 16px 60px}
+  .contenedor{max-width:960px;margin:0 auto;padding:24px 16px 60px}
   header{display:flex;align-items:center;gap:12px;margin-bottom:24px}
   h1{font-size:22px;letter-spacing:.5px}
   .logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#4f8cff,#2ecc71);display:flex;align-items:center;justify-content:center;font-weight:700;color:#081020}
@@ -45,6 +48,25 @@
   .spinner{display:inline-block;width:14px;height:14px;border:2px solid #fff8;border-top-color:#fff;border-radius:50%;animation:giro .7s linear infinite;vertical-align:-2px}
   @keyframes giro{to{transform:rotate(360deg)}}
   footer{margin-top:30px;text-align:center;color:var(--apagado);font-size:12px}
+
+  /* ------- viaje en vivo ------- */
+  #mapa{height:380px;border-radius:10px;border:1px solid var(--borde);margin-top:12px;background:#0d1020}
+  .ruta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;margin-top:6px}
+  .ruta .parada{background:var(--panel2);border:1px solid var(--borde);padding:6px 10px;border-radius:8px;position:relative}
+  .ruta .parada.tu{border-color:var(--azul)}
+  .ruta .parada.salida{border-color:var(--verde)}
+  .ruta .flecha{color:var(--apagado)}
+  .ruta .parada .mini{display:block;font-size:10.5px;color:var(--apagado)}
+  .parada.pulso::after{content:"";position:absolute;inset:-4px;border-radius:11px;border:2px solid var(--azul);opacity:.6;animation:pulso 1.6s ease-out infinite}
+  @keyframes pulso{0%{transform:scale(.96);opacity:.7}100%{transform:scale(1.12);opacity:0}}
+  .nota{font-size:12px;color:var(--amarillo);margin-top:10px;line-height:1.45}
+  .nodo-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:12px}
+  .nodo-card{background:var(--panel2);border:1px solid var(--borde);border-radius:10px;padding:12px}
+  .nodo-card h3{font-size:13.5px;margin-bottom:6px}
+  .nodo-card .dato{border-bottom:none;font-size:12.5px;padding:3px 0}
+  .nodo-card b{color:var(--azul)}
+  .cargando-geo{color:var(--apagado);font-size:13px}
+  .leaflet-popup-content{color:#101318}
 </style>
 </head>
 <body>
@@ -54,7 +76,7 @@
     <div class="logo">JN</div>
     <div>
       <h1>JumperNAT · control de circuitos</h1>
-      <div class="sub">API: https://jumpernet.duckdns.org · navegador → 3 saltos → salida</div>
+      <div class="sub">API: https://jumpernet.duckdns.org · socket → 3 saltos → destino</div>
     </div>
   </header>
 
@@ -62,7 +84,7 @@
   <div id="sin-sesion">
     <div class="tarjeta">
       <div class="fila">
-        <button class="sec" id="pest-login" onclick="pesta('login')">Entrar</button>
+        <button class="primario" id="pest-login" onclick="pesta('login')">Entrar</button>
         <button class="sec" id="pest-registro" onclick="pesta('registro')">Crear cuenta</button>
       </div>
 
@@ -104,15 +126,29 @@
 
     <div class="tarjeta" id="tarjeta-uso">
       <h2>Cómo usar el proxy SOCKS5</h2>
-      <p class="peque">Puerto 1080 · autenticación con tus mismas credenciales · solo puertos destino 80/443.</p>
+      <p class="peque">Puerto 1080 · autenticación con tus mismas credenciales · solo puertos destino 80/443 · cifrado en capas (ChaCha20-Poly1305) entre entrada y salida.</p>
       <pre class="comando" id="comando-socks"></pre>
       <button class="sec" onclick="copiar(this)" data-src="comando-socks">Copiar</button>
+    </div>
+
+    <div class="tarjeta" id="tarjeta-viaje">
+      <h2>Viaje de tu conexión · en vivo</h2>
+      <div class="ruta" id="ruta-linea"></div>
+      <div id="mapa"></div>
+      <div class="nota">ℹ Los saltos <b>están en el mismo servidor</b> (Oracle Cloud, Ashburn, us-ashburn-1): la separación es lógica (contenedores aislados), no geográfica. El mapa muestra el recorrido REAL de tu conexión: TÚ → servidor (con 3 saltos internos cifrados) → destino en internet.</div>
+      <div class="nodo-cards" id="nodos-viaje"></div>
+      <div class="cargando-geo" id="cargando-geo">localizando tu conexión y el servidor…</div>
+    </div>
+
+    <div class="tarjeta">
+      <h2>Tu información de sesión</h2>
+      <div id="info-usuario"></div>
     </div>
 
     <div class="tarjeta">
       <h2>Cuenta</h2>
       <div class="fila">
-        <button class="sec" onclick="cargarMe(this)" id="btn-refrescar">Refrescar estado</button>
+        <button class="sec" onclick="cargarMe(this)" id="btn-refrescar">Refrescar vivo</button>
         <button class="sec" onclick="salir()">Cerrar sesión</button>
         <button class="peligro" onclick="borrarCuenta()">Eliminar cuenta</button>
       </div>
@@ -125,7 +161,10 @@
 
 <script>
 const API = "https://jumpernet.duckdns.org";
+const SERVIDOR_IP = "129.213.137.20";   // IP publica estable registrada en DuckDNS
 let TOKEN = localStorage.getItem("token") || null;
+let MAPA = null, CAPA_RUTA = null;
+let YO_ACTUAL = null;
 
 // ---------- utilidades ----------
 function $(id){ return document.getElementById(id); }
@@ -230,10 +269,86 @@ async function cargarMe(btn){
   finally{ if(btn) ocupando(btn,false,"Refrescar estado"); }
 }
 
+// ---------- mapa y viaje en vivo ----------
+function geo(ip){
+  return fetch(`https://ipapi.co/${ip}/json/`)
+    .then(r=>r.json())
+    .then(d=>({lat:d.latitude, lon:d.longitude, lugar:[d.city,d.region,d.country_name].filter(Boolean).join(", "), org:d.org}))
+    .catch(()=>null);
+}
+
+function initMapa(tu, servidor, activa){
+  if(!MAPA){
+    MAPA = L.map("mapa", {zoomControl:true}).setView([38.0,-77.0], 6);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18, attribution:"&copy; OpenStreetMap"}).addTo(MAPA);
+    CAPA_RUTA = L.layerGroup().addTo(MAPA);
+  }
+  if(MAPA._container && MAPA._container.clientWidth===0){ setTimeout(()=>MAPA.invalidateSize(),60); }
+  CAPA_RUTA.clearLayers();
+
+  const marcaUser = L.marker([tu.lat,tu.lon]).addTo(CAPA_RUTA)
+    .bindPopup(`<b>TÚ</b><br>${tu.lugar||tu.ip}<br>IP pública: ${tu.ip}`);
+  const marcaSrv = L.marker([servidor.lat,servidor.lon]).addTo(CAPA_RUTA)
+    .bindPopup(`<b>Nodos JumperNAT</b><br>${servidor.lugar||servidor.ip}<br>3 saltos internos (misma máquina)`);
+  L.polyline([[tu.lat,tu.lon],[servidor.lat,servidor.lon]], {color:"#4f8cff", weight:3}).addTo(CAPA_RUTA);
+  L.polyline([[servidor.lat,servidor.lon],[servidor.lat+1.6,servidor.lon+2.2]], {color:"#2ecc71", weight:2, dashArray:"6 8"}).addTo(CAPA_RUTA)
+    .bindPopup("→ destino en internet (HTTP/S:80/443)");
+  MAPA.fitBounds(L.latLngBounds([[tu.lat,tu.lon],[servidor.lat,servidor.lon]]).pad(0.3));
+}
+
+async function pintarViaje(yo){
+  const activa = !!yo.activo;
+  // linea de paradas Tú -> nodo1 -> nodo2 -> nodo3 -> destino
+  const paradas = ["TÚ (tu conexión)", ...(yo.circuito||["nodo?","nodo?","nodo?"]), "DESTINO (internet)"];
+  const clase = ["tu","","","", activa ? "salida":""];
+  $("ruta-linea").innerHTML = paradas.map((p,i)=>{
+    const saltando = activa && i>=1 && i<=3;
+    return `<span class="parada ${clase[i]||""} ${i===1&&saltando?"pulso":""}">${p}
+      <span class="mini">${i===0?"tu IP real":i===4?"puerto 80/443":"encr. JENC"}</span></span>${i<4?'<span class="flecha">→</span>':""}`;
+  }).join("");
+
+  // tarjetas de nodo con la info de /nodos (nombre, dirección, estado)
+  try{
+    const nodos = await api("GET","/nodos",null,false);
+    const mapa_ = Object.fromEntries(nodos.map(n=>[n.nombre,n]));
+    $("nodos-viaje").innerHTML = (yo.circuito||[]).map((n,i)=>{
+      const ninfo = mapa_[n]||{};
+      const proximo = i<2 ? (yo.circuito[i+1]||"?") : "destino final (80/443)";
+      const vivo = ninfo.estado==="vivo";
+      return `<div class="nodo-card" id="nc-${i}">
+        <h3>SALTO ${i+1} · <b>${n}</b> ${vivo?badgeVivo():""}</h3>
+        <div class="dato"><span class="etq">dirección</span><span class="val">${ninfo.direccion||"—"}</span></div>
+        <div class="dato"><span class="etq">estado</span><span class="val">${ninfo.estado||"—"}</span></div>
+        <div class="dato"><span class="etq">salta hacia →</span><span class="val">${proximo}</span></div>
+        <div class="dato"><span class="etq">enlace</span><span class="val">ChaCha20-Poly1305</span></div>
+      </div>`;
+    }).join("");
+  }catch(e){ $("nodos-viaje").innerHTML = ""; }
+
+  // info del usuario
+  $("info-usuario").innerHTML = `
+    <div class="dato"><span class="etq">Cuenta</span><span class="val">${yo.email}</span></div>
+    <div class="dato"><span class="etq">Tu IP pública (la ve el servidor)</span><span class="val">${yo.ip_real||"—"}</span></div>
+    <div class="dato"><span class="etq">La IP que ve internet cuando usa el circuito</span><span class="val">${yo.activo?yo.ip_salida+" (nodo exit, IP del servidor)":"—"}</span></div>
+    <div class="dato"><span class="etq">Circuito actual</span><span class="val">${yo.circuito?yo.circuito.join(" → "):"—"}</span></div>
+    <div class="dato"><span class="etq">Estado</span><span class="val">${yo.activo?"CONECTADO (cifrado JENC activo)":"desconectado"}</span></div>
+    <div class="dato"><span class="etq">Último cambio de circuito</span><span class="val">${new Date().toLocaleString()}</span></div>`;
+
+  // geolocalización usuario + servidor y pintar mapa
+  const [tu, srv] = await Promise.all([ geo(yo.ip_real||""), geo(SERVIDOR_IP) ]);
+  const tuGeo  = tu  || {lat:40.0, lon:-3.7, lugar:"", ip: yo.ip_real||"?"};
+  const srvGeo = srv || {lat:39.04, lon:-77.49, lugar:"Ashburn, Virginia, EE. UU.", ip: SERVIDOR_IP};
+  $("cargando-geo").classList.add("oculto");
+  initMapa(tuGeo, srvGeo, yo.activo);
+}
+
+function badgeVivo(){ return `<span class="estado vivo" style="padding:2px 8px;font-size:11px">vivo</span>`; }
+
 // ---------- presentacion ----------
 function pintar(yo){
   $("sin-sesion").classList.add("oculto");
   $("con-sesion").classList.remove("oculto");
+  YO_ACTUAL = yo;
   $("quien").textContent = yo.email;
   const activa = !!yo.activo;
   const badge = $("badge-estado");
@@ -243,7 +358,7 @@ function pintar(yo){
   $("btn-rotar").disabled = !activa;
   $("btn-desconectar").disabled = !activa;
 
-  const fd = new Date().toLocaleString();
+  const fd = new Date(yo.ultimo_cambio*1000 ? yo.ultimo_cambio*1000 : Date.now()).toLocaleString();
   if(activa){
     $("detalle-circuito").innerHTML = `
       <div class="dato"><span class="etq">Circuito (3 saltos)</span><span class="val">${yo.circuito.join(" → ")}</span></div>
@@ -258,8 +373,8 @@ curl --socks5-hostname "${proxy}" https://example.com/`;
     $("detalle-circuito").innerHTML = `
       <div class="dato"><span class="etq">Circuito</span><span class="val">—</span></div>
       <div class="dato"><span class="etq">Último cambio</span><span class="val">${fd}</span></div>`;
-    $("tarjeta-uso").classList.add("oculto");
   }
+  pintarViaje(yo);
 }
 
 function copiar(btn){
