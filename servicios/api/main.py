@@ -6,6 +6,8 @@ Plano de control (HTTP JSON) que incluye:
   - cuentas de usuario (Fase 3): registro, login con JWT, panel /me,
     connect / disconnect / rotate / delete, con contrasenas en argon2,
     rate limiting en login/registro y limite de usuarios.
+  - endpoint interno para el proxy SOCKS5 (Fase 5): valida credenciales
+    y devuelve el circuito, pero SOLO desde la red interna.
 
 Seguridad:
   - Las contrasenas se guardan con argon2 (nunca en claro).
@@ -385,6 +387,39 @@ def delete_me(token: str | None = Header(default=None, alias="Authorization")):
     c.execute("DELETE FROM usuarios WHERE id=?", (u["id"],))
     c.commit()
     return {"ok": True, "borrado": u["email"]}
+
+
+# ---------------------------------------------------------------- interno (Fase 5)
+
+class CredencialesSocks(BaseModel):
+    email: str
+    password: str
+
+
+@app.post("/interno/socks_auth")
+def socks_auth(cr: CredencialesSocks, x_interno: str | None = Header(default=None)):
+    """Valida las credenciales del proxy SOCKS5 contra las cuentas de la API.
+
+    Solo accesible desde la red interna (con token interno). Devuelve el
+    circuito del usuario SOLO si existe y esta conectado (activo=1).
+    NUNCA es un proxy abierto: sin credenciales validas, sin circuito.
+    """
+    if INTERNAL_TOKEN and x_interno != INTERNAL_TOKEN:
+        raise HTTPException(status_code=401, detail="token interno no valido")
+    email = cr.email.strip().lower()
+    c = conex()
+    f = c.execute("SELECT * FROM usuarios WHERE email=?", (email,)).fetchone()
+    if f is None:
+        raise HTTPException(status_code=401, detail="credenciales no validas")
+    try:
+        ok = hasher.verify(f["password_hash"], cr.password)
+    except (VerifyMismatchError, InvalidHashError):
+        ok = False
+    if not ok:
+        raise HTTPException(status_code=401, detail="credenciales no validas")
+    if not f["activo"] or not f["circuito"]:
+        raise HTTPException(status_code=403, detail="usuario sin circuito activo; conectate en la web")
+    return {"id": f["id"], "circuito": json.loads(f["circuito"]), "ip_salida": f["ip_salida"]}
 
 
 # ---------------------------------------------------------------- arranque

@@ -22,7 +22,27 @@ x-nodo: &nodo
   <<: *limites
 
 services:
-  # HTTPS y proxy inverso: unico servicio publicado junto con la entrada (1080)
+  # Fase 5: proxy SOCKS5 de entrada (publica 1080). Solo este y caddy se
+  # publican en el host (regla 2); todo lo demas queda en la red interna red_jumper.
+  entrada:
+    build: ./servicios/entrada
+    image: jumpernat/entrada
+    restart: unless-stopped
+    ports:
+      - "1080:1080"
+    environment:
+      PUERTO_ENTRADA: "1080"
+      API_URL: http://api:8000
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      PUERTOS_PERMITIDOS: "80,443"
+      EXCEPCIONES_PRIVADAS: web-destino
+    depends_on:
+      - api
+    networks: [red_jumper]
+    <<: *limites
+
+  # HTTPS + Let's Encrypt automatico para ${DOMINIO} (Fase 4). Si la Security
+  # List de Oracle tiene los puertos 80/443 abiertos, la emision es instantanea.
   caddy:
     image: caddy:2.8-alpine
     restart: unless-stopped

@@ -6,6 +6,11 @@ El nodo quita el primer elemento (su siguiente salto), se conecta a el, y le
 pasa el resto de la ruta (misma linea). Si en la ruta solo queda el destino,
 este nodo es el "exit": se conecta al destino y no envia linea de ruta.
 
+El nodo de SALIDA valida el destino final (defensa en profundidad junto con
+la validacion de la entrada, Fase 5): solo puertos 80/443 y bloqueo de IPs
+privadas/loopback/docker/link-local (incluida la metadata de Oracle), salvo
+las excepciones de pruebas internas (web-destino).
+
 Despues reenvia bytes en ambos sentidos con asyncio (sin interpretar contenido).
 Solo registra [HOP] con el origen interno y el siguiente interno; nunca el
 contenido ni el destino final del usuario.
@@ -14,6 +19,7 @@ Ademas envia un heartbeat periodico a la API para que esta mantenga el
 registro de nodos vivos (Fase 2).
 """
 import asyncio
+import ipaddress
 import json
 import os
 import socket
@@ -25,6 +31,17 @@ LISTEN_PORT = int(os.environ.get("NODO_PORT", "9000"))
 API_URL = os.environ.get("API_URL", "")
 INTERNAL_TOKEN = os.environ.get("INTERNAL_TOKEN", "")
 INTERVALO_HB = int(os.environ.get("INTERVALO_HB_SEG", "10"))
+PUERTOS_PERMITIDOS = {int(p) for p in os.environ.get("PUERTOS_PERMITIDOS", "80,443").split(",")}
+# destinos internos excluidos del bloqueo de redes privadas (solo para pruebas)
+EXCEPCIONES = {h.strip().lower() for h in os.environ.get("EXCEPCIONES_PRIVADAS", "web-destino").split(",")}
+
+# Redes prohibidas como destino: privadas, loopback, docker, CGNAT,
+# link-local (incluida la metadata 169.254.169.254 de Oracle) y ULA IPv6.
+REDES_PROHIBIDAS = [ipaddress.ip_network(n) for n in (
+    "0.0.0.0/8", "10.0.0.0/8", "100.64.0.0/10", "127.0.0.0/8",
+    "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16",
+    "::1/128", "fc00::/7", "fe80::/10",
+)]
 
 
 def hilo_heartbeat():
@@ -67,6 +84,17 @@ async def pipe(reader, writer):
             pass
 
 
+def destino_bloqueado(host: str) -> bool:
+    """True si el host ya es una IP dentro de las redes prohibidas."""
+    try:
+        ip = ipaddress.ip_address(host.strip("[]"))
+    except ValueError:
+        # es un nombre: no bloqueado aqui (resolverlo es cosa del exit tambien,
+        # pero la entrada ya valida en su capa y el exit revalida la IP tras resolver)
+        return False
+    return any(ip in red for red in REDES_PROHIBIDAS)
+
+
 async def hop_handler(reader, writer):
     try:
         # 1) leer la linea de ruta (con limite de tiempo para no bloquear el nodo)
@@ -79,6 +107,36 @@ async def hop_handler(reader, writer):
         siguiente = partes[0]
         resto = ",".join(partes[1:])
         origen = writer.get_extra_info("peername")
+
+        if not resto:
+            # ---- nodo de SALIDA: validar el destino final (Fase 5) ----
+            try:
+                host_d, puerto_d = siguiente.rsplit(":", 1)
+                puerto_d = int(puerto_d)
+            except ValueError:
+                print("[HOP-ERR] destino mal formado", flush=True)
+                writer.close()
+                return
+            if puerto_d not in PUERTOS_PERMITIDOS:
+                print("[HOP-ERR] puerto no permitido en salida", flush=True)
+                writer.close()
+                return
+            if host_d.strip().lower() in EXCEPCIONES:
+                pass  # destino interno permitido para pruebas
+            else:
+                # resolver el nombre y revalidar la IP real (anti-DNS-bypass)
+                try:
+                    infos = await asyncio.get_event_loop().getaddrinfo(host_d, puerto_d, type=socket.SOCK_STREAM)
+                    ips = {i[4][0] for i in infos}
+                except socket.gaierror:
+                    print("[HOP-ERR] destino no resoluble", flush=True)
+                    writer.close()
+                    return
+                if not ips or any(destino_bloqueado(ip) for ip in ips):
+                    print("[HOP-ERR] destino privado/metadata bloqueado en salida", flush=True)
+                    writer.close()
+                    return
+                siguiente = f"{host_d}:{puerto_d}"
         print(f"[HOP] origen={origen} -> siguiente={siguiente} restosaltos={resto or '(exit)'}", flush=True)
 
         # 2) conectar al siguiente salto (o al destino si somos el exit)
