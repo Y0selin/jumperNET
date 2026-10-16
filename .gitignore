@@ -1,10 +1,5 @@
-# Secretos y entorno - nunca en git
+__pycache__/
+*.pyc
 .env
-# Datos de runtime (SQLite, certificados, logs)
 data/
-*.db
-*.sqlite3
-# Copias de seguridad con reglas del sistema
-backups/
-# Docker
-docker-compose.override.yml
+*.png
