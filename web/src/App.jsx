@@ -5,26 +5,49 @@ import Info from "./components/Informacion.jsx";
 import Landing from "./components/Landing.jsx";
 import Autenticacion from "./components/Autenticacion.jsx";
 import Red from "./components/Red.jsx";
+import Nodos from "./components/Nodos.jsx";
 import Cuenta from "./components/Cuenta.jsx";
 import { me, setToken, getToken } from "./lib/api.js";
 import { aplicaTema, cargaTema } from "./lib/temas.js";
 
-const TABS = [
-  { id: "red", texto: "Red", ico: "◉" },
-  { id: "cuenta", texto: "Cuenta", ico: "☰" },
-  { id: "info", texto: "Info", ico: "▤" },
-  { id: "ajustes", texto: "Ajustes", ico: "✦" },
+const NAV_SESION = [
+  { grupo: "red", items: [
+    { id: "red", texto: "Panel de red", ico: "◉" },
+    { id: "nodos", texto: "Nodos", ico: "⛓" },
+  ] },
+  { grupo: "tu cuenta", items: [
+    { id: "cuenta", texto: "Cuenta", ico: "☻" },
+    { id: "info", texto: "Documentación", ico: "▤" },
+    { id: "ajustes", texto: "Diseñador", ico: "✦" },
+  ] },
 ];
+
+const PROMPT = {
+  red: "status --red",
+  nodos: "ls -la nodos/",
+  cuenta: "whoami",
+  info: "man jumpernat",
+  ajustes: "theme --editar",
+  inicio: "cat bienvenida.md",
+  auth: "./acceder",
+};
 
 export default function App() {
   const [tab, setTab] = useState(getToken() ? "red" : "inicio");
   const [yo, setYo] = useState(null);
   const [authModo, setAuthModo] = useState("login");
   const [toasts, setToasts] = useState([]);
+  const [lateral, setLateral] = useState(false);   // menú móvil
+  const [pegada, setPegada] = useState(false);     // topbar con scroll
 
   useEffect(() => { aplicaTema(cargaTema()); }, []);
   useEffect(() => {
     if (getToken()) me().then(setYo).catch(() => {});
+  }, []);
+  useEffect(() => {
+    const alScroll = () => setPegada(window.scrollY > 12);
+    window.addEventListener("scroll", alScroll, { passive: true });
+    return () => window.removeEventListener("scroll", alScroll);
   }, []);
 
   function aviso(texto, tipo = "ok") {
@@ -35,83 +58,163 @@ export default function App() {
   function salir() { setToken(null); setYo(null); setTab("inicio"); aviso("sesión cerrada", "ok"); }
   function alEntrar() { me().then((d) => { setYo(d); setTab("red"); }).catch(() => aviso("no se pudo cargar tu cuenta", "error")); }
   function irAuth(m = "login") { setAuthModo(m); setTab("auth"); }
+  function ir(id) { setTab(id); setLateral(false); }
 
   const enSesion = !!yo && !!getToken();
+  const activo = !!yo?.activo;
+
+  const navega = (id) => (
+    <button key={id} className={`lateral-btn ${tab === id ? "activa" : ""}`} onClick={() => ir(id)}>
+      <span className="ico">{NAV_SESION.flatMap((g) => g.items).find((i) => i.id === id)?.ico}</span>
+      <span>{NAV_SESION.flatMap((g) => g.items).find((i) => i.id === id)?.texto}</span>
+      {id === "red" && (
+        <span className={`punto ${activo ? "" : ""}`} style={{
+          width: 7, height: 7, borderRadius: "50%", marginLeft: "auto",
+          background: activo ? "var(--acento-1)" : "#7b8781",
+          boxShadow: activo ? "0 0 8px rgb(from var(--acento-1) r g b / .8)" : "none",
+        }} />
+      )}
+    </button>
+  );
 
   return (
     <>
       <GlifosFondo />
-      <div style={{ position: "relative", zIndex: 1 }}>
+      <div className="cascara">
 
-        <header className="barra">
-          <div className="barra-inner">
-            <div className="logo-marca" onClick={() => setTab(enSesion ? "red" : "inicio")}
-              style={{ cursor: "pointer" }} role="button" tabIndex={0}>
-              <div className="logo-cubo flota">JN</div>
-              <div>
-                <div className="nombre">JumperNAT</div>
-                <div className="lema mono">▚ red por saltos · bajo tu control</div>
-              </div>
-            </div>
+        {/* ───────── barra lateral ───────── */}
+        <aside className={`lateral ${lateral ? "abierto" : ""}`}>
+          <button className="lateral-marca" onClick={() => ir(enSesion ? "red" : "inicio")}>
+            <span className="logo-cubo flota">{">_"}</span>
+            <span className="nombre">Jumper<span>NAT</span><span className="cursor">_</span></span>
+          </button>
 
-            <nav className="tabs">
-              {enSesion && TABS.map((t) => (
-                <button key={t.id} className={tab === t.id ? "activa" : ""} onClick={() => setTab(t.id)}>
-                  <span className="mono" style={{ opacity: .7, marginRight: 6 }}>{t.ico}</span>{t.texto}
+          <div className="lateral-cuerpo">
+            <div className="lateral-grupo">
+              <div className="lateral-titulo">// público</div>
+              <button className={`lateral-btn ${tab === "inicio" ? "activa" : ""}`} onClick={() => ir("inicio")}>
+                <span className="ico">⌂</span><span>Inicio</span>
+              </button>
+              {!enSesion && (
+                <button className={`lateral-btn ${tab === "auth" ? "activa" : ""}`} onClick={() => irAuth(authModo)}>
+                  <span className="ico">⇥</span><span>Acceder</span>
                 </button>
-              ))}
-              {!enSesion && <button className={tab === "inicio" ? "activa" : ""} onClick={() => setTab("inicio")}>Inicio</button>}
-              {!enSesion && <button className={tab === "auth" ? "activa" : ""} onClick={() => irAuth(authModo)}>Acceder</button>}
-              {enSesion && <button onClick={salir}>Salir</button>}
-            </nav>
+              )}
+            </div>
+
+            {enSesion && NAV_SESION.map((g) => (
+              <div className="lateral-grupo" key={g.grupo}>
+                <div className="lateral-titulo">// {g.grupo}</div>
+                {g.items.map((i) => navega(i.id))}
+              </div>
+            ))}
+
+            {enSesion && (
+              <div className="lateral-grupo">
+                <div className="lateral-titulo">// sesión</div>
+                <button className="lateral-btn" onClick={salir}><span className="ico">⏻</span><span>Salir</span></button>
+              </div>
+            )}
           </div>
-        </header>
 
-        <div className="contenedor">
+          <div className="lateral-pie">
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span className="punto-vivo" />
+              {enSesion ? (activo ? "red activa · 3 saltos" : "red apagada") : "sin sesión"}
+            </span>
+            <span style={{ color: "rgb(255 255 255 / .35)" }}>jumpernet.duckdns.org</span>
+          </div>
+        </aside>
 
-          {tab === "inicio" && !enSesion && <Landing irAuth={irAuth} />}
+        {lateral && <div className="velo" onClick={() => setLateral(false)} />}
 
-          {tab === "auth" && !enSesion && (
-            <Autenticacion alEntrar={alEntrar} aviso={aviso} modoInicial={authModo} volver={() => setTab("inicio")} />
-          )}
+        {/* ───────── topbar + contenido ───────── */}
+        <div className="principal">
+          <header className={`barra-sup ${pegada ? "pegada" : ""}`}>
+            <button className="hamburguesa" onClick={() => setLateral(true)} aria-label="Abrir menú">☰</button>
+            <span className="prompt">
+              <b>{yo?.email?.split("@")[0] || "invitado"}</b>@jumpernat:<i>~/{tab}</i>$ {PROMPT[tab]}
+            </span>
+            <span style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+              {enSesion && (
+                <span className={`chip ${activo ? "vivo" : "muerto"}`}>{activo ? "RED ACTIVA" : "RED OFF"}</span>
+              )}
+              {enSesion && (
+                <button className="btn" onClick={() => ir("nodos")} title="Ver todos los nodos">
+                  ⛓ {yo?.circuito?.length ? `${yo.circuito.length}/3` : "0/3"}
+                </button>
+              )}
+              {enSesion
+                ? <button className="btn" onClick={salir}>Salir</button>
+                : <button className="btn primario" onClick={() => irAuth("login")}>Acceder</button>}
+            </span>
+          </header>
 
-          {tab === "red" && enSesion && <Red yo={yo} aviso={aviso} alSalir={salir} />}
+          <main className="contenido">
+            {tab === "inicio" && <Landing irAuth={irAuth} enSesion={enSesion} />}
 
-          {tab === "cuenta" && enSesion && (
-            <Cuenta yo={yo} aviso={aviso} alSalir={salir} irRed={() => setTab("red")} />
-          )}
+            {tab === "auth" && !enSesion && (
+              <Autenticacion alEntrar={alEntrar} aviso={aviso} modoInicial={authModo} volver={() => ir("inicio")} />
+            )}
 
-          {tab === "ajustes" && enSesion && (
-            <div className="apa" style={{ display: "grid", gap: 16 }}>
-              <div className="seccion-titulo">
-                <span className="migas mono">panel / ajustes</span>
-                <h1>Diseñador del tema</h1>
-                <span className="nota">colores, radios, letra, efectos y CSS libre — en vivo y solo en tu navegador.</span>
+            {tab === "red" && enSesion && <Red yo={yo} alRecargar={setYo} aviso={aviso} />}
+
+            {tab === "nodos" && enSesion && (
+              <div className="apa">
+                <div className="cab-seccion">
+                  <div className="cubo-ico">⛓</div>
+                  <div>
+                    <span className="migas">panel / nodos</span>
+                    <h1>Los nodos de la red</h1>
+                    <p className="sub">Todos los saltos registrados, con estado, latencia medida y conexiones que están reenviando ahora mismo.</p>
+                  </div>
+                </div>
+                <Nodos yo={yo} aviso={aviso} />
               </div>
-              <Ajustes aviso={aviso} />
-            </div>
-          )}
+            )}
 
-          {tab === "info" && enSesion && (
-            <div className="apa" style={{ display: "grid", gap: 16 }}>
-              <div className="seccion-titulo">
-                <span className="migas mono">panel / info</span>
-                <h1>Documentación</h1>
-                <span className="nota">qué es, cómo funciona y los detalles técnicos del circuito.</span>
+            {tab === "cuenta" && enSesion && (
+              <Cuenta yo={yo} aviso={aviso} alSalir={salir} irRed={() => ir("red")} />
+            )}
+
+            {tab === "ajustes" && enSesion && (
+              <div className="apa">
+                <div className="cab-seccion">
+                  <div className="cubo-ico">✦</div>
+                  <div>
+                    <span className="migas">panel / diseñador</span>
+                    <h1>Diseñador del tema</h1>
+                    <p className="sub">Colores, forma, tipografía, efectos y CSS libre — en vivo y solo en tu navegador.</p>
+                  </div>
+                </div>
+                <Ajustes aviso={aviso} />
               </div>
-              <Info />
-            </div>
-          )}
+            )}
 
-          <footer className="nota mono" style={{ textAlign: "center", marginTop: 44, fontSize: 11 }}>
-            JumperNAT · 3 saltos · ChaCha20-Poly1305 · api: jumpernet.duckdns.org
-            <br />
-            <span style={{ opacity: .7 }}>proyecto educativo · la red solo se activa cuando tú lo decides</span>
-          </footer>
+            {tab === "info" && enSesion && (
+              <div className="apa">
+                <div className="cab-seccion">
+                  <div className="cubo-ico">▤</div>
+                  <div>
+                    <span className="migas">panel / documentación</span>
+                    <h1>Documentación</h1>
+                    <p className="sub">Qué es, cómo funciona el circuito por dentro y los detalles técnicos.</p>
+                  </div>
+                </div>
+                <Info />
+              </div>
+            )}
+
+            <footer className="nota mono" style={{ textAlign: "center", marginTop: 44, fontSize: 10.5 }}>
+              JumperNAT · 3 saltos · ChaCha20-Poly1305 · api: jumpernet.duckdns.org
+              <br />
+              <span style={{ opacity: .7 }}>proyecto educativo · la red solo se activa cuando tú lo decides</span>
+            </footer>
+          </main>
         </div>
       </div>
 
-      {/* avisos flotantes */}
+      {/* avisos */}
       <div style={{ position: "fixed", bottom: 18, right: 18, display: "grid", gap: 8, zIndex: 90, maxWidth: "min(340px, 88vw)" }}>
         {toasts.map((t) => (
           <div key={t.id} className={`apa ${t.tipo === "error" ? "mensaje-error" : "mensaje-ok"}`}

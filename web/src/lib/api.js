@@ -1,5 +1,4 @@
 export const API_URL = "https://jumpernet.duckdns.org";
-const T = localStorage.getItem("token");
 
 export function getToken() { return localStorage.getItem("token"); }
 export function setToken(t) { t ? localStorage.setItem("token", t) : localStorage.removeItem("token"); }
@@ -37,13 +36,14 @@ export async function registrar(email, pass) { return (await api("POST", "/regis
 export async function login(email, pass) { return (await api("POST", "/login", { email, password: pass }, false)).datos; }
 export async function borrar(me_) { return api("DELETE", "/me"); }
 
-/** geolocalización de una IP vía ipapi.co (servicio público, desde el navegador) */
-export async function geo(ip) {
-  if (!ip) return null;
-  try {
-    const r = await fetch(`https://ipapi.co/${ip}/json/`);
-    const d = await r.json();
-    if (d.latitude == null) return null;
-    return { lat: d.latitude, lon: d.longitude, lugar: [d.city, d.region, d.country_name].filter(Boolean).join(", "), org: d.org };
-  } catch { return null; }
+/** IP pública con la que sale el servidor (la que ve internet por el circuito) */
+export async function salida() { return (await api("GET", "/salida")).datos; }
+
+/** Comprobación REAL del circuito: pide al destino que IP ve al salir por él */
+export async function comprobar(password) { return (await api("POST", "/comprobar", { password })).datos; }
+
+/** Geolocalización real hecha en el servidor (con caché); sin IP usa la tuya */
+export async function geoApi(ip = null) {
+  try { return (await api("GET", "/geo" + (ip ? `?ip=${encodeURIComponent(ip)}` : ""))).datos; }
+  catch { return { ok: false, error: "sin respuesta de geolocalización" }; }
 }

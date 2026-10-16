@@ -53,20 +53,32 @@ REDES_PROHIBIDAS = [ipaddress.ip_network(n) for n in (
 )]
 
 
+# conexiones vivas que estamos reenviando ahora mismo (lo reporta el heartbeat)
+CONEXIONES = 0
+_lock_conexiones = threading.Lock()
+
+
+def _conexion_suma(delta: int) -> None:
+    global CONEXIONES
+    with _lock_conexiones:
+        CONEXIONES = max(0, CONEXIONES + delta)
+
+
 def hilo_heartbeat():
-    """Avisa a la API de forma periodica de que este nodo esta vivo."""
+    """Avisa a la API de forma periodica de que este nodo esta vivo y de
+    cuantas conexiones lleva en este momento."""
     if not API_URL:
         return
     nombre = os.environ.get("NODO_NOMBRE", socket.gethostname())
-    cuerpo = json.dumps(
-        {"nombre": nombre, "direccion": f"{nombre}:{LISTEN_PORT}"}
-    ).encode()
-    req = urllib.request.Request(
-        f"{API_URL}/nodos/heartbeat",
-        data=cuerpo,
-        headers={"Content-Type": "application/json", "X-Interno": INTERNAL_TOKEN},
-    )
     while True:
+        cuerpo = json.dumps(
+            {"nombre": nombre, "direccion": f"{nombre}:{LISTEN_PORT}", "conexiones": CONEXIONES}
+        ).encode()
+        req = urllib.request.Request(
+            f"{API_URL}/nodos/heartbeat",
+            data=cuerpo,
+            headers={"Content-Type": "application/json", "X-Interno": INTERNAL_TOKEN},
+        )
         try:
             with urllib.request.urlopen(req, timeout=5) as r:
                 r.read()
@@ -147,6 +159,7 @@ def destino_bloqueado(host: str) -> bool:
 
 
 async def hop_handler(reader, writer):
+    _conexion_suma(1)
     try:
         # 1) leer la linea de ruta (con limite de tiempo para no bloquear el nodo)
         linea = await asyncio.wait_for(reader.readline(), timeout=15)
@@ -216,6 +229,7 @@ async def hop_handler(reader, writer):
     except Exception as e:
         print(f"[HOP-ERR] {e}", flush=True)
     finally:
+        _conexion_suma(-1)
         try:
             writer.close()
         except Exception:

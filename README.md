@@ -104,7 +104,8 @@ curl --socks5-hostname "tu@correo:tu-clave@jumpernet.duckdns.org:1080" https://e
 
 | Suite | Comando | Qué cubre |
 |---|---|---|
-| Integral (fases 1–8) | `bash tests/run_all.sh` | saltos encadenados, circuitos por API, ciclo de usuario, HTTPS/CORS, SOCKS5 (auth, bloqueos de destino y puerto), cifrado JENC. Necesita Docker y el stack levantado. |
+| Integral (fases 1–8) | `bash tests/run_all.sh` | saltos encadenados, circuitos por API, ciclo de usuario (incluida `/comprobar`, una petición real por el circuito), HTTPS/CORS, SOCKS5 (auth, bloqueos de destino y puerto) y que la salida del circuito sale con la IP pública REAL del servidor (5.5), cifrado JENC. Necesita Docker y el stack levantado. |
+| Cambio de IP real | `bash tests/ip_publica_real.sh` (desde TU máquina) | mide tu IP directa y la que ve el destino a través del SOCKS5: comprueba que la IP pública cambia de verdad (`tu-IP -> la-del-exit`) y que el panel anuncia la misma IP de salida. No necesita Docker, solo que tu red esté encendida. |
 | Panel web (E2E) | `cd web && npm run test:e2e` | Chrome headless con la API simulada: 72 comprobaciones (inicio, validaciones, registro y login, red apagada por defecto, encender/girar/apagar con el interruptor, Info, Cuenta con baja en dos pasos, responsive a 390 px, presets y cierre de sesión). Requiere `npm run preview` en el puerto 4173. Deja capturas en `web/e2e-out/`. |
 | Panel desplegado | `URL_APP=https://y0selin.github.io/jumperNET/ npm run test:e2e` | El mismo recorrido contra el sitio publicado, para cazar fallos que solo aparecen en la subruta de Pages (assets, iconos). |
 

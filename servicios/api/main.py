@@ -21,8 +21,14 @@ import json
 import os
 import random
 import re
+import socket
 import sqlite3
+import struct
+import threading
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 
 import jwt
 import uvicorn
@@ -38,6 +44,9 @@ JWT_SECRET = os.environ.get("JWT_SECRET", "")
 JWT_SEGUNDOS = int(os.environ.get("JWT_SEGUNDOS", "7200"))
 MAX_USUARIOS = int(os.environ.get("MAX_USUARIOS", "500"))
 UMBRAL_CAIDO = int(os.environ.get("UMBRAL_CAIDO_SEG", "35"))
+# Proxy SOCKS5 de entrada, por la red interna (para comprobar el circuito de
+# extremo a extremo desde la propia API: https no, HTTP plano al puerto 80).
+SOCKS_ENTRADA = os.environ.get("SOCKS_ENTRADA", "entrada:1080")
 # Redes desde las que SI nos fiamos de X-Forwarded-For (Caddy corre en docker)
 PROXIES_CONFIANZA = os.environ.get("PROXIES_CONFIANZA", "172.16.0.0/12,10.0.0.0/8").split(",")
 
@@ -172,14 +181,69 @@ def _auth(token_hdr: str | None) -> dict:
     return dict(f)
 
 
+# ---------------------------------------------------------------- red externa
+# La IP publica con la que el servidor (y por tanto el nodo de salida) sale a
+# internet. Se mide de verdad contra un servicio "cual es mi IP" y se cachea:
+# asi el panel puede enseñar la IP que ve internet al usar el circuito.
+_ip_publica = {"valor": None, "medida": 0.0}
+SERVICIOS_IP = ("https://api.ipify.org", "http://ifconfig.me/ip", "https://icanhazip.com")
+
+
+def medir_ip_publica(ttl: float = 600.0) -> str | None:
+    """IP publica de salida (cacheada). None si no se pudo medir."""
+    ahora = time.time()
+    if _ip_publica["valor"] and ahora - _ip_publica["medida"] < ttl:
+        return _ip_publica["valor"]
+    for url in SERVICIOS_IP:
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "jumpernat/1.0"})
+            with urllib.request.urlopen(req, timeout=4) as r:
+                texto = r.read(64).decode(errors="replace").strip()
+            # ifconfig.me devuelve solo la IP; los otros tambien
+            if re.fullmatch(r"[0-9a-fA-F:.]{7,45}", texto):
+                _ip_publica.update(valor=texto, medida=ahora)
+                return texto
+        except Exception:
+            continue
+    return _ip_publica["valor"]
+
+
+def _es_ipv4(t: str | None) -> bool:
+    if not t:
+        return False
+    partes = t.split(".")
+    return len(partes) == 4 and all(p.isdigit() and 0 <= int(p) <= 255 for p in partes)
+
+
+def ip_salida_efectiva(f) -> str | None:
+    """IP que ve internet al usar el circuito.
+
+    En versiones anteriores esta columna guardaba el NOMBRE del nodo de salida
+    ("nodo6"), que el panel enseñaba como si fuese una IP. Ahora guarda la IP
+    publica real; si la fila es antigua (o no se pudo medir al conectar), la
+    medimos y, si hay suerte, la dejamos ya guardada.
+    """
+    guardada = f["ip_salida"]
+    if _es_ipv4(guardada):
+        return guardada
+    medida = medir_ip_publica()
+    if medida and f["activo"]:
+        c = conex()
+        c.execute("UPDATE usuarios SET ip_salida=? WHERE id=?", (medida, f["id"]))
+        c.commit()
+    return medida
+
+
 def fila_a_dict(f) -> dict:
+    activo = bool(f["activo"])
     return {
         "id": f["id"],
         "email": f["email"],
         "ip_real": f["ip_real"],
-        "ip_salida": f["ip_salida"],
+        "ip_salida": ip_salida_efectiva(f) if activo else None,
+        "nodo_exit": (json.loads(f["circuito"])[-1] if f["circuito"] else None),
         "circuito": json.loads(f["circuito"]) if f["circuito"] else None,
-        "activo": bool(f["activo"]),
+        "activo": activo,
         "ultimo_cambio": f["ultimo_cambio"],
     }
 
@@ -189,6 +253,7 @@ def fila_a_dict(f) -> dict:
 class Heartbeat(BaseModel):
     nombre: str
     direccion: str
+    conexiones: int = 0
 
 
 @app.post("/nodos/heartbeat")
@@ -197,28 +262,78 @@ def heartbeat(hb: Heartbeat, x_interno: str | None = Header(default=None)):
         raise HTTPException(status_code=401, detail="token interno no valido")
     refrescar_estados()
     c = conex()
+    # columna nueva (Fase 9): numero de conexiones vivas que reenvia el nodo
+    try:
+        c.execute("ALTER TABLE nodos ADD COLUMN conexiones INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # ya existe
     c.execute(
-        """INSERT INTO nodos(nombre, direccion, ultimo_heartbeat, estado)
-           VALUES(?,?,?,'vivo')
+        """INSERT INTO nodos(nombre, direccion, ultimo_heartbeat, estado, conexiones)
+           VALUES(?,?,?,'vivo',?)
            ON CONFLICT(nombre) DO UPDATE SET
              direccion=excluded.direccion,
              ultimo_heartbeat=excluded.ultimo_heartbeat,
-             estado='vivo'""",
-        (hb.nombre, hb.direccion, time.time()),
+             estado='vivo',
+             conexiones=excluded.conexiones""",
+        (hb.nombre, hb.direccion, time.time(), max(0, hb.conexiones)),
     )
     c.commit()
     return {"ok": True}
+
+
+# latencia por nodo: se mide con un TCP connect de verdad y se cachea un poco
+_ms_nodos: dict[str, tuple[float, int | None]] = {}
+
+
+def medir_ms(direccion: str) -> int | None:
+    """Milisegundos de un TCP connect al nodo (None si no responde)."""
+    ahora = time.time()
+    cache = _ms_nodos.get(direccion)
+    if cache and ahora - cache[0] < 8:
+        return cache[1]
+    ms = None
+    try:
+        host, puerto = direccion.rsplit(":", 1)
+        t0 = time.perf_counter()
+        with socket.create_connection((host, int(puerto)), timeout=0.8):
+            ms = round((time.perf_counter() - t0) * 1000)
+    except Exception:
+        ms = None
+    _ms_nodos[direccion] = (ahora, ms)
+    return ms
 
 
 @app.get("/nodos")
 def lista_nodos():
     refrescar_estados()
     c = conex()
-    filas = c.execute("SELECT nombre, direccion, estado FROM nodos ORDER BY nombre").fetchall()
-    return [
-        {"nombre": f["nombre"], "direccion": f["direccion"], "estado": f["estado"]}
-        for f in filas
-    ]
+    columnas = "nombre, direccion, estado, ultimo_heartbeat"
+    try:
+        filas = c.execute(f"SELECT {columnas}, conexiones FROM nodos ORDER BY nombre").fetchall()
+    except sqlite3.OperationalError:
+        filas = c.execute(f"SELECT {columnas} FROM nodos ORDER BY nombre").fetchall()
+    ahora = time.time()
+    # latencias en paralelo para no encadenar 6 timeouts
+    medidas: dict[str, int | None] = {}
+    hilos = []
+    for f in filas:
+        t = threading.Thread(target=lambda d=f["direccion"]: medidas.__setitem__(d, medir_ms(d)))
+        t.start()
+        hilos.append(t)
+    for t in hilos:
+        t.join(timeout=1.2)
+    salida = []
+    for f in filas:
+        d = dict(f)
+        salida.append({
+            "nombre": d["nombre"],
+            "direccion": d["direccion"],
+            "estado": d["estado"],
+            "conexiones": d.get("conexiones", 0),
+            "ultimo_hb": round(ahora - d["ultimo_heartbeat"], 1),
+            "ms": medidas.get(d["direccion"], medir_ms(d["direccion"])),
+        })
+    return salida
 
 
 def elegir_circuito() -> dict:
@@ -343,7 +458,10 @@ def connect(
     circ = elegir_circuito()
     c.execute(
         "UPDATE usuarios SET circuito=?, ip_salida=?, activo=1, ip_real=?, ultimo_cambio=? WHERE id=?",
-        (json.dumps(circ["saltos"]), circ["exit"], ip_real(request), time.time(), u["id"]),
+        # ip_salida guarda la IP PUBLICA de salida (la que ve internet por el
+        # circuito), no el nombre del nodo: si no se puede medir, se guarda el
+        # nombre y ip_salida_efectiva() lo corregira en la siguiente lectura.
+        (json.dumps(circ["saltos"]), medir_ip_publica() or circ["exit"], ip_real(request), time.time(), u["id"]),
     )
     c.commit()
     return fila_a_dict(c.execute("SELECT * FROM usuarios WHERE id=?", (u["id"],)).fetchone())
@@ -374,7 +492,7 @@ def rotate(request: Request, token: str | None = Header(default=None, alias="Aut
     circ = elegir_circuito()
     c.execute(
         "UPDATE usuarios SET circuito=?, ip_salida=?, ultimo_cambio=? WHERE id=?",
-        (json.dumps(circ["saltos"]), circ["exit"], time.time(), u["id"]),
+        (json.dumps(circ["saltos"]), medir_ip_publica() or circ["exit"], time.time(), u["id"]),
     )
     c.commit()
     return fila_a_dict(c.execute("SELECT * FROM usuarios WHERE id=?", (u["id"],)).fetchone())
@@ -387,6 +505,188 @@ def delete_me(token: str | None = Header(default=None, alias="Authorization")):
     c.execute("DELETE FROM usuarios WHERE id=?", (u["id"],))
     c.commit()
     return {"ok": True, "borrado": u["email"]}
+
+
+# ---------------------------------------------------------------- red real (Fase 9)
+# Endpoints que responden a la pregunta "¿esto funciona de verdad?":
+#   /salida    -> la IP publica con la que salimos a internet (medida, cacheada)
+#   /comprobar -> hace una peticion REAL por el circuito SOCKS5 del usuario y
+#                 devuelve la IP que ha visto el destino
+#   /geo       -> geolocaliza una IP en el servidor (con cache), para que el
+#                 mapa no tenga que fiarse del navegador ni inventar posiciones
+
+_ip_geo: dict[str, tuple[float, dict]] = {}
+GEO_TTL = 6 * 3600
+
+
+def _leer_exacto(s: socket.socket, n: int) -> bytes:
+    buf = b""
+    while len(buf) < n:
+        trozo = s.recv(n - len(buf))
+        if not trozo:
+            raise ConnectionError("la conexion se cerro durante el handshake")
+        buf += trozo
+    return buf
+
+
+MOTIVOS_SOCKS = {
+    1: "fallo general del circuito",
+    2: "el circuito denego el destino (politica de salida)",
+    3: "red inalcanzable",
+    4: "destino inalcanzable",
+    5: "conexion rechazada por el destino",
+    6: "el circuito tardo demasiado (TTL)",
+    7: "comando no soportado",
+    8: "tipo de direccion no soportado",
+}
+
+
+def _socks_http_get(entrada: str, usuario: str, clave: str, destino: str, puerto: int, ruta: str = "/") -> str:
+    """Peticion HTTP/1.0 a pelo A TRAVES del circuito SOCKS5 autenticado.
+    Devuelve el cuerpo como texto. Lanza RuntimeError con el motivo exacto si
+    algo falla (sin autenticacion, destino denegado, etc.)."""
+    host_p, puerto_p = entrada.rsplit(":", 1)
+    s = socket.create_connection((host_p, int(puerto_p)), timeout=8)
+    s.settimeout(8)
+    try:
+        s.sendall(bytes([5, 1, 2]))  # SOCKS5, un solo metodo: usuario/contrasena
+        if _leer_exacto(s, 2) != bytes([5, 2]):
+            raise RuntimeError("la entrada no acepta autenticacion por usuario/contrasena")
+        u, p = usuario.encode(), clave.encode()
+        s.sendall(bytes([1, len(u)]) + u + bytes([len(p)]) + p)
+        if _leer_exacto(s, 2) != bytes([1, 0]):
+            raise RuntimeError("credenciales rechazadas o sin circuito activo")
+        h = destino.encode()
+        s.sendall(bytes([5, 1, 0, 3, len(h)]) + h + struct.pack("!H", puerto))
+        rep = _leer_exacto(s, 4)
+        if rep[1] != 0:
+            raise RuntimeError(MOTIVOS_SOCKS.get(rep[1], f"el circuito rechazo la peticion (rep={rep[1]})"))
+        atyp = rep[3]
+        if atyp == 1:
+            _leer_exacto(s, 4)
+        elif atyp == 4:
+            _leer_exacto(s, 16)
+        elif atyp == 3:
+            _leer_exacto(s, _leer_exacto(s, 1)[0])
+        _leer_exacto(s, 2)
+        s.sendall(
+            f"GET {ruta} HTTP/1.0\r\nHost: {destino}\r\nUser-Agent: jumpernat-comprobacion\r\nConnection: close\r\n\r\n".encode()
+        )
+        datos = b""
+        while len(datos) < 8192:
+            trozo = s.recv(4096)
+            if not trozo:
+                break
+            datos += trozo
+    finally:
+        s.close()
+    _, _, cuerpo = datos.partition(b"\r\n\r\n")
+    return cuerpo.decode(errors="replace").strip()
+
+
+class Comprobacion(BaseModel):
+    password: str
+    destino: str = "api.ipify.org:80"
+    ruta: str = "/"
+
+
+@app.get("/salida")
+def salida(token: str | None = Header(default=None, alias="Authorization")):
+    """IP publica de salida del servidor (medida de verdad y cacheada)."""
+    u = _auth(token)
+    circuitos = json.loads(u["circuito"]) if u["circuito"] else []
+    return {
+        "ip_salida": medir_ip_publica(ttl=60),
+        "nodo_exit": circuitos[-1] if circuitos else None,
+        "activo": bool(u["activo"]),
+    }
+
+
+@app.post("/comprobar")
+def comprobar(cp: Comprobacion, token: str | None = Header(default=None, alias="Authorization")):
+    """Comprueba el circuito de extremo a extremo: sale por el SOCKS5 del propio
+    usuario y pregunta a un servicio externo que IP ve. Devuelve la IP observada,
+    la esperada y si cambia respecto a la IP real del usuario.
+
+    La contrasena se usa SOLO para este handshake (el proxy valida contra argon2
+    en la propia API) y no se guarda ni se registra."""
+    u = _auth(token)
+    if not limitar(f"chk:{u['id']}", 12, 60):
+        raise HTTPException(status_code=429, detail="demasiadas comprobaciones; espera un minuto")
+    if not u["activo"]:
+        raise HTTPException(status_code=409, detail="la red esta apagada: enciendela antes de comprobar")
+    host_d, _, puerto_d = cp.destino.partition(":")
+    t0 = time.perf_counter()
+    try:
+        cuerpo = _socks_http_get(SOCKS_ENTRADA, u["email"], cp.password, host_d, int(puerto_d or "80"), cp.ruta or "/")
+    except Exception as e:
+        return {"ok": False, "error": str(e), "ms": round((time.perf_counter() - t0) * 1000)}
+    ms = round((time.perf_counter() - t0) * 1000)
+    observada = cuerpo.split()[0] if cuerpo else ""
+    if not _es_ipv4(observada):
+        return {"ok": False, "error": f"respuesta inesperada del destino: {cuerpo[:80]!r}", "ms": ms}
+    esperada = ip_salida_efectiva(dict(u))
+    circuitos = json.loads(u["circuito"]) if u["circuito"] else []
+    return {
+        "ok": True,
+        "ip_observada": observada,
+        "ip_esperada": esperada,
+        "tu_ip": u["ip_real"],
+        "usa_el_exit": (observada == esperada) if esperada else None,
+        "cambia_tu_ip": (observada != u["ip_real"]) if u["ip_real"] else None,
+        "circuito": circuitos,
+        "destino": cp.destino,
+        "ms": ms,
+    }
+
+
+def _geo_proveedor(ip: str) -> dict | None:
+    """Geolocaliza una IP con dos proveedores publicos (sin clave)."""
+    try:
+        req = urllib.request.Request(f"https://ipwho.is/{ip}", headers={"User-Agent": "jumpernat/1.0"})
+        with urllib.request.urlopen(req, timeout=5) as r:
+            d = json.loads(r.read(4096))
+        if d.get("success") and d.get("latitude") is not None:
+            return {
+                "lat": d["latitude"], "lon": d["longitude"],
+                "ciudad": d.get("city"), "region": d.get("region"), "pais": d.get("country"),
+                "org": (d.get("connection") or {}).get("org"), "fuente": "ipwho.is",
+            }
+    except Exception:
+        pass
+    try:
+        url = f"http://ip-api.com/json/{ip}?fields=status,lat,lon,city,regionName,country,org,isp"
+        req = urllib.request.Request(url, headers={"User-Agent": "jumpernat/1.0"})
+        with urllib.request.urlopen(req, timeout=5) as r:
+            d = json.loads(r.read(4096))
+        if d.get("status") == "success":
+            return {
+                "lat": d["lat"], "lon": d["lon"],
+                "ciudad": d.get("city"), "region": d.get("regionName"), "pais": d.get("country"),
+                "org": d.get("org") or d.get("isp"), "fuente": "ip-api.com",
+            }
+    except Exception:
+        pass
+    return None
+
+
+@app.get("/geo")
+def geo(ip: str | None = None, token: str | None = Header(default=None, alias="Authorization")):
+    """Geolocalizacion real (servidor) con cache. Sin `ip`, usa la del que llama.
+    Si ningun proveedor responde se devuelve ok=false: el panel entonces dice
+    claramente que no se pudo localizar, en vez de inventarse una posicion."""
+    u = _auth(token)
+    objetivo = (ip or u["ip_real"] or "").strip()
+    if not re.fullmatch(r"[0-9a-fA-F:.]{7,45}", objetivo or ""):
+        return {"ip": objetivo, "ok": False, "error": "sin IP que localizar"}
+    guardado = _ip_geo.get(objetivo)
+    if guardado and time.time() - guardado[0] < GEO_TTL:
+        return {"ip": objetivo, "ok": True, "cache": True, **guardado[1]}
+    datos = _geo_proveedor(objetivo)
+    if not datos:
+        return {"ip": objetivo, "ok": False, "error": "ningun proveedor de geolocalizacion respondio"}
+    _ip_geo[objetivo] = (time.time(), datos)
+    return {"ip": objetivo, "ok": True, "cache": False, **datos}
 
 
 # ---------------------------------------------------------------- interno (Fase 5)

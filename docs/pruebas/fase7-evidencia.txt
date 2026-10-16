@@ -1,0 +1,77 @@
+>>> asegurando el stack levantado...
+ Container jumpernat-nodo5-1 Started 
+ Container jumpernat-nodo2-1 Started 
+
+==============================================================
+ PRUEBA 1.1: saltos manuales: 3 reenvíos encadenados hasta web-destino
+==============================================================
+  --> OK (log: /tmp/runall_1.1.log)
+
+==============================================================
+ PRUEBA 2.1: circuits aleatorios por la API + heartbeat de nodos
+==============================================================
+  --> OK (log: /tmp/runall_2.1.log)
+
+==============================================================
+ PRUEBA 2.2: peticion REAL a traves de un circuito de la API (e2e)
+==============================================================
+  --> OK (log: /tmp/runall_2.2.log)
+
+==============================================================
+ PRUEBA 3.1: ciclo completo de usuario (register/login/me/connect/rotate/disconnect/delete)
+==============================================================
+  --> OK (log: /tmp/runall_3.1.log)
+
+==============================================================
+ PRUEBA 4.1: HTTPS real con certificado de Let's Encrypt en jumpernet.duckdns.org
+==============================================================
+  --> OK (log: /tmp/runall_4.1.log)
+>>> preparando usuarios de prueba del SOCKS5...
+  (usuarios demo listos)
+
+==============================================================
+ PRUEBA 5.1: proxy SOCKS5: 8 casos de protocolo (auth, circuito, bloqueos)
+==============================================================
+  --> OK (log: /tmp/runall_5.1.log)
+
+==============================================================
+ PRUEBA 5.2: SOCKS5 desde INTERNET: salida HTTPS real por el circuito
+==============================================================
+  --> OK (log: /tmp/runall_5.2.log)
+
+==============================================================
+ PRUEBA 5.3: SOCKS5 desde INTERNET: destino PRIVADO (metadata Oracle) denegado
+==============================================================
+  --> OK (log: /tmp/runall_5.3.log)
+
+==============================================================
+ PRUEBA 5.4: SOCKS5 desde INTERNET: puerto PROHIBIDO (8080) denegado
+==============================================================
+  --> OK (log: /tmp/runall_5.4.log)
+
+==============================================================
+ PRUEBA 5.5: SOCKS5: la salida del circuito es la IP publica REAL del servidor
+==============================================================
+  --> OK (log: /tmp/runall_5.5.log)
+
+==============================================================
+ PRUEBA 8.1: cifrado en capas JENC: e2e probado con registro y clave real (ChaCha20)
+==============================================================
+  --> OK (log: /tmp/runall_8.1.log)
+
+==============================================================
+ RESUMEN DE PRUEBAS INTEGRALES
+==============================================================
+  OK    | 1.1 | saltos manuales: 3 reenvíos encadenados hasta web-destino
+  OK    | 2.1 | circuits aleatorios por la API + heartbeat de nodos
+  OK    | 2.2 | peticion REAL a traves de un circuito de la API (e2e)
+  OK    | 3.1 | ciclo completo de usuario (register/login/me/connect/rotate/disconnect/delete)
+  OK    | 4.1 | HTTPS real con certificado de Let's Encrypt en jumpernet.duckdns.org
+  OK    | 5.1 | proxy SOCKS5: 8 casos de protocolo (auth, circuito, bloqueos)
+  OK    | 5.2 | SOCKS5 desde INTERNET: salida HTTPS real por el circuito
+  OK    | 5.3 | SOCKS5 desde INTERNET: destino PRIVADO (metadata Oracle) denegado
+  OK    | 5.4 | SOCKS5 desde INTERNET: puerto PROHIBIDO (8080) denegado
+  OK    | 5.5 | SOCKS5: la salida del circuito es la IP publica REAL del servidor
+  OK    | 8.1 | cifrado en capas JENC: e2e probado con registro y clave real (ChaCha20)
+--------------------------------------------------------------
+  RESULTADO: ✅ TODAS LAS PRUEBAS (11/11) SUPERADAS

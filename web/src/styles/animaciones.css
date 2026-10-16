@@ -46,6 +46,11 @@
   88% { transform: translateX(-1px); }
 }
 @keyframes degradado-corre { to { background-position: 200% 50%; } }
+@keyframes deriva-malla { to { background-position: 48px 48px; } }
+@keyframes escanea {
+  0% { transform: translateY(-120%); }
+  100% { transform: translateY(320%); }
+}
 @keyframes sube-brillo {
   from { opacity: .35; transform: translateY(0); }
   to { opacity: .9; transform: translateY(-3px); }

@@ -1,7 +1,9 @@
 #!/bin/bash
 # Pruebas integrales de JumperNAT (Fase 7): ejecuta de forma encadenada las
 # pruebas de todas las fases y saca un resumen con exit 0 solo si TODO pasa.
-# Uso:  bash ~/jumpernat/tests/run_all.sh
+# Uso:  bash tests/run_all.sh        (desde ~/jumpernat en el VPS; y
+#       bash tests/ip_publica_real.sh desde tu propia maquina: cambia la IP
+#       de verdad al salir por el circuito)
 set -u
 cd ~/jumpernat || exit 1
 
@@ -59,6 +61,11 @@ raise SystemExit(1 if malas else 0)" >/dev/null 2>&1; then
 # ---------------------------------------------------------------- infra
 echo ">>> asegurando el stack levantado..."
 docker compose up -d --build 2>&1 | tail -2
+# Los limites de registro/login (3 registros y 5 logins cada 5 min por IP) viven
+# EN MEMORIA de la API: si acabas de correr la suite o pruebas sueltas, los
+# contenedores efimeros de docker heredan IP y fase3 no puede registrar. Con la
+# API reiniciada, la suite parte de ventanas limpias y es repetible.
+docker compose restart api >/dev/null 2>&1
 esperar_api || { echo "la API no responde"; exit 1; }
 esperar_nodos || { echo "aviso: los nodos tardan en aceptar TCP (se continua igualmente)"; }
 
@@ -136,6 +143,22 @@ paso 5.3 "SOCKS5 desde INTERNET: destino PRIVADO (metadata Oracle) denegado" \
 
 paso 5.4 "SOCKS5 desde INTERNET: puerto PROHIBIDO (8080) denegado" \
   deniega_puerto8080
+
+coincide_ip_salida() {
+  # La peticion que sale por el circuito tiene que llegar a internet con la
+  # MISMA IP publica que el propio servidor usa para su trafico directo: una
+  # sola maquina, una sola IP. Si no coincide, algo esta reescribiendo el
+  # origen (o el exit no es quien deveria ser).
+  local directa por_proxy
+  directa=$(curl -fsS --max-time 15 https://api.ipify.org) || return 1
+  por_proxy=$(curl -fsS --max-time 25 --socks5-hostname "${SOCKS_PROXY}" https://api.ipify.org) || return 1
+  echo "  IP del servidor directa : $directa"
+  echo "  IP vista por el destino : $por_proxy"
+  [ "$por_proxy" = "$directa" ]
+}
+
+paso 5.5 "SOCKS5: la salida del circuito es la IP publica REAL del servidor" \
+  coincide_ip_salida
 
 paso 8.1 "cifrado en capas JENC: e2e probado con registro y clave real (ChaCha20)" \
   docker compose run --rm -e SOCKS_USER -e SOCKS_PASS -e SOCKS_USER_NC -e SOCKS_PASS_NC -e CLAVE_SALTOS \

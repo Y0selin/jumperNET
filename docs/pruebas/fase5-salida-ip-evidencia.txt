@@ -1,0 +1,12 @@
+## Cambio de IP publica real, medido desde un cliente EXTERNO (no el VPS)
+## Date: 2026-10-16 17:53 CEST | host: attacker | salida: tests/ip_publica_real.sh
+
+== cambio de IP real desde attacker ==
+  tu IP directa                 : 83.56.26.27
+  IP vista por el destino       : 129.213.137.20
+  OK    · la IP publica CAMBIA al usar el circuito
+  ip_salida que anuncia la API  : 129.213.137.20
+  OK    · el panel enseña la IP real del exit (coincide con la que ve internet)
+  RESULTADO: el circuito cambia tu IP publica de verdad (83.56.26.27 -> 129.213.137.20)
+
+exit=0
