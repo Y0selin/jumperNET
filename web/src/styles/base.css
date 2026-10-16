@@ -284,6 +284,24 @@ select.campo option { background: #10160f; color: var(--texto); }
 }
 .campo-caja .ojo:hover { color: var(--acento-1); background: rgb(255 255 255 / .05); }
 
+/* acceso: medidor de fuerza, aviso de BloqMays y pistas inline embem debmái */
+.fuerza {
+  display: flex; align-items: center; gap: 5px; margin: -2px 0 10px;
+}
+.fuerza i {
+  width: 34px; height: 4px; border-radius: 999px; background: rgb(255 255 255 / .08);
+  transition: background .2s ease;
+}
+.fuerza i[data-estado="ok"] { background: rgb(from var(--acento-1) r g b / .8); }
+.fuerza i[data-estado="mal"] { background: rgb(226 82 74 / .75); }
+.fuerza span { margin-left: auto; }
+.aviso-caps {
+  margin: -4px 0 10px; font-size: 11px; color: var(--acento-3);
+  display: flex; gap: 6px; align-items: center;
+}
+.aviso-caps::before { content: "⇪"; font-size: 12px; }
+.pista { font-size: 12px; color: var(--acento-3); }
+
 /* ---------- badges / chips ---------- */
 .chip {
   padding: 3px 11px; border-radius: 999px; font-size: 11px; font-weight: 600;
@@ -596,11 +614,13 @@ select.campo option { background: #10160f; color: var(--texto); }
 .tarjeta.brillo:hover::after { animation: brillo-pasa calc(1.15 * var(--veld)) ease; }
 
 /* marco giratorio (auth) */
-.marco-grad { position: relative; border-radius: calc(var(--radio) + 2px); padding: 1px; overflow: hidden; }
-.marco-grad .girador {
-  position: absolute; left: -50%; top: -50%; width: 200%; aspect-ratio: 1;
-  background: conic-gradient(from 0deg, transparent 0 12%, rgb(from var(--acento-1) r g b / .85) 22%, transparent 32%, transparent 52%, rgb(from var(--acento-2) r g b / .7) 62%, transparent 72%);
-  animation: gira-borde calc(9 * var(--veld)) linear infinite;
+/* borde del acceso: un degradado ESTÁTICO fino (antes giraba en bucle:
+   bonito 5 s, un anuncio 5 min) */
+.marco-grad {
+  position: relative; border-radius: calc(var(--radio) + 2px); padding: 1px;
+  background: linear-gradient(165deg,
+    rgb(from var(--acento-1) r g b / .5), rgb(from var(--borde) r g b / .9) 42%,
+    rgb(from var(--acento-2) r g b / .38));
 }
 .marco-grad > .panel-auth { position: relative; z-index: 1; border-radius: var(--radio); }
 
