@@ -86,14 +86,7 @@
   0% { transform: translateX(-120%); }
   60%, 100% { transform: translateX(240%); }
 }
-.efecto-brillo { position: relative; overflow: hidden; }
-.efecto-brillo::after {
-  content: ""; position: absolute; top: 0; bottom: 0; width: 38%;
-  background: linear-gradient(100deg, transparent, rgb(255 255 255 / .18), transparent);
-  transform: translateX(-120%);
-  animation: brillo-pasa 3.6s ease-in-out infinite var(--vel-anim);
-  pointer-events: none;
-}
+/* .efecto-brillo y su ::after viven ahora en base.css */
 
 /* accesibilidad: menos movimiento */
 @media (prefers-reduced-motion: reduce) {
