@@ -3,5 +3,6 @@ __pycache__/
 .env
 data/
 *.png
+!web/extension/*.png
 web/node_modules/
 web/dist/
