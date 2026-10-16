@@ -268,6 +268,58 @@ dec_circuito_con_peer() {
 paso 9.2 "nodos personales: entra al pool + salto e2e con peer_prueba" \
   dec_circuito_con_peer
 
+# 9.3: un hop guardado muere (el equipo personal de un amigo se apaga, un
+# nodo se reconstruye) -> socks_auth REPARA el circuito automaticamente y el
+# proxy sigue funcionando sin que el usuario toque nada. Antes de este arreglo
+# el tunel moria en silencio dentro del hop y Chrome acababa mostrando tu IP.
+repara_circuito_muerto() {
+  local USER_R="repara@test.local" PASS_R="reparaclave9" T code circ0
+  T=$(curl -s -X POST 127.0.0.1:8000/login -H 'Content-Type: application/json' \
+    -d "{\"email\":\"$USER_R\",\"password\":\"$PASS_R\"}" | python3 -c 'import json,sys;print(json.load(sys.stdin).get("token",""))' || true)
+  if [ -z "$T" ]; then
+    curl -s -o /dev/null -X POST 127.0.0.1:8000/register -H 'Content-Type: application/json' \
+      -d "{\"email\":\"$USER_R\",\"password\":\"$PASS_R\"}" || true
+    T=$(curl -s -X POST 127.0.0.1:8000/login -H 'Content-Type: application/json' \
+      -d "{\"email\":\"$USER_R\",\"password\":\"$PASS_R\"}" | python3 -c 'import json,sys;print(json.load(sys.stdin)["token"])')
+  fi
+  [ -n "$T" ] || { echo "  no pude crear el usuario de reparacion"; return 1; }
+  code=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $T" 127.0.0.1:8000/connect)
+  [ "$code" = "200" ] || { echo "  /connect devolvio $code"; return 1; }
+  # escribo DIRECTO en la BD un circuito cadaver (hop inexistente)
+  docker exec jumpernat-api-1 python3 -c "
+import os, sqlite3, json
+c = sqlite3.connect(os.environ.get('DB_PATH', '/data/jumpernat.db'))
+c.execute(\"UPDATE usuarios SET circuito=? WHERE email=?\", (json.dumps(['peer_muerto','nodo2','nodo3']), '$USER_R'))
+c.commit()
+print('circuito venenoso puesto')"
+  # IP directa del servidor (para comparar)
+  directa=$(curl -fsS --max-time 15 https://api.ipify.org) || return 1
+  # pasamos POR el proxy (SOCKS5 1080): socks_auth debe reparar y funcionar
+  por_socks=$(curl -fsS --max-time 30 --socks5-hostname \
+    "$(python3 -c "print('$USER_R'.replace('@','%40'))"):$PASS_R@127.0.0.1:1080" https://api.ipify.org) || { echo "  el proxy responde con circuito muerto (deberia autor repararse)"; return 1; }
+  [ "$por_socks" = "$directa" ] || { echo "  IP por SOCKS ($por_socks) != directa ($directa)"; return 1; }
+  echo "  SOCKS5 ok con circuito que referenciaba un hop muerto"
+  # y por la entrada HTTP (la que usa la extension del navegador)
+  por_http=$(curl -fsS --max-time 30 \
+    -x "$(python3 -c "print('$USER_R'.replace('@','%40'))"):$PASS_R@127.0.0.1:1081" https://api.ipify.org) || { echo "  CONNECT 1081 fallo con hop muerto (deberia repararse)"; return 1; }
+  [ "$por_http" = "$directa" ] || { echo "  IP por 1081 ($por_http) != directa ($directa)"; return 1; }
+  echo "  entrada HTTP ok (la extension del navegador no muere con un hop caido)"
+  # comprobacion dura: la BD ya NO contiene el hop muerto para este usuario
+  circ0=$(docker exec jumpernat-api-1 python3 -c "
+import os, sqlite3
+c = sqlite3.connect(os.environ.get('DB_PATH', '/data/jumpernat.db'))
+f = c.execute(\"SELECT circuito FROM usuarios WHERE email=?\", ('$USER_R',)).fetchone()
+print(f[0] if f else '')")
+  echo "$circ0" | grep -q 'peer_muerto' && { echo "  la BD sigue con el hop muerto: sin reparacion"; return 1; }
+  echo "  circuito reparado en BD: $circ0"
+  # limpieza del usuario de prueba
+  curl -s -o /dev/null -X DELETE -H "Authorization: Bearer $T" 127.0.0.1:8000/me
+  return 0
+}
+
+paso 9.3 "auto-reparacion: circuito guardado con hop muerto sigue funcionando" \
+  repara_circuito_muerto
+
 # ---------------------------------------------------------------- resumen
 echo ""
 echo "=============================================================="

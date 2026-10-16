@@ -40,7 +40,10 @@ async function fijado(contenido) {
     await navegador.proxy.settings.set({ value: contenido });
   } else if (navegador.proxy?.settings) {
     // Chrome MV3: chrome.proxy.settings con reglas fixed_servers
-    if (contenido.proxyType === "system" || contenido.proxyType === "none") {
+    // APAGADO = direct SIEMPRE: el apagado caia en la rama de fixed_servers
+    // (quedaba un proxy 1081 sin credenciales => ERR_INVALID_AUTH_CREDENTIALS
+    //  en TODO el trafico y Chrome reintentaba directo: se veia tu IP real).
+    if (["system", "none", "direct"].includes(contenido.proxyType)) {
       await navegador.proxy.settings.set({ value: { mode: "direct" } });
     } else {
       await navegador.proxy.settings.set({

@@ -305,7 +305,10 @@ async def atender(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
             return
         saltos = resp["circuito"]
         estado2, redes = await api("GET", "/nodos", None, {"X-Interno": INTERNAL_TOKEN})
-        mapa = {r["nombre"]: r["direccion"] for r in (redes or [])}
+        # solo nodos VIVOS (misma regla que la entrada SOCKS5): un mapa con
+        # nodos caidos hace morir el tunel en un hop intermedio, sin error ni
+        # en laentrada ni en el navegador (Chrome acabaria mostrando tu IP)
+        mapa = {r["nombre"]: r["direccion"] for r in (redes or []) if r.get("estado") == "vivo"}
         if not all(s in mapa for s in saltos):
             writer.write(b"HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n")
             await writer.drain()

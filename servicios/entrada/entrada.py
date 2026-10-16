@@ -259,7 +259,10 @@ async def atender(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         saltos = resp["circuito"]
         # 2. pedir la tabla de saltos para resolver nombres a direcciones
         estado2, redes = await api("GET", "/nodos", None, {"X-Interno": INTERNAL_TOKEN})
-        mapa = {r["nombre"]: r["direccion"] for r in (redes or [])}
+        # solo nodos VIVOS: /nodos puede listar hosts caidos (latido vencido) y
+        # el mapa con datos muertos hace que el circuito muera en silencio dentro
+        # de un hop intermedio (fallo de DNS o TCP) sin error para el cliente
+        mapa = {r["nombre"]: r["direccion"] for r in (redes or []) if r.get("estado") == "vivo"}
         primera = mapa.get(saltos[0])
         if not primera:
             print(f"[entrada] primer salto {saltos[0]!r} no esta en /nodos", flush=True)

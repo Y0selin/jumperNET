@@ -285,7 +285,7 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
             <span className="rotulo">tu IP (origen)</span>
             <div className="ip">{yo?.ip_real || "—"}</div>
             <div className="lugar">
-              {geoTu?.ok ? [geoTu.ciudad, geoTu.pais].filter(Boolean).join(", ") : (geoTu ? "no se pudo localizar" : "localizando…")}
+              {geoTu?.ok ? [geoTu.ciudad, geoTu.pais].filter(Boolean).join(", ") : (geoTu ? "no se pudo localizar (⟳ reintenta)" : "localizando…")}
             </div>
           </div>
           <div className="flecha-cambia">⟶</div>
@@ -295,7 +295,7 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
             <div className="lugar">
               {!activo ? "activa la red para verla"
                 : geoSal?.ok ? [geoSal.ciudad, geoSal.pais].filter(Boolean).join(", ")
-                : geoSal ? "no se pudo localizar" : "localizando…"}
+                : geoSal ? "no se pudo localizar (⟳ reintenta)" : "localizando…"}
             </div>
           </div>
         </div>

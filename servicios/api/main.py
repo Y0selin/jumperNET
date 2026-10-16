@@ -533,6 +533,12 @@ def delete_me(token: str | None = Header(default=None, alias="Authorization")):
 
 _ip_geo: dict[str, tuple[float, dict]] = {}
 GEO_TTL = 6 * 3600
+# si los proveedores externos fallan (limites de uso, picos), reusamos el dato
+# viejo hasta 45 dias y no volvemos a machacar la IP detro de 15 min: el mapa
+# no se rompe con un mal rato del proveedor (era la causa del "error de API")
+GEO_STALE_TTL = 45 * 86400
+GEO_FALLO_TTL = 15 * 60
+_geo_fallo: dict[str, float] = {}
 
 
 def _leer_exacto(s: socket.socket, n: int) -> bytes:
@@ -657,7 +663,7 @@ def comprobar(cp: Comprobacion, token: str | None = Header(default=None, alias="
 
 
 def _geo_proveedor(ip: str) -> dict | None:
-    """Geolocaliza una IP con dos proveedores publicos (sin clave)."""
+    """Geolocaliza una IP con tres proveedores publicos (sin clave)."""
     try:
         req = urllib.request.Request(f"https://ipwho.is/{ip}", headers={"User-Agent": "jumpernat/1.0"})
         with urllib.request.urlopen(req, timeout=5) as r:
@@ -683,6 +689,20 @@ def _geo_proveedor(ip: str) -> dict | None:
             }
     except Exception:
         pass
+    # tercer proveedor (ipapi.co): si ipwho.is e ip-api.com fallan a la vez
+    # (picos de uso, limites), el mapa sigue teniendo datos
+    try:
+        req = urllib.request.Request(f"https://ipapi.co/{ip}/json/", headers={"User-Agent": "jumpernat/1.0"})
+        with urllib.request.urlopen(req, timeout=5) as r:
+            d = json.loads(r.read(4096))
+        if not d.get("error") and d.get("latitude") is not None:
+            return {
+                "lat": d["latitude"], "lon": d["longitude"],
+                "ciudad": d.get("city"), "region": d.get("region"), "pais": d.get("country_name"),
+                "org": d.get("org"), "fuente": "ipapi.co",
+            }
+    except Exception:
+        pass
     return None
 
 
@@ -696,12 +716,21 @@ def geo(ip: str | None = None, token: str | None = Header(default=None, alias="A
     if not re.fullmatch(r"[0-9a-fA-F:.]{7,45}", objetivo or ""):
         return {"ip": objetivo, "ok": False, "error": "sin IP que localizar"}
     guardado = _ip_geo.get(objetivo)
-    if guardado and time.time() - guardado[0] < GEO_TTL:
+    ahora = time.time()
+    if guardado and ahora - guardado[0] < GEO_TTL:
         return {"ip": objetivo, "ok": True, "cache": True, **guardado[1]}
+    ultimo_fallo = _geo_fallo.get(objetivo)
+    if ultimo_fallo and ahora - ultimo_fallo < GEO_FALLO_TTL:
+        if guardado and ahora - guardado[0] < GEO_STALE_TTL:
+            return {"ip": objetivo, "ok": True, "cache": "obsoleta", **guardado[1]}
+        return {"ip": objetivo, "ok": False, "error": "la geolocalizacion no responde ahora; reintenta en unos minutos"}
     datos = _geo_proveedor(objetivo)
     if not datos:
+        _geo_fallo[objetivo] = ahora
+        if guardado and ahora - guardado[0] < GEO_STALE_TTL:
+            return {"ip": objetivo, "ok": True, "cache": "obsoleta", **guardado[1]}
         return {"ip": objetivo, "ok": False, "error": "ningun proveedor de geolocalizacion respondio"}
-    _ip_geo[objetivo] = (time.time(), datos)
+    _ip_geo[objetivo] = (ahora, datos)
     return {"ip": objetivo, "ok": True, "cache": False, **datos}
 
 
@@ -735,7 +764,27 @@ def socks_auth(cr: CredencialesSocks, x_interno: str | None = Header(default=Non
         raise HTTPException(status_code=401, detail="credenciales no validas")
     if not f["activo"] or not f["circuito"]:
         raise HTTPException(status_code=403, detail="usuario sin circuito activo; conectate en la web")
-    return {"id": f["id"], "circuito": json.loads(f["circuito"]), "ip_salida": f["ip_salida"]}
+    saltos = json.loads(f["circuito"])
+
+    # Auto-reparacion de circuitos con hops muertos (Fase 9b). Un nodo de
+    # infraestructura que se reconstruye, o el equipo personal de un amigo que
+    # se apaga, no puede dejar a un usuario con un circuito cadaver: si algun
+    # salto guardado ya no esta vivo, se elige otro circuito con nodos VIVOS y
+    # se guarda en su sitio. Sin esto, el proxy muere en silencio (el navegador
+    # ni siquiera muestra error, segun Chrome puede caer a su IP directa).
+    refrescar_estados()
+    vivos = {r["nombre"] for r in c.execute("SELECT nombre FROM nodos WHERE estado='vivo'")}
+    if not all(s in vivos for s in saltos):
+        cir = elegir_circuito()
+        saltos = cir["saltos"]
+        salida = medir_ip_publica() or f["ip_salida"]
+        c.execute(
+            "UPDATE usuarios SET circuito=?, ip_salida=?, ultimo_cambio=? WHERE id=?",
+            (json.dumps(saltos), salida, time.time(), f["id"]),
+        )
+        c.commit()
+        print(f"[socks_auth] circuito reparado para {email}: {saltos}", flush=True)
+    return {"id": f["id"], "circuito": saltos, "ip_salida": f["ip_salida"]}
 
 
 # ---------------------------------------------------------------- arranque
