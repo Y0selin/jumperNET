@@ -43,6 +43,20 @@ function Interruptor({ activo, ocupado, alCambiar }) {
   );
 }
 
+/* ── marcadores del mapa ──
+   Usamos divIcon propio en vez de las imágenes de Leaflet: así no hay
+   ninguna petición a marker-icon.png / marker-shadow.png (que en GitHub
+   Pages, servido en subruta, daban 404) y encima pega con el diseño. */
+function marca(clase) {
+  return L.divIcon({
+    className: "marca-envoltorio",
+    html: `<span class="marca-mapa ${clase}"></span>`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+    popupAnchor: [0, -10],
+  });
+}
+
 /* ── parada de la ruta ── */
 function Parada({ nombre, sub, tipo, pulso }) {
   const col = tipo === "tu" ? "var(--acento-2)" : tipo === "exit" ? "var(--acento-1)" : tipo === "destino" ? "var(--acento-3)" : "var(--borde)";
@@ -107,8 +121,8 @@ export default function Red({ yo: yo0, aviso }) {
     L.polyline([[srv.lat, srv.lon], [srv.lat + 1.7, srv.lon + 2.4]], {
       color: "var(--acento-1)", opacity: tenue ? .35 : .8, weight: 2, dashArray: "6 8",
     }).bindPopup("→ destino (solo 80/443)").addTo(c);
-    L.marker([tu.lat, tu.lon]).addTo(c).bindPopup(`<b>TÚ</b><br>${tu.lugar || ""}<br>IP ${yo?.ip_real ?? "?"}`);
-    L.marker([srv.lat, srv.lon]).addTo(c).bindPopup(`<b>Nodos JumperNAT</b><br>${srv.lugar}<br>3 saltos sobre la misma máquina`);
+    L.marker([tu.lat, tu.lon], { icon: marca("tu") }).addTo(c).bindPopup(`<b>TÚ</b><br>${tu.lugar || ""}<br>IP ${yo?.ip_real ?? "?"}`);
+    L.marker([srv.lat, srv.lon], { icon: marca("srv") }).addTo(c).bindPopup(`<b>Nodos JumperNAT</b><br>${srv.lugar}<br>3 saltos sobre la misma máquina`);
     if (activo) {
       (yo?.circuito || []).forEach((n, i) => {
         L.circleMarker([srv.lat, srv.lon], { radius: 6 + i * 4, color: "#2ee88a", weight: 1.4, fill: false })

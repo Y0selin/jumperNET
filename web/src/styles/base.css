@@ -322,6 +322,21 @@ select.campo option { background: #10160f; color: var(--texto); }
   border: 1px solid rgb(from var(--acento-1) r g b / .5); color: var(--acento-1);
   background: rgb(from var(--acento-1) r g b / .08); font-size: 16px;
 }
+/* ---------- marcadores del mapa (divIcon propio, sin imágenes) ---------- */
+.marca-envoltorio { background: none !important; border: none !important; }
+.marca-mapa {
+  display: block; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--acento-2);
+  box-shadow: 0 0 0 4px rgb(from var(--acento-2) r g b / .22),
+              0 0 calc(14px * var(--glow)) rgb(from var(--acento-2) r g b / .85);
+}
+.marca-mapa.srv {
+  border-radius: 5px; background: var(--acento-1);
+  box-shadow: 0 0 0 4px rgb(from var(--acento-1) r g b / .22),
+              0 0 calc(14px * var(--glow)) rgb(from var(--acento-1) r g b / .85);
+  animation: pulso-anillo calc(2.2 * var(--veld)) ease-out infinite;
+}
+
 input[type="color"] { border-radius: 6px; cursor: pointer; border: 1px solid var(--borde); background: none; }
 input[type="range"] { accent-color: var(--acento-1); }
 .leaflet-container { background: #0b1013; font-family: inherit; }

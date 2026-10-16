@@ -6,7 +6,9 @@
 import puppeteer from "puppeteer-core";
 import { mkdirSync } from "node:fs";
 
-const URL_APP = "http://localhost:4173/";
+// URL_APP permite probar cualquier despliegue, p. ej.:
+//   URL_APP=https://y0selin.github.io/jumperNET/ npm run test:e2e
+const URL_APP = process.env.URL_APP || "http://localhost:4173/";
 const SALIDA = "e2e-out";
 mkdirSync(SALIDA, { recursive: true });
 
@@ -67,7 +69,18 @@ const navegador = await puppeteer.launch({
 const pagina = await navegador.newPage();
 const errores = [];
 pagina.on("pageerror", (e) => errores.push("pageerror: " + e.message));
-pagina.on("response", (r) => { if (r.status() >= 400) errores.push(`http ${r.status()} ${r.url().slice(0, 90)}`); });
+pagina.on("response", (r) => {
+  const u = r.url();
+  if (r.status() >= 400) errores.push(`http ${r.status()} ${u.slice(0, 90)}`);
+  // «asset fantasma»: el preview responde con el index.html del SPA (200) a
+  // cualquier ruta que falte, así que un asset inexistente se cuela sin 404.
+  // En producción (GitHub Pages, en subruta) el mismo asset SÍ da 404: mejor
+  // detectarlo aquí.
+  if (/\.(png|jpe?g|svg|gif|webp|css|js|woff2?|ttf)(\?|$)/.test(u) && r.request().resourceType() !== "document") {
+    const ct = (r.headers()["content-type"] || "");
+    if (ct.includes("text/html")) errores.push(`asset fantasma (el fallback SPA tapa un 404): ${u.slice(0, 100)}`);
+  }
+});
 pagina.on("console", (m) => { const t = m.text(); if (t.startsWith("[jn-mock]")) console.log("  [mock]", t.slice(0, 120)); if (m.type() === "error") errores.push("console: " + t); });
 await pagina.evaluateOnNewDocument(MOCK_PAGINA);
 await pagina.setViewport({ width: 1280, height: 900 });
@@ -173,6 +186,7 @@ igual(c.toUpperCase().includes("¿QUÉ PASA SI ACTIVO?"), true, "explica qué pa
 igual((await pagina.$(".interruptor.activo")) === null, true, "interruptor visualmente apagado");
 igual((await pagina.$(".tuberia")) !== null, true, "tubería de tráfico presente y detenida");
 igual((await pagina.$(".leaflet-pane")) !== null, true, "mapa Leaflet inicializado sin crash");
+igual((await pagina.$$(".marca-mapa")).length >= 2, true, "marcadores propios del mapa (sin imágenes de Leaflet que den 404)");
 await captura("03-panel-apagado");
 
 console.log("\n== 4 · ACTIVAR RED con el interruptor ==");

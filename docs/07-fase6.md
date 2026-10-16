@@ -116,7 +116,8 @@ Pages configurado con fuente **GitHub Actions** → `.github/workflows/pages.yml
 ## Verificación
 - Build local: `npm run build` ✓ (47 módulos; ~109 KB gzip de JS, ~11,5 KB gzip de CSS).
 - **E2E real** con Chrome headless: `npm run test:e2e` (necesita `vite preview`
-  en el puerto 4173). Inyecta un mock de la API dentro de la página y recorre
+  en el puerto 4173; con `URL_APP=https://y0selin.github.io/jumperNET/` se puede
+  apuntar al despliegue y comprobar el sitio publicado). Inyecta un mock de la API dentro de la página y recorre
   10 bloques: landing y glifos, animaciones vivas, validaciones y registro,
   panel con la red apagada, encender con el interruptor, girar, apagar, Info
   (principiante y avanzado), Cuenta con borrado en dos pasos, responsive a
@@ -125,6 +126,13 @@ Pages configurado con fuente **GitHub Actions** → `.github/workflows/pages.yml
   consola y cero peticiones fallidas**.
 - La forma real de `/nodos` (`nombre`, `direccion`, `estado`) se contrastó
   contra la API en producción.
+- El test detecta **assets fantasma**: `vite preview` responde el `index.html`
+  del SPA a cualquier ruta que falte, así que un asset inexistente se cuela con
+  200 y sin error en local. El E2E marca como error cualquier respuesta HTML con
+  extensión de asset — así se cazó el 404 de los marcadores de Leaflet, que solo
+  se veía en GitHub Pages (subruta). Solución: marcadores `divIcon` propios, sin
+  imágenes de Leaflet. El E2E añade la comprobación `.marca-mapa` y, corriendo
+  contra el sitio publicado, termina con **cero 404**.
 - Production: `https://y0selin.github.io/jumperNET/` sirve los assets del
   build React (HTTP 200) ✓.
 
