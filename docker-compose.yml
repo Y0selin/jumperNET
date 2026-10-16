@@ -48,6 +48,30 @@ services:
     networks: [red_jumper]
     <<: *limites
 
+  # Entrada HTTP (publica 1081): proxy HTTP CONNECT con autenticacion Basic
+  # para la extension del navegador (Chrome no admite SOCKS5 con credenciales;
+  # la extension SI puede responder al 407 con webRequest.onAuthRequired).
+  # Mismas reglas: credenciales de la cuenta, 80/443, anti-IP-privadas, JENC.
+  entrada-http:
+    build:
+      context: ./servicios
+      dockerfile: entrada-http/Dockerfile
+    image: jumpernat/entrada-http
+    restart: unless-stopped
+    ports:
+      - "1081:1081"
+    environment:
+      PUERTO_ENTRADA_HTTP: "1081"
+      API_URL: http://api:8000
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      PUERTOS_PERMITIDOS: "80,443"
+      EXCEPCIONES_PRIVADAS: web-destino
+      CLAVE_SALTOS: ${CLAVE_SALTOS:-}
+    depends_on:
+      - api
+    networks: [red_jumper]
+    <<: *limites
+
   # HTTPS + Let's Encrypt automatico para ${DOMINIO} (Fase 4). Si la Security
   # List de Oracle tiene los puertos 80/443 abiertos, la emision es instantanea.
   caddy:

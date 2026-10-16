@@ -160,6 +160,32 @@ coincide_ip_salida() {
 paso 5.5 "SOCKS5: la salida del circuito es la IP publica REAL del servidor" \
   coincide_ip_salida
 
+entra_http() {
+  # como Chrome no deja credenciales SOCKS, la extension del navegador usa la
+  # entrada HTTP (1081): mismo circuito, mismo usuario, Basic. Aqui damos los
+  # tres casos desde el propio host (por el publish de docker da -- lo mismo
+  # que internet si tu Security List abre 1081).
+  local ip_directa ip_http
+  ip_directa=$(curl -fsS --max-time 15 https://api.ipify.org) || return 1
+  # 1) sin credenciales -> 407 con Proxy-Authenticate Basic (se mide con una
+  #    peticion http://: en el CONNECT de https curl ni reporta el codigo)
+  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+    -x "127.0.0.1:1081" http://example.com/ || true)
+  [ "$code" = "407" ] || { echo "  sin auth se esperaba 407, llego $code"; return 1; }
+  # 2) con credenciales -> la peticion recorre TODO el circuito y llega con
+  #    la IP del exit (igual que por SOCKS5)
+  ip_http=$(curl -fsS --max-time 25 \
+    -x "${SOCKS_USER/@/%40}:${SOCKS_PASS}@127.0.0.1:1081" https://api.ipify.org) || return 1
+  echo "  IP via entrada HTTP : $ip_http  (directa: $ip_directa)"
+  [ "$ip_http" = "$ip_directa" ] || return 1
+  # 3) destino PRIVADO (metadata Oracle) denegado tambien por la entrada HTTP
+  ! curl -fsS -o /dev/null --connect-timeout 12 \
+    -x "${SOCKS_USER/@/%40}:${SOCKS_PASS}@127.0.0.1:1081" http://169.254.169.254/
+}
+
+paso 5.6 "entrada HTTP (1081): 407 sin clave, circuito con clave y privado denegado" \
+  entra_http
+
 paso 8.1 "cifrado en capas JENC: e2e probado con registro y clave real (ChaCha20)" \
   docker compose run --rm -e SOCKS_USER -e SOCKS_PASS -e SOCKS_USER_NC -e SOCKS_PASS_NC -e CLAVE_SALTOS \
   cliente-test fase8_cifrado.py

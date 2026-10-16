@@ -1,6 +1,6 @@
 >>> asegurando el stack levantado...
- Container jumpernat-nodo5-1 Started 
- Container jumpernat-nodo2-1 Started 
+ Container jumpernat-nodo6-1 Started 
+ Container jumpernat-nodo1-1 Started 
 
 ==============================================================
  PRUEBA 1.1: saltos manuales: 3 reenvíos encadenados hasta web-destino
@@ -55,6 +55,11 @@
   --> OK (log: /tmp/runall_5.5.log)
 
 ==============================================================
+ PRUEBA 5.6: entrada HTTP (1081): 407 sin clave, circuito con clave y privado denegado
+==============================================================
+  --> OK (log: /tmp/runall_5.6.log)
+
+==============================================================
  PRUEBA 8.1: cifrado en capas JENC: e2e probado con registro y clave real (ChaCha20)
 ==============================================================
   --> OK (log: /tmp/runall_8.1.log)
@@ -72,6 +77,7 @@
   OK    | 5.3 | SOCKS5 desde INTERNET: destino PRIVADO (metadata Oracle) denegado
   OK    | 5.4 | SOCKS5 desde INTERNET: puerto PROHIBIDO (8080) denegado
   OK    | 5.5 | SOCKS5: la salida del circuito es la IP publica REAL del servidor
+  OK    | 5.6 | entrada HTTP (1081): 407 sin clave, circuito con clave y privado denegado
   OK    | 8.1 | cifrado en capas JENC: e2e probado con registro y clave real (ChaCha20)
 --------------------------------------------------------------
-  RESULTADO: ✅ TODAS LAS PRUEBAS (11/11) SUPERADAS
+  RESULTADO: ✅ TODAS LAS PRUEBAS (12/12) SUPERADAS

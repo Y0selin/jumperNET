@@ -79,6 +79,48 @@ function marca(clase) {
   });
 }
 
+/* aviso de instalación de la extensión (se propone al encender la red) */
+function AvisoExtension({ alCerrar, email }) {
+  return (
+    <div className="red-card tarjeta brillo" role="dialog" aria-label="Instalar la extensión del navegador">
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <h2 className="seccion" style={{ marginBottom: 0 }}>Extensión del navegador</h2>
+        <button className="btn" style={{ marginLeft: "auto" }} onClick={alCerrar} aria-label="Cerrar aviso">✕</button>
+      </div>
+      <p className="nota" style={{ fontSize: 12.5 }}>
+        ¿Quieres que <b>todo tu navegador</b> salga por aquí (como FoxyProxy, pero automático)?
+        La extensión de JumperNAT configura el proxy ella sola y rellena las credenciales
+        <b>({email})</b> sin preguntar. Los navegadores no permiten instalar extensiones “desde la web”:
+        instala la nuestra en modo desarrollador (1 minuto):
+      </p>
+      <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
+        <div className="tarjeta" style={{ margin: 0 }}>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>Firefox</div>
+          <ol className="nota" style={{ fontSize: 12, paddingLeft: 18, margin: 0, display: "grid", gap: 4 }}>
+            <li>Descarga el repo/zip de <span className="mono">web/extension/</span> y descomprímelo.</li>
+            <li>Abre <span className="mono">about:debugging#/runtime/this-firefox</span>.</li>
+            <li>“Cargar complemento temporal” → escoge <span className="mono">manifest.json</span>.</li>
+            <li>En el popup: tu email + contraseña → <b>Activar</b>.</li>
+          </ol>
+        </div>
+        <div className="tarjeta" style={{ margin: 0 }}>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>Chrome / Edge / Brave</div>
+          <ol className="nota" style={{ fontSize: 12, paddingLeft: 18, margin: 0, display: "grid", gap: 4 }}>
+            <li>En la carpeta descargada: <span className="mono">bash web/extension/empaqueta.sh</span> (crea <span className="mono">dist/chrome/</span>).</li>
+            <li>Abre <span className="mono">chrome://extensions</span> y activa <b>Modo de desarrollador</b>.</li>
+            <li>“Cargar sin comprimir” → carpeta <span className="mono">dist/chrome</span>.</li>
+            <li>En el popup: tu email + contraseña → <b>Activar</b>.</li>
+          </ol>
+        </div>
+      </div>
+      <p className="nota" style={{ marginTop: 8, fontSize: 11.5 }}>
+        La extension funciona igual en Windows y Linux. Alternativa sin extension:
+        <span className="mono"> cliente/proxy_local.sh</span> del repo (relé local para cualquier app del sistema).
+      </p>
+    </div>
+  );
+}
+
 export default function Red({ yo: yo0, aviso, alRecargar }) {
   const [yo, setYo] = useState(yo0);
   const [latencia, setLat] = useState(null);
@@ -89,6 +131,7 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
   const [prueba, setPrueba] = useState(null);
   const [probando, setProbando] = useState(false);
   const [ipSalida, setIpSalida] = useState(null);
+  const [avisaExt, setAvisaExt] = useState(false);
   const divMapa = useRef(null);
   const mapa = useRef(null);
   const capa = useRef(null);
@@ -159,7 +202,7 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
 
   async function accion(fn, msg) {
     setOcu(true);
-    try { await fn(); aviso(msg, "ok"); await refrescar(); }
+    try { await fn(); aviso(msg, "ok"); if (fn === conectar) setAvisaExt(true); await refrescar(); }
     catch (e) { aviso(e.message, "error"); }
     finally { setOcu(false); }
   }
@@ -213,6 +256,11 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
         activo={activo} ocupado={ocupado}
         alCambiar={() => accion(activo ? desconectar_ : conectar, activo ? "red desactivada" : "red activada ✓ — tu tráfico ya viaja por 3 saltos")}
       />
+
+      {/* ── aviso de instalar la extensión (solo tras encender) ── */}
+      {avisaExt && activo && (
+        <AvisoExtension alCerrar={() => setAvisaExt(false)} email={yo?.email || ""} />
+      )}
 
       {/* ── verificación real del circuito ── */}
       <Revela className="tarjeta">

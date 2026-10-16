@@ -1,0 +1,29 @@
+{
+  "manifest_version": 2,
+  "name": "JumperNAT — tu red",
+  "version": "1.0.0",
+  "description": "Configura el navegador para que TODO tu trafico salga por tu circuito JumperNAT (3 saltos + IP del exit). Solo para tu cuenta: nada se configura a mano, como FoxyProxy pero automatico.",
+  "permissions": [
+    "proxy",
+    "storage",
+    "webRequest",
+    "webRequestBlocking",
+    "<all_urls>"
+  ],
+  "background": { "scripts": ["background.js"] },
+  "browser_action": {
+    "default_title": "JumperNAT",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "icono.png",
+      "128": "icono128.png"
+    }
+  },
+  "icons": {
+    "48": "icono.png",
+    "128": "icono128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": { "id": "jumpernat@duckdns.org", "strict_min_version": "115.0" }
+  }
+}

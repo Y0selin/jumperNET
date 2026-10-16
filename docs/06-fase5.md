@@ -117,3 +117,29 @@ curl --socks5-hostname "usuario:clave@jumpernet.duckdns.org:1080" https://exampl
 - `tests/fase5_socks.py` — test de socket puro byte a byte
 - `servicios/nodo/nodo.py` — validación de destino en el nodo de salida (defensa en profundidad)
 - `servicios/api/main.py` — endpoint interno `/interno/socks_auth`
+
+## Entrada HTTP (1081) para la extensión del navegador — después de fase 7
+
+La extensión (`web/extension/`) no apunta al SOCKS5 del 1080 porque Chrome no
+admite credenciales SOCKS5 (ni manual ni por extensión) y Firefox no deja a una
+extensión responder el handshake SOCKS. El camino estándar que la extensión SÍ
+puede responder con sus credenciales es el proxy HTTP: `407 + Proxy-Authenticate`
+→ `webRequest.onAuthRequired` (los dos navegadores lo soportan).
+
+Servicio `entrada-http` (compose, público en 1081, código `servicios/entrada-http/`):
+
+* Mismo contrato que la entrada SOCKS5: credenciales de la cuenta vía
+  `POST /interno/socks_auth` (argon2) + circuito activo.
+* Mismos destinos: 80/443, anti-IP-privadas/docker/metadata de Oracle,
+  excepción solo para `web-destino` en pruebas.
+* CONNECT `host:443` y peticiones `http://` con URI absoluta (proxy clásico).
+* Reenvía nombres de dominio tal cual: resuelve el nodo de salida.
+* JENC (fase 8) cifra cliente↔circuito igual que en la entrada SOCKS5.
+
+Pruebas (paso 5.6 de `tests/run_all.sh`, evidencia `docs/pruebas/fase7-evidencia.txt`):
+407 sin credenciales; con credenciales la petición recorre el circuito y
+internet la ve con la IP del exit; metadata denegada.
+
+> Para usarlo desde casa, abre el 1081 en la Security List de Oracle (como
+> 80/443/1080). Sin abrirlo, la suite lo prueba por 127.0.0.1 (válido: el
+> publish de docker pasa por la misma pila de filtros del servicio).

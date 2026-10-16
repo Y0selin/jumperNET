@@ -122,6 +122,24 @@ bash proxy_local.sh off                # apaga el relé y deja los navegadores c
 - La clave vive solo en `~/.local/share/jumpernet/credenciales` (chmod 600) y
   en el handshake con el servidor; el relé **solo escucha en 127.0.0.1**.
 
+## Navegador por el circuito, sin tocar ajustes (extensión)
+
+Como Chrome no admite credenciales en SOCKS5, la red publica además una
+**entrada HTTP en el puerto 1081** (mismas reglas que el SOCKS5 del 1080);
+la **extensión del navegador** (`web/extension/`)
+la apunta ahí, configura el proxy del navegador ella misma y responde a los
+avisos de autenticación con tu cuenta: nada se escribe a mano, igual en
+Windows y Linux, para Chrome/Edge/Brave y Firefox. Detalle de instalación en
+[`web/extension/README.md`](web/extension/README.md).
+> El 407 + `Proxy-Authenticate` del proxy HTTP es lo que la extensión puede
+> responder automáticamente (`webRequest.onAuthRequired`); usar el SOCKS5 del
+> 1080 con un navegador solo es viable vía el relé local (`cliente/`).
+
+> **Nota de infraestructura:** para que la extensión funcione desde tu casa,
+> el puerto **1081** tiene que estar abierto en la Security List de Oracle
+> (igual que se hizo con 80/443/1080). Mientras tanto, la suite lo prueba
+> desde el propio servidor vía 127.0.0.1.
+
 ## Pruebas
 
 | Suite | Comando | Qué cubre |
