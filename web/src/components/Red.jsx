@@ -169,8 +169,14 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
   /* mapa: se crea una vez y se repinta con cada dato nuevo */
   useEffect(() => {
     if (mapa.current || !divMapa.current) return;
-    const m = L.map(divMapa.current, { attributionControl: false });
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(m);
+    const m = L.map(divMapa.current, { attributionControl: true });
+    // mapa oscuro (Carto, basado en OpenStreetMap): encaja con el tema y no
+    // deslumbra al lado de las tarjetas del panel
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      maxZoom: 20,
+      subdomains: "abcd",
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>',
+    }).addTo(m);
     capa.current = L.layerGroup().addTo(m);
     mapa.current = m;
     m.setView([40, -30], 3);

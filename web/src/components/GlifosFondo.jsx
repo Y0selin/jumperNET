@@ -26,7 +26,7 @@ export default function GlifosFondo() {
       celdas = [];
       for (let y = 0; y < nfils; y++)
         for (let x = 0; x < ncols; x++)
-          if (Math.random() < 0.07)
+          if (Math.random() < 0.04)
             celdas.push({ x: x * CE + CE, y: y * CE + CE, g: "", a: 0, objetivo: 0, proximo: Math.random() * 400 });
     }
     redimensiona();
@@ -41,7 +41,7 @@ export default function GlifosFondo() {
       ctx.textAlign = "center";
       for (const c of celdas) {
         if (t > c.proximo) {
-          c.objetivo = c.objetivo > 0 ? 0 : 0.34 + Math.random() * 0.25;
+          c.objetivo = c.objetivo > 0 ? 0 : 0.2 + Math.random() * 0.16;
           if (c.objetivo > 0) c.g = GLIFOS[(Math.random() * GLIFOS.length) | 0];
           c.proximo = t + (c.objetivo > 0 ? 1200 + Math.random() * 3800 : 220 + Math.random() * 900) / Math.max(.2, vel);
         }
@@ -63,11 +63,11 @@ export default function GlifosFondo() {
   return (
     <div className="fondo-fijo" aria-hidden>
       {/* halos de color suaves */}
-      <div className="halo" style={{ left: "-10%", top: "-15%", width: 520, height: 520, background: "rgb(from var(--acento-1) r g b / .08)" }} />
-      <div className="halo" style={{ right: "-12%", top: "30%", width: 460, height: 460, background: "rgb(from var(--acento-2) r g b / .06)" }} />
-      <div className="halo" style={{ bottom: "-20%", left: "30%", width: 500, height: 500, background: "rgb(from var(--acento-3) r g b / .05)" }} />
+      <div className="halo" style={{ left: "-10%", top: "-15%", width: 520, height: 520, background: "rgb(from var(--acento-1) r g b / .05)" }} />
+      <div className="halo" style={{ right: "-12%", top: "30%", width: 460, height: 460, background: "rgb(from var(--acento-2) r g b / .04)" }} />
+      <div className="halo" style={{ bottom: "-20%", left: "30%", width: 500, height: 500, background: "rgb(from var(--acento-3) r g b / .03)" }} />
       {/* malla */}
-      <div className="grid-bg" style={{ position: "absolute", inset: 0, opacity: .55 }} />
+      <div className="grid-bg" style={{ position: "absolute", inset: 0, opacity: .45 }} />
       {/* glifos */}
       <canvas ref={ref} style={{ position: "absolute", inset: 0 }} />
       {/* vieta para que el texto siempre se lea */}

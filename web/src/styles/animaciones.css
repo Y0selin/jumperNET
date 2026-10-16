@@ -81,11 +81,11 @@
 .revela-3 { transition-delay: .22s; }
 
 /* ---------- texto y detalles vivos ---------- */
+/* antes era un degradado que corría en bucle: leía como un anuncio parpadeante.
+   Ahora es un degradado ESTÁTICO (la estética limpia de HackNexus). */
 .titulo-animado {
-  background: linear-gradient(100deg, var(--texto) 0%, var(--acento-1) 28%, var(--texto) 55%, var(--acento-2) 82%, var(--texto) 100%);
-  background-size: 200% 100%;
+  background: linear-gradient(100deg, var(--texto) 0%, var(--acento-1) 30%, var(--texto) 58%, var(--acento-2) 84%, var(--texto) 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
-  animation: degradado-corre calc(9 * var(--veld)) linear infinite;
 }
 .sacude { animation: sacude .42s cubic-bezier(.36,.07,.19,.97) both; }
 .brinca:hover { animation: sube-brillo calc(.35 * var(--veld)) ease both; }

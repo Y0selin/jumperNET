@@ -24,7 +24,7 @@
   --fuente: "Inter", system-ui;
   --fuente-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", "Cascadia Code", Consolas, monospace;
 
-  --glow: 0.8;       /* 0..2 intensidad de resplandor (text-glow, halos) */
+  --glow: 0.28;      /* sutil: la referencia (HackNexus) solo respira; no deslumbra */
   --glass: 0.7;      /* opacidad del panel glass */
   --vel-anim: 1;     /* multiplicador global de animaciones (0 = off) */
   /* --veld = «1 segundo escalado»: dentro de calc() para no romper los
@@ -66,11 +66,14 @@ pre, code, .codigo { font-family: var(--fuente-mono); }
 .grid-bg {
   background-image:
     linear-gradient(rgb(from var(--acento-1) r g b / .05) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(from var(--acento-1) r g b / .05) 1px, transparent 1px);
+    linear-gradient(90deg, rgb(from var(--acento-1) r g b / .07) 1px, transparent 1px);
   background-size: 48px 48px;
-  animation: deriva-malla calc(26 * var(--veld)) linear infinite;
+  /* malla ESTÁTICA: la referencia no la mueve; animar el fondo completo carga la vista */
 }
-.halo { position: absolute; border-radius: 50%; filter: blur(140px); }
+.halo {
+  position: absolute; border-radius: 50%; filter: blur(140px);
+  animation: none;
+}
 
 /* ---------- estructura: sidebar + topbar + contenido ---------- */
 .cascara { min-height: 100vh; }
@@ -231,8 +234,7 @@ h3.mini {
 .tarjeta:hover {
   border-color: rgb(from var(--acento-1) r g b / .45);
   box-shadow: 0 0 0 1px rgb(from var(--acento-1) r g b / .18), 0 14px 34px -16px rgb(0 0 0 / .7);
-}
-.tarjeta.destacada { border-color: rgb(from var(--acento-1) r g b / .4); }
+}.tarjeta.destacada { border-color: rgb(from var(--acento-1) r g b / .4); }
 .panel-auth { backdrop-filter: blur(16px); }
 
 /* ---------- botones ---------- */
@@ -250,7 +252,6 @@ h3.mini {
 .btn.primario {
   background: rgb(from var(--acento-1) r g b / .16); color: var(--acento-1);
   border-color: rgb(from var(--acento-1) r g b / .55);
-  box-shadow: 0 0 calc(20px * var(--glow)) rgb(from var(--acento-1) r g b / .22);
 }
 .btn.primario:hover { background: rgb(from var(--acento-1) r g b / .24); }
 .btn.peligro { background: rgb(226 82 74 / .12); color: #ff9088; border-color: rgb(226 82 74 / .45); }
@@ -381,9 +382,8 @@ select.campo option { background: #10160f; color: var(--texto); }
 }
 .interruptor.activo {
   background: rgb(from var(--acento-1) r g b / .2); border-color: rgb(from var(--acento-1) r g b / .6);
-  box-shadow: 0 0 calc(26px * var(--glow)) rgb(from var(--acento-1) r g b / .4);
 }
-.interruptor.activo .interruptor-bola { left: 41px; background: var(--acento-1); border-color: var(--acento-1); box-shadow: 0 0 calc(16px * var(--glow)) rgb(from var(--acento-1) r g b / .85); }
+.interruptor.activo .interruptor-bola { left: 41px; background: var(--acento-1); border-color: var(--acento-1); }
 .interruptor:hover:not(:disabled) { border-color: var(--acento-1); }
 .interruptor.ocupado { opacity: .55; cursor: wait; }
 
@@ -491,7 +491,7 @@ select.campo option { background: #10160f; color: var(--texto); }
 /* ---------- terminal / bloques de código ---------- */
 .terminal {
   border: 1px solid var(--borde); border-radius: var(--radio); overflow: hidden;
-  background: rgb(0 0 0 / .55); box-shadow: inset 0 0 60px rgb(0 0 0 / .4); position: relative;
+  background: rgb(0 0 0 / .55); position: relative;
 }
 .terminal-cabecera {
   display: flex; align-items: center; gap: 6px; padding: 9px 13px;
@@ -621,6 +621,19 @@ select.campo option { background: #10160f; color: var(--texto); }
 input[type="color"] { border-radius: 6px; cursor: pointer; border: 1px solid var(--borde); background: none; }
 input[type="range"] { accent-color: var(--acento-1); }
 .leaflet-container { background: #0b1013; font-family: inherit; }
+/* mapa en modo oscuro: afina bordes, atribución discreta y popups del tema */
+.leaflet-container .leaflet-control-attribution {
+  background: rgb(from var(--panel) r g b / .75); color: var(--texto-suave);
+  font-size: 9.5px; padding: 1px 6px; border-radius: 8px 0 0 0;
+}
+.leaflet-container .leaflet-control-attribution a { color: var(--acento-1); }
+.leaflet-container .leaflet-popup-content-wrapper,
+.leaflet-container .leaflet-popup-tip {
+  background: #10151a; color: var(--texto); border: 1px solid var(--borde);
+  box-shadow: 0 8px 24px rgb(0 0 0 / .5);
+}
+.leaflet-container a.leaflet-popup-close-button { color: var(--texto-suave); }
+.leaflet-container .leaflet-popup-content { margin: 10px 14px; font-size: 12px; line-height: 1.5; }
 .spin {
   display: inline-block; width: 14px; height: 14px; border: 2px solid rgb(255 255 255 / .2);
   border-top-color: var(--acento-1); border-radius: 50%; animation: giro .7s linear infinite; vertical-align: -2px;
