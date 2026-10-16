@@ -95,12 +95,20 @@ byte con `socket` puro; No necesita curl):
 | 7 | Destino `web-destino:8080` (puerto no permitido) | bloqueado | ✅ OK |
 | 8 | Destino `web-destino:443` (puerto de la lista) | aceptado | ✅ OK |
 
-## Pendiente
-- Prueba externa con `curl --socks5-hostname user:pass@jumpernet.duckdns.org:1080 https://example.com/`:
-  el puerto `1080` **sigue bloqueado en la Security List de Oracle** (las reglas
-  80/443 se arreglaron en la Default Security List, pero la de 1080 quedo en
-  la lista aislada). Verificación pendiente del cuello externo; el resto de la
-  fase está probada por red interna.
+## Verificación externa (fuera del servidor, por internet)
+
+El puerto 1080 quedó ABIERTO en la Security List de Oracle junto con 80/443.
+
+### Cómo se usa (comando real verificado)
+```bash
+curl --socks5-hostname "usuario:clave@jumpernet.duckdns.org:1080" https://example.com/
+```
+| prueba | resultado |
+|---|---|
+| HTTP a `web-destino` vía SOCKS5 autenticado (exterior) | ✅ HTTP 200 |
+| HTTPS a `example.com` vía SOCKS5 autenticado | ✅ HTTP 200 (salida real al internet) |
+| Destino metadata Oracle 169.254.169.254 | ❌ bloqueado (curl exit 97) |
+| Destino puerto 8080 | ❌ bloqueado (curl exit 97) |
 
 ## Archivos
 - `servicios/entrada/entrada.py` — proxy SOCKS5 (sin dependencias)
