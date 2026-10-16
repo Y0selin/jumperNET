@@ -20,17 +20,25 @@ Funcionamiento:
   6. Se retransmite en ambos sentidos (el cliente habla HTTP "a traves"
      del circuito, como una web normal).
 
-Sin dependencias externas: SOCKS con asyncio stdlib y cliente HTTP
-minimo a mano para hablar con la API (Connection: close).
+El stream del cliente se cifra ANTES de salir hacia el primer salto cuando
+CLAVE_SALTOS esta configurado (Fase 8, cifrado en capas): los nodos son
+reenvio ciego y el nodo de salida descifra (deteccion automatica JENC).
+
+Sin dependencias externas salvo cryptography (ChaCha20-Poly1305): SOCKS con
+asyncio stdlib y cliente HTTP minimo a mano para hablar con la API.
 """
 import asyncio
 import ipaddress
 import json
 import os
 
+from _comun import cifra
+
 PUERTO = int(os.environ.get("PUERTO_ENTRADA", "1080"))
 API_URL = os.environ.get("API_URL", "http://api:8000")
 INTERNAL_TOKEN = os.environ.get("INTERNAL_TOKEN", "")
+# Fase 8: secreto compartido entrada<->nodos para el cifrado extremo a extremo
+CLAVE_SALTOS = os.environ.get("CLAVE_SALTOS", "")
 PUERTOS_PERMITIDOS = {int(p) for p in os.environ.get("PUERTOS_PERMITIDOS", "80,443").split(",")}
 # destinos internos excluidos del bloqueo de redes privadas (solo para pruebas)
 EXCEPCIONES = {h.strip().lower() for h in os.environ.get("EXCEPCIONES_PRIVADAS", "web-destino").split(",")}
@@ -183,6 +191,50 @@ async def retransmitir(a: asyncio.StreamReader, b: asyncio.StreamWriter):
             pass
 
 
+async def retransmitir_cifrado(a: asyncio.StreamReader, b: asyncio.StreamWriter, aead):
+    """Del cliente PLANO hacia el circuito CIFRADO (Fase 8): cada trozo leido
+    del cliente se convierte en un registro JENC."""
+    emisor = cifra.Emisor(aead)
+    try:
+        while True:
+            datos = await a.read(cifra.CHUNK)
+            if not datos:
+                break
+            await emisor.enviar(b, datos)
+        await emisor.cerrar(b)
+    except (ConnectionError, asyncio.IncompleteReadError):
+        pass
+    finally:
+        try:
+            b.close()
+        except Exception:
+            pass
+
+
+async def retransmitir_descifrado(a: asyncio.StreamReader, b: asyncio.StreamWriter, aead):
+    """Del circuito CIFRADO hacia el cliente PLANO (respuestas).
+    El exit manda la magia JENC al comienzo: hay que consumirla ANTES de
+    leer los registros, o el primer prefijo de longitud se corrompe."""
+    try:
+        magia = await asyncio.wait_for(a.readexactly(4), timeout=15)
+        if not cifra.es_magia(magia):
+            print("[entrada] el exit no respondio en modo JENC", flush=True)
+            return
+        receptor = cifra.Receptor(aead)
+        while True:
+            datos = await receptor.recibir(a)
+            if not datos:
+                break
+            b.write(datos)
+    except Exception:
+        pass
+    finally:
+        try:
+            b.close()
+        except Exception:
+            pass
+
+
 async def atender(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
     peer = writer.get_extra_info("peername")
     print(f"[entrada] conexion desde {peer}", flush=True)
@@ -232,8 +284,14 @@ async def atender(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         writer.write(b"\x05\x00\x00\x01" + b"\x00" * 4 + b"\x00\x00")
         await writer.drain()
         print(f"[entrada] circuito {saltos} para {usuario!r} -> {dest}", flush=True)
-        t1 = asyncio.create_task(retransmitir(reader, w_nodo))
-        t2 = asyncio.create_task(retransmitir(conecta, writer))
+        if CLAVE_SALTOS:
+            # Fase 8: cifrar en ambos sentidos (cliente plano <-> circuito JENC)
+            aead = cifra.aead_desde_secreto(CLAVE_SALTOS)
+            t1 = asyncio.create_task(retransmitir_cifrado(reader, w_nodo, aead))
+            t2 = asyncio.create_task(retransmitir_descifrado(conecta, writer, aead))
+        else:
+            t1 = asyncio.create_task(retransmitir(reader, w_nodo))
+            t2 = asyncio.create_task(retransmitir(conecta, writer))
         await asyncio.gather(t1, t2)
     except (asyncio.IncompleteReadError, ConnectionError, OSError) as e:
         print(f"[entrada] error con {peer}: {type(e).__name__}", flush=True)

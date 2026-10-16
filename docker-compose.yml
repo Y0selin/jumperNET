@@ -10,13 +10,17 @@ x-limites: &limites
   cpus: "0.25"
 
 x-nodo: &nodo
-  build: ./servicios/nodo
+  build:
+    context: ./servicios
+    dockerfile: nodo/Dockerfile
   image: jumpernat/nodo
   restart: unless-stopped
   environment:
     NODO_PORT: "9000"
     API_URL: http://api:8000
     INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+    # Fase 8: si esta definida, la entrada cifra el stream y el exit lo descifra
+    CLAVE_SALTOS: ${CLAVE_SALTOS:-}
     INTERVALO_HB_SEG: "10"
   networks: [red_jumper]
   <<: *limites
@@ -25,7 +29,9 @@ services:
   # Fase 5: proxy SOCKS5 de entrada (publica 1080). Solo este y caddy se
   # publican en el host (regla 2); todo lo demas queda en la red interna red_jumper.
   entrada:
-    build: ./servicios/entrada
+    build:
+      context: ./servicios
+      dockerfile: entrada/Dockerfile
     image: jumpernat/entrada
     restart: unless-stopped
     ports:
@@ -36,6 +42,7 @@ services:
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
       PUERTOS_PERMITIDOS: "80,443"
       EXCEPCIONES_PRIVADAS: web-destino
+      CLAVE_SALTOS: ${CLAVE_SALTOS:-}
     depends_on:
       - api
     networks: [red_jumper]
@@ -88,6 +95,7 @@ services:
       NODO_NOMBRE: nodo1
       API_URL: http://api:8000
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      CLAVE_SALTOS: ${CLAVE_SALTOS:-}
       INTERVALO_HB_SEG: "10"
   nodo2:
     <<: *nodo
@@ -96,6 +104,7 @@ services:
       NODO_NOMBRE: nodo2
       API_URL: http://api:8000
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      CLAVE_SALTOS: ${CLAVE_SALTOS:-}
       INTERVALO_HB_SEG: "10"
   nodo3:
     <<: *nodo
@@ -104,6 +113,7 @@ services:
       NODO_NOMBRE: nodo3
       API_URL: http://api:8000
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      CLAVE_SALTOS: ${CLAVE_SALTOS:-}
       INTERVALO_HB_SEG: "10"
   nodo4:
     <<: *nodo
@@ -112,6 +122,7 @@ services:
       NODO_NOMBRE: nodo4
       API_URL: http://api:8000
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      CLAVE_SALTOS: ${CLAVE_SALTOS:-}
       INTERVALO_HB_SEG: "10"
   nodo5:
     <<: *nodo
@@ -120,6 +131,7 @@ services:
       NODO_NOMBRE: nodo5
       API_URL: http://api:8000
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      CLAVE_SALTOS: ${CLAVE_SALTOS:-}
       INTERVALO_HB_SEG: "10"
   nodo6:
     <<: *nodo
@@ -128,6 +140,7 @@ services:
       NODO_NOMBRE: nodo6
       API_URL: http://api:8000
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      CLAVE_SALTOS: ${CLAVE_SALTOS:-}
       INTERVALO_HB_SEG: "10"
 
   web-destino:
@@ -146,6 +159,9 @@ services:
     profiles: ["test"]  # solo se ejecuta cuando lo llamamos: docker compose run cliente-test
     volumes:
       - ./tests:/tests:ro
+      - ./servicios/_comun:/app/_comun:ro
+    environment:
+      PYTHONPATH: /app
     working_dir: /tests
     entrypoint: ["python"]
     networks: [red_jumper]

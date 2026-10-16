@@ -137,6 +137,10 @@ paso 5.3 "SOCKS5 desde INTERNET: destino PRIVADO (metadata Oracle) denegado" \
 paso 5.4 "SOCKS5 desde INTERNET: puerto PROHIBIDO (8080) denegado" \
   deniega_puerto8080
 
+paso 8.1 "cifrado en capas JENC: e2e probado con registro y clave real (ChaCha20)" \
+  docker compose run --rm -e SOCKS_USER -e SOCKS_PASS -e SOCKS_USER_NC -e SOCKS_PASS_NC -e CLAVE_SALTOS \
+  cliente-test fase8_cifrado.py
+
 # ---------------------------------------------------------------- resumen
 echo ""
 echo "=============================================================="

@@ -11,6 +11,11 @@ la validacion de la entrada, Fase 5): solo puertos 80/443 y bloqueo de IPs
 privadas/loopback/docker/link-local (incluida la metadata de Oracle), salvo
 las excepciones de pruebas internas (web-destino).
 
+El nodo de SALIDA tambien DESCIFRA el stream del usuario cuando la entrada
+uso el modo cifrado (Fase 8): deteccion automatica por los 4 primeros bytes
+tras la linea de ruta (magia "JENC"). Sin CLAVE_SALTOS el exit se queda en
+modo plano (compatibilidad con las fases 1-2).
+
 Despues reenvia bytes en ambos sentidos con asyncio (sin interpretar contenido).
 Solo registra [HOP] con el origen interno y el siguiente interno; nunca el
 contenido ni el destino final del usuario.
@@ -27,10 +32,14 @@ import threading
 import time
 import urllib.request
 
+from _comun import cifra
+
 LISTEN_PORT = int(os.environ.get("NODO_PORT", "9000"))
 API_URL = os.environ.get("API_URL", "")
 INTERNAL_TOKEN = os.environ.get("INTERNAL_TOKEN", "")
 INTERVALO_HB = int(os.environ.get("INTERVALO_HB_SEG", "10"))
+# Fase 8: secreto compartido para el cifrado extremo a extremo de los saltos
+CLAVE_SALTOS = os.environ.get("CLAVE_SALTOS", "")
 PUERTOS_PERMITIDOS = {int(p) for p in os.environ.get("PUERTOS_PERMITIDOS", "80,443").split(",")}
 # destinos internos excluidos del bloqueo de redes privadas (solo para pruebas)
 EXCEPCIONES = {h.strip().lower() for h in os.environ.get("EXCEPCIONES_PRIVADAS", "web-destino").split(",")}
@@ -82,6 +91,48 @@ async def pipe(reader, writer):
             writer.close()
         except Exception:
             pass
+
+
+async def modo_cifrado_exit(reader, writer, r2, w2):
+    """El exit descifra el stream de la entrada y habla plano con el destino;
+    y en la vuelta, cifra las respuestas del destino hacia la entrada."""
+    aead = cifra.aead_desde_secreto(CLAVE_SALTOS)
+    receptor = cifra.Receptor(aead)
+
+    async def hacia_destino():
+        try:
+            while True:
+                datos = await receptor.recibir(reader)
+                if not datos:
+                    break
+                w2.write(datos)
+                await w2.drain()
+        except Exception:
+            pass
+        finally:
+            try:
+                w2.close()
+            except Exception:
+                pass
+
+    async def hacia_cliente():
+        try:
+            emisor = cifra.Emisor(aead)
+            while True:
+                datos = await r2.read(cifra.CHUNK)
+                if not datos:
+                    break
+                await emisor.enviar(writer, datos)
+            await emisor.cerrar(writer)
+        except Exception:
+            pass
+        finally:
+            try:
+                writer.close()
+            except Exception:
+                pass
+
+    await asyncio.gather(hacia_destino(), hacia_cliente(), return_exceptions=True)
 
 
 def destino_bloqueado(host: str) -> bool:
@@ -148,8 +199,20 @@ async def hop_handler(reader, writer):
             w2.write((",".join(partes[1:]) + "\n").encode())
             await w2.drain()
 
-        # 4) reenvio bidireccional hasta que ambas partes cierren
-        await asyncio.gather(pipe(reader, w2), pipe(r2, writer), return_exceptions=True)
+            # 4) reenvio bidireccional hasta que ambas partes cierren (nodo intermedio)
+            await asyncio.gather(pipe(reader, w2), pipe(r2, writer), return_exceptions=True)
+        else:
+            # ---- modo EXIT: deteccion automatica del cifrado (Fase 8) ----
+            if CLAVE_SALTOS:
+                magia = await asyncio.wait_for(reader.readexactly(4), timeout=15)
+                if cifra.es_magia(magia):
+                    print("[HOP] circuito con cifrado en capas (JENC) activo", flush=True)
+                    await modo_cifrado_exit(reader, writer, r2, w2)
+                    return
+                # no es JENC: modo plano con los bytes ya leidos por delante
+                w2.write(magia)
+                await w2.drain()
+            await asyncio.gather(pipe(reader, w2), pipe(r2, writer), return_exceptions=True)
     except Exception as e:
         print(f"[HOP-ERR] {e}", flush=True)
     finally:
