@@ -100,6 +100,28 @@ npm run build                      # genera dist/ (es lo que publica Pages)
 curl --socks5-hostname "tu@correo:tu-clave@jumpernet.duckdns.org:1080" https://example.com/
 ```
 
+## Tu navegador por el circuito, en automático
+
+El SOCKS5 exige usuario/clave y los navegadores no pueden dárselas solos
+(Chrome no admite credenciales SOCKS; Firefox pregunta en cada conexión).
+`cliente/proxy_local.sh` lo resuelve con un **relé local sin credenciales**
+(`cliente/rele_socks.py`, solo Python estándar) que se autentica él:
+
+```bash
+cd cliente && bash proxy_local.sh on tu@correo 'tuClave'   # enciende todo: rele+Firefox+Chrome
+bash proxy_local.sh firefox            # lanza el Firefox dedicado (tu perfil no se toca)
+navegador-jumpernet                    # lanzador universal (Firefox o Chrome/Chromium/Brave)
+bash proxy_local.sh prueba             # mide tu IP directa y la que ve internet por el relé
+bash proxy_local.sh off                # apaga el relé y deja los navegadores como estaban
+```
+
+- Firefox: **perfil dedicado** (`~/.local/share/jumpernet/firefox`) con SOCKS5
+  hacia `127.0.0.1:7777` y DNS remoto; tu perfil de siempre queda intacto.
+- Chrome/Chromium/Brave: se lanza por el lanzador con perfil aparte
+  (`--proxy-server socks5://127.0.0.1` + resólver solo por el proxy).
+- La clave vive solo en `~/.local/share/jumpernet/credenciales` (chmod 600) y
+  en el handshake con el servidor; el relé **solo escucha en 127.0.0.1**.
+
 ## Pruebas
 
 | Suite | Comando | Qué cubre |
