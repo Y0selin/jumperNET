@@ -12,6 +12,36 @@ const $ = (id) => document.getElementById(id);
  *               del panel web (la extension no enciende la red; solo ruta)
  *   rechazada-> email/clave no son los de tu cuenta de la web
  */
+let ipEsperada = null;
+
+/*
+ * Prueba REAL tipo FoxyProxy: un fetch hecho DESDE ESTE POPUP sale por el
+ * proxy del navegador (chrome.proxy / browser.proxy), asi que si la "IP que
+ * ve internet" es la del circuito, tenéis la prueba directa de que ando
+ * activa y funciona; y si es tu IP real, ahí está el problema para verlo.
+ * Devolución: verde = coincide con la salida esperada del circuito.
+ */
+async function probarIp() {
+  const caja = $("ipAhora");
+  caja.textContent = "comprobando qué IP ve internet…";
+  try {
+    const r = await fetch(`https://api.ipify.org?cachebust=${Date.now()}`, { cache: "no-store" });
+    const ip = (await r.text()).trim().slice(0, 64);
+    if (ipEsperada && ip === ipEsperada) {
+      caja.className = "estado-red mono viva";
+      caja.textContent = `\u2713 IP que ve internet: ${ip} — es la de tu circuito, TODO funcionando`;
+    } else {
+      caja.className = "estado-red mono apagada";
+      caja.textContent = ipEsperada
+        ? `\u2717 IP que ve internet: ${ip} — esperada del circuito: ${ipEsperada} (el trafico NO esta saliendo por tu red)`
+        : `IP que ve internet: ${ip} (tu IP directa — activa la red en la web y pulsa ACTIVAR aquí)`;
+    }
+  } catch (e0) {
+    caja.className = "estado-red mono error";
+    caja.textContent = "\u2717 el navegador no llegó a api.ipify.org — el proxy está activo PERO no contesta (¿red encendida? ¿credenciales correctas?)";
+  }
+}
+
 async function comprobarRed() {
   const caja = $("estadoRed");
   const { configJumperNAT } = await navegador.storage.local.get(["configJumperNAT"]);
@@ -35,6 +65,8 @@ async function comprobarRed() {
     if (yo.activo) {
       caja.className = "estado-red mono viva";
       caja.textContent = `◉ red encendida · ${yo.circuito?.length || 3} saltos · exit: ${yo.nodo_exit || "—"}`;
+      ipEsperada = yo.ip_salida || null;
+      probarIp();
     } else {
       caja.className = "estado-red mono apagada";
       caja.textContent = "○ red APAGADA: enciéndela con el interruptor de la pestaña Red en la web (la extensión no la enciende; solo dirige tu tráfico)";
@@ -96,3 +128,7 @@ $("olvidar").addEventListener("click", async () => {
 
 cargar();
 comprobarRed();
+
+// la IP que ve internet se mide al abrir el popup y con el boton del refresco
+probarIp();
+$("probarIp").addEventListener("click", probarIp);

@@ -42,6 +42,7 @@
   <h1><span class="punto" id="punto"></span> JumperNAT <span id="estadoTxt" style="font-weight:400;color:#9a9aa2;font-size:12px"></span></h1>
   <p class="sub">Todo el tráfico del navegador sale por tu circuito (3 saltos) con la IP del exit.</p>
   <div id="estadoRed" class="estado-red mono">comprobando el estado de la red…</div>
+  <div id="ipAhora" class="estado-red mono">comprobando qué IP ve internet…</div>
 
   <label for="usuario">Tu email (usuario del proxy)</label>
   <input id="usuario" autocomplete="off" spellcheck="false" placeholder="tu@correo.es" />
@@ -53,12 +54,17 @@
     <button id="apagar">Desactivar</button>
     <button class="peligro" id="olvidar">Olvidar</button>
   </div>
+  <div class="fila">
+    <button id="probarIp" style="flex:1">⟳ Volver a comprobar la IP vista por internet</button>
+  </div>
 
   <p class="aviso">
     La red tiene que estar ENCENDIDA en la web (interruptor de la pestaña Red):
     el proxy rechaza credenciales sin circuito. Las credenciales se guardan
     solo en este navegador (storage local de la extensión) y viajan cifradas
-    dentro del handshake con el servidor.
+    dentro del handshake con el servidor. La «IP que ve internet» se mide DE
+    VERDAD por tu navegador a través de su proxy (igual que FoxyProxy: nada de
+    estimaciones).
   </p>
 
   <script src="popup.js"></script>

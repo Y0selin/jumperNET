@@ -171,12 +171,30 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
     if (mapa.current || !divMapa.current) return;
     const m = L.map(divMapa.current, { attributionControl: true });
     // mapa oscuro (Carto, basado en OpenStreetMap): encaja con el tema y no
-    // deslumbra al lado de las tarjetas del panel
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    // deslumbra al lado de las tarjetas del panel. RESPALDO VECTORIAL: algunos
+    // proveedores de tiles se atascan por política o límite y devuelven en la
+    // propia imagen mensajes tipo «API KEY REQUIRED»: con 3 fallos se quita el
+    // proveedor y el mapa se dibuja igual con un GeoJSON de países que vive en
+    // el propio panel (sin tiles, sin claves, sin terceros).
+    const t = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
       maxZoom: 20,
       subdomains: "abcd",
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>',
     }).addTo(m);
+    let fallosTiles = 0;
+    t.on("tileerror", async () => {
+      fallosTiles += 1;
+      if (fallosTiles < 3 || mapa._jn_vectorial) return;
+      mapa._jn_vectorial = true;
+      try { m.removeLayer(t); } catch { /* ya quitado */ }
+      const r = await fetch(`${import.meta.env.BASE_URL}mundo.json`);
+      const mundo = await r.json();
+      L.geoJSON(mundo, {
+        style: { color: "#3a3a44", weight: .6, fillColor: "#1c1c24", fillOpacity: 1 },
+        interactive: false,
+      }).addTo(m);
+      m.setView(m.getCenter(), m.getZoom());
+    });
     capa.current = L.layerGroup().addTo(m);
     mapa.current = m;
     m.setView([40, -30], 3);

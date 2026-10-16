@@ -115,11 +115,24 @@ const escucha_auth = (detalles, callback) => {
   }
 };
 
-navegador.webRequest.onAuthRequired.addListener(
-  escucha_auth,
-  { urls: ["<all_urls>"] },
-  ["asyncBlocking"]
-);
+/*
+ * Registro ANTI-MUERTE del script: "asyncBlocking" solo existe en Chromium y
+ * Firefox lanza un error al añadirlo con una spec que no reconoce, matando TODO
+ * el script (y el proxy nunca se aplicaria: seria el fallo «veo mi IP real»).
+ * Por eso: intentamos asyncBlocking (Chrome, callback) y si no se puede cae al
+ * registro plano, donde Firefox responde con la PROMESA de escucha_auth.
+ */
+try {
+  navegador.webRequest.onAuthRequired.addListener(
+    escucha_auth,
+    { urls: ["<all_urls>"] },
+    ["asyncBlocking"]
+  );
+  console.log("[jumpernet] onAuthRequired registrado con asyncBlocking");
+} catch (e) {
+  navegador.webRequest.onAuthRequired.addListener(escucha_auth, { urls: ["<all_urls>"] });
+  console.log("[jumpernet] onAuthRequired registrado por promesa (Firefox):", String(e).slice(0, 80));
+}
 
 /* -------------------------------------------------------------- arranque */
 
@@ -156,7 +169,42 @@ async function cargar_y_aplicar() {
     ? `activa via ${cadenaProxy(config_ahora)} (usuario ${config_ahora.usuario})`
     : "apagada (el navegador usa su proxy normal)";
   console.log("[jumpernet] extension lista:", estado);
+  señal_estado();
 }
+
+/* ------------------------------------------------- señal visual (badge) */
+/*
+ * Como FoxyProxy no se sabe si funciona por clases: esta extension deja la
+ * señal escrita EN LA BARRA con el resultado REAL del proxy: ✓ verde si una
+ * peticion real del navegador ve una IP por el proxy, ✗ si el proxy no llega,
+ * (y ¡ en errores del propio proxy). Sin paneles ni consola: se ve asi enseguida.
+ */
+const BOTON = navegador.action || navegador.browserAction; // MV3 / MV2
+
+function pon_badge(texto, color, titulo) {
+  if (!BOTON) return;
+  BOTON.setBadgeText({ text: texto });
+  BOTON.setBadgeBackgroundColor({ color });
+  try { BOTON.setTitle({ title: titulo }); } catch (e0) { /* nunca fatal */ }
+}
+
+async function señal_estado() {
+  try {
+    if (!config_ahora.activo) { pon_badge("", "#555", "JumperNAT: apagada"); return; }
+    pon_badge("…", "#8a6", "JumperNAT: comprobando el proxy…");
+    const r = await fetch(`https://api.ipify.org?cachebust=${Date.now()}`, { cache: "no-store" });
+    const ip = (await r.text()).trim().slice(0, 64);
+    pon_badge("\u2713", "#34d47c", `JumperNAT: proxy OK — internet te ve con ${ip}`);
+  } catch (e) {
+    pon_badge("\u2717", "#ff5a6a", "JumperNAT: el trafico no consigue salir por el proxy\n(revisa que la RED este encendida en la web y las credenciales)");
+  }
+}
+
+try {
+  navegador.proxy.onProxyError.addListener(() => {
+    pon_badge("\u00a1", "#ffb454", "JumperNAT: error del proxy (mira el popup por detalles)");
+  });
+} catch (e) { /* navegador sin proxy.onProxyError: sin señal extra */ }
 
 navegador.storage.onChanged.addListener((cambios, area) => {
   if (area === "local" && cambios.configJumperNAT) {
