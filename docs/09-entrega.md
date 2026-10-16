@@ -88,8 +88,7 @@ proxy SOCKS5 host `jumpernet.duckdns.org`, puerto `1080`, con usuario y clave.
 
 | Ítem | Estado |
 |---|---|
-| Fase 6: activar **GitHub Pages** (Settings → Pages → main + `/ (root)`) | ⏳ acción pendiente en la web de GitHub |
-| Fase 8: cifrado y salto por TCP (opcional) | ⏳ pendiente de decisión (implementación opcional) |
-| Migrar nota | la IP del servidor está registrada en duckdns ya |
+| Fase 6: web en **GitHub Pages** desplegada con Actions (`pages.yml`) | ✅ https://y0selin.github.io/jumperNET/ (HTTP 200 + API/CORS OK) |
+| Fase 8: cifrado en capas (ChaCha20-Poly1305 JENC entrada↔exit) + viaje en vivo en el panel | ✅ run_all 10/10 |
 | Certificado TLS | Let's Encrypt renueva automático (Caddy), sin acción |
-| copia de la BD | `~/jumpernat/data/`: salvo manualmente si quieres recuerdar |
+| Copia de la BD | `~/jumpernat/data/`: hacer backup manual si quieres conservar usuarios |

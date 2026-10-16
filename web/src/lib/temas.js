@@ -3,6 +3,16 @@
 const CLAVE = "jumpernat-tema";
 
 export const PRESETS = {
+  "terminal-verde": {
+    nombre: "Terminal Verde",
+    variables: {
+      "--bg-1": "#0b0f0d", "--bg-2": "#0d1410", "--panel": "18, 23, 20", "--panel-sol": "125, 255, 192",
+      "--borde": "#232b26", "--acento-1": "#2ee88a", "--acento-2": "#4fb0ff",
+      "--acento-3": "#ffb454", "--texto": "#d9e2db", "--texto-suave": "#8a948d",
+    },
+    forma: { "--radio": "12px", "--radio-2": "8px", "--tam-fuente": "14.5px", "--fuente": '"Inter", system-ui' },
+    efectos: { "--glow": "0.8", "--glass": "0.7", "--vel-anim": "1" },
+  },
   "grafito-profesional": {
     nombre: "Grafito Profesional",
     variables: {
@@ -43,16 +53,6 @@ export const PRESETS = {
     forma: { "--radio": "6px", "--radio-2": "4px", "--tam-fuente": "14px", "--fuente": 'ui-monospace, "Cascadia Code", Consolas' },
     efectos: { "--glow": "0.9", "--glass": "0.55", "--vel-anim": "1.1" },
   },
-  "rubí": {
-    nombre: "Rubí Rojo",
-    variables: {
-      "--bg-1": "#100306", "--bg-2": "#26060f", "--panel": "38, 10, 18", "--panel-sol": "255, 190, 200",
-      "--borde": "#7f2440", "--acento-1": "#ff4d6d", "--acento-2": "#ff9f68",
-      "--acento-3": "#e5484d", "--texto": "#ffe9ee", "--texto-suave": "#c08b98",
-    },
-    forma: { "--radio": "12px", "--radio-2": "8px", "--tam-fuente": "14.5px", "--fuente": '"Inter", system-ui' },
-    efectos: { "--glow": "0.8", "--glass": "0.6", "--vel-anim": "1" },
-  },
   "luz-blanca": {
     nombre: "Luz Blanca",
     variables: {
@@ -62,16 +62,6 @@ export const PRESETS = {
     },
     forma: { "--radio": "12px", "--radio-2": "8px", "--tam-fuente": "14.5px", "--fuente": '"Inter", system-ui' },
     efectos: { "--glow": "0.3", "--glass": "0.9", "--vel-anim": "1" },
-  },
-  "solar-de-oro": {
-    nombre: "Solar de Oro",
-    variables: {
-      "--bg-1": "#0d0a04", "--bg-2": "#221a08", "--panel": "40, 30, 12", "--panel-sol": "255, 230, 170",
-      "--borde": "#8a6d1d", "--acento-1": "#e9b13c", "--acento-2": "#d98d20",
-      "--acento-3": "#f2d477", "--texto": "#fff6e0", "--texto-suave": "#bfa87c",
-    },
-    forma: { "--radio": "14px", "--radio-2": "9px", "--tam-fuente": "14.5px", "--fuente": '"Inter", system-ui' },
-    efectos: { "--glow": "0.7", "--glass": "0.62", "--vel-anim": "1" },
   },
 };
 
@@ -91,6 +81,6 @@ export function cargaTema() {
     const t = JSON.parse(localStorage.getItem(CLAVE));
     if (t && t.variables) return t;
   } catch { /* tema roto: preset */ }
-  return JSON.parse(JSON.stringify(PRESETS["grafito-profesional"]));
+  return JSON.parse(JSON.stringify(PRESETS["terminal-verde"]));
 }
-export function temaPorId(id) { return JSON.parse(JSON.stringify(PRESETS[id] || PRESETS["grafito-profesional"])); }
+export function temaPorId(id) { return JSON.parse(JSON.stringify(PRESETS[id] || PRESETS["terminal-verde"])); }

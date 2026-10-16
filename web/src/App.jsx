@@ -1,147 +1,123 @@
 import { useEffect, useState } from "react";
-import Aurora from "./components/Aurora.jsx";
-import Autenticacion from "./components/Autenticacion.jsx";
-import Panel from "./components/Panel.jsx";
+import GlifosFondo from "./components/GlifosFondo.jsx";
 import Ajustes from "./components/Ajustes.jsx";
-import Informacion from "./components/Informacion.jsx";
-import { api, me, setToken, getToken, decodificaJwt } from "./lib/api.js";
+import Info from "./components/Informacion.jsx";
+import Landing from "./components/Landing.jsx";
+import Autenticacion from "./components/Autenticacion.jsx";
+import Red from "./components/Red.jsx";
+import Cuenta from "./components/Cuenta.jsx";
+import { me, setToken, getToken } from "./lib/api.js";
 import { aplicaTema, cargaTema } from "./lib/temas.js";
 
-let _idToast = 0;
+const TABS = [
+  { id: "red", texto: "Red", ico: "◉" },
+  { id: "cuenta", texto: "Cuenta", ico: "☰" },
+  { id: "info", texto: "Info", ico: "▤" },
+  { id: "ajustes", texto: "Ajustes", ico: "✦" },
+];
 
 export default function App() {
-  const [tab, setTab] = useState(getToken() ? "panel" : "entrar");
+  const [tab, setTab] = useState(getToken() ? "red" : "inicio");
   const [yo, setYo] = useState(null);
+  const [authModo, setAuthModo] = useState("login");
   const [toasts, setToasts] = useState([]);
 
   useEffect(() => { aplicaTema(cargaTema()); }, []);
   useEffect(() => {
-    if (getToken()) {
-      me().then(setYo).catch(() => {});
-    }
+    if (getToken()) me().then(setYo).catch(() => {});
   }, []);
 
   function aviso(texto, tipo = "ok") {
-    const id = ++_idToast;
+    const id = Date.now() + Math.random();
     setToasts((ts) => [...ts, { id, texto, tipo }]);
-    setTimeout(() => setToasts((ts) => ts.filter((t) => t.id !== id)), 3800);
+    setTimeout(() => setToasts((ts) => ts.filter((t) => t.id !== id)), 3600);
   }
-
-  async function salir() {
-    setToken(null); setYo(null); setTab("entrar"); aviso("sesión cerrada", "ok");
-  }
-  async function eliminarCuenta() {
-    if (!confirm("¿ELIMINAR tu cuenta para siempre? Se borra tu circuito y tu registro.")) return;
-    try { await api("DELETE", "/me"); salir(); aviso("cuenta eliminada", "ok"); }
-    catch (e) { aviso(e.message, "error"); }
-  }
-
-  function alEntrar() { me().then((d) => { setYo(d); setTab("panel"); }); }
+  function salir() { setToken(null); setYo(null); setTab("inicio"); aviso("sesión cerrada", "ok"); }
+  function alEntrar() { me().then((d) => { setYo(d); setTab("red"); }).catch(() => aviso("no se pudo cargar tu cuenta", "error")); }
+  function irAuth(m = "login") { setAuthModo(m); setTab("auth"); }
 
   const enSesion = !!yo && !!getToken();
 
   return (
     <>
-      <Aurora />
+      <GlifosFondo />
       <div style={{ position: "relative", zIndex: 1 }}>
 
         <header className="barra">
           <div className="barra-inner">
-            <div className="logo-marca">
+            <div className="logo-marca" onClick={() => setTab(enSesion ? "red" : "inicio")}
+              style={{ cursor: "pointer" }} role="button" tabIndex={0}>
               <div className="logo-cubo flota">JN</div>
               <div>
                 <div className="nombre">JumperNAT</div>
-                <div className="lema">torre de control · 3 saltos · cifrado en capas</div>
+                <div className="lema mono">▚ red por saltos · bajo tu control</div>
               </div>
             </div>
+
             <nav className="tabs">
-              {[
-                ["panel", "Panel", enSesion],
-                ["ajustes", "Ajustes", true],
-                ["info", "Info", true],
-                ["cuenta", "Cuenta", enSesion],
-                ["entrar", "Entrar", !enSesion],
-              ].filter(([, , visible]) => visible).map(([id, texto]) => (
-                <button key={id} className={tab === id ? "activa" : ""} onClick={() => setTab(id)}>{texto}</button>
+              {enSesion && TABS.map((t) => (
+                <button key={t.id} className={tab === t.id ? "activa" : ""} onClick={() => setTab(t.id)}>
+                  <span className="mono" style={{ opacity: .7, marginRight: 6 }}>{t.ico}</span>{t.texto}
+                </button>
               ))}
+              {!enSesion && <button className={tab === "inicio" ? "activa" : ""} onClick={() => setTab("inicio")}>Inicio</button>}
+              {!enSesion && <button className={tab === "auth" ? "activa" : ""} onClick={() => irAuth(authModo)}>Acceder</button>}
+              {enSesion && <button onClick={salir}>Salir</button>}
             </nav>
           </div>
         </header>
 
         <div className="contenedor">
-          {/* ======== ENTRAR ======== */}
-          {tab === "entrar" && (!enSesion) && (
-            <Autenticacion alEntrar={alEntrar} aviso={aviso} />
+
+          {tab === "inicio" && !enSesion && <Landing irAuth={irAuth} />}
+
+          {tab === "auth" && !enSesion && (
+            <Autenticacion alEntrar={alEntrar} aviso={aviso} modoInicial={authModo} volver={() => setTab("inicio")} />
           )}
 
-          {/* ======== PANEL ======== */}
-          {tab === "panel" && enSesion && (
-            <>
-              <div className="aparecer" style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                <h1 className="titular-maquina" style={{ fontSize: 24 }}>
-                  Hola de nuevo, {yo.email.split("@")[0]}
-                </h1>
-                <span className="chip nuevo">⚡ red en vivo</span>
-              </div>
-              <Panel yo={yo} aviso={aviso} />
-            </>
+          {tab === "red" && enSesion && <Red yo={yo} aviso={aviso} alSalir={salir} />}
+
+          {tab === "cuenta" && enSesion && (
+            <Cuenta yo={yo} aviso={aviso} alSalir={salir} irRed={() => setTab("red")} />
           )}
 
-          {/* ======== AJUSTES ======== */}
-          {tab === "ajustes" && (
-            <>
-              <div className="aparecer" style={{ marginBottom: 14 }}>
-                <h1 style={{ fontSize: 24 }}>🎨 Diseñador visual</h1>
-                <p className="nota">Diseña la página a tu gusto: colores, esquinas, letra, efectos y CSS libre. Todo en vivo y solo en tu navegador.</p>
+          {tab === "ajustes" && enSesion && (
+            <div className="apa" style={{ display: "grid", gap: 16 }}>
+              <div className="seccion-titulo">
+                <span className="migas mono">panel / ajustes</span>
+                <h1>Diseñador del tema</h1>
+                <span className="nota">colores, radios, letra, efectos y CSS libre — en vivo y solo en tu navegador.</span>
               </div>
               <Ajustes aviso={aviso} />
-            </>
-          )}
-
-          {/* ======== INFO ======== */}
-          {tab === "info" && (
-            <>
-              <div className="aparecer" style={{ marginBottom: 14 }}>
-                <h1 style={{ fontSize: 24 }}>📚 ¿Cómo funciona esto?</h1>
-                <p className="nota">Desde la explicación de cero conocimientos hasta los formatos exactos de protocolo.</p>
-              </div>
-              <Informacion />
-            </>
-          )}
-
-          {/* ======== CUENTA ======== */}
-          {tab === "cuenta" && enSesion && (
-            <div className="tarjeta grande t-led" style={{ maxWidth: 520 }}>
-              <h2 className="seccion">Tu cuenta</h2>
-              <div className="dato"><span className="etq">email</span><span className="val">{yo.email}</span></div>
-              <div className="dato"><span className="etq">id</span><span className="val">{yo.id}</span></div>
-              <div className="dato"><span className="etq">sesión JWT</span><span className="val">{decodificaJwt(getToken()) ? `expira ${new Date(decodificaJwt(getToken()).cuerpo.exp * 1000).toLocaleTimeString()}` : "—"}</span></div>
-              <div className="fila-btn" style={{ marginTop: 16 }}>
-                <button className="btn" onClick={() => setTab("panel")}>← Volver al panel</button>
-                <button className="btn" onClick={salir}>Cerrar sesión</button>
-                <button className="btn peligro" onClick={eliminarCuenta}>Eliminar cuenta</button>
-              </div>
-              <p className="nota" style={{ marginTop: 10 }}>
-                Eliminar cuenta borra al instante tu registro y tu circuito. Por diseño solo se guarda
-                tu estado actual: nunca hay histórico de tráfico ni de destinos.
-              </p>
             </div>
           )}
 
-          <footer className="nota" style={{ textAlign: "center", marginTop: 34, fontSize: 12 }}>
-            JumperNAT · proyecto educativo de anonimato por circuito de saltos ·
-            React + Vite · API: jumpernet.duckdns.org
+          {tab === "info" && enSesion && (
+            <div className="apa" style={{ display: "grid", gap: 16 }}>
+              <div className="seccion-titulo">
+                <span className="migas mono">panel / info</span>
+                <h1>Documentación</h1>
+                <span className="nota">qué es, cómo funciona y los detalles técnicos del circuito.</span>
+              </div>
+              <Info />
+            </div>
+          )}
+
+          <footer className="nota mono" style={{ textAlign: "center", marginTop: 44, fontSize: 11 }}>
+            JumperNAT · 3 saltos · ChaCha20-Poly1305 · api: jumpernet.duckdns.org
+            <br />
+            <span style={{ opacity: .7 }}>proyecto educativo · la red solo se activa cuando tú lo decides</span>
           </footer>
         </div>
       </div>
 
-      {/* toasts */}
-      <div style={{ position: "fixed", bottom: 20, right: 20, display: "grid", gap: 8, zIndex: 99 }}>
+      {/* avisos flotantes */}
+      <div style={{ position: "fixed", bottom: 18, right: 18, display: "grid", gap: 8, zIndex: 90, maxWidth: "min(340px, 88vw)" }}>
         {toasts.map((t) => (
-          <div key={t.id} className={t.tipo === "error" ? "error-msg" : "ok-msg"} style={{
-            minWidth: 240, boxShadow: "0 10px 30px rgb(0 0 0 /.5)",
-            animation: "llega-tarjeta .4s cubic-bezier(.2,.9,.3,1.15) both",
-          }}>{t.tipo === "error" ? "⚠ " : "✓ "}{t.texto}</div>
+          <div key={t.id} className={`apa ${t.tipo === "error" ? "mensaje-error" : "mensaje-ok"}`}
+            style={{ minWidth: 220, marginTop: 0, boxShadow: "0 14px 34px rgb(0 0 0 / .55)", backdropFilter: "blur(8px)" }}>
+            {t.tipo === "error" ? "⚠ " : "✓ "}{t.texto}
+          </div>
         ))}
       </div>
     </>

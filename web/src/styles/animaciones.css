@@ -1,68 +1,95 @@
 /* ============================================================
-   animaciones.css — micro-interacciones sutiles y elegantes.
-   Todas desactivables con --vel-anim=0 (data-anim="off").
+   animaciones.css — todas las animaciones del sitio.
+   · --vel-anim (0..2, Diseñador) acelera/frena: se aplica SIEMPRE
+     dentro de calc() vía --veld, nunca como var suelto en el
+     shorthand (un var unitario se come el «infinite»).
+   · data-anim="off" (cuando --vel-anim = 0) apaga todo de golpe.
+   · prefers-reduced-motion también lo apaga.
    ============================================================ */
 
 @keyframes giro { to { transform: rotate(360deg); } }
-
-@keyframes aparecer {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: none; }
-}
-.aparecer { animation: aparecer .5s cubic-bezier(.2,.8,.25,1) both var(--vel-anim); }
-.aparecer-1 { animation-delay: .06s; }
-.aparecer-2 { animation-delay: .12s; }
-.aparecer-3 { animation-delay: .19s; }
-.aparecer-4 { animation-delay: .26s; }
-
+@keyframes cursor-parpadea { 50% { opacity: 0; } }
 @keyframes flota {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
 }
-.flota { animation: flota 5s ease-in-out infinite var(--vel-anim); }
-
-@keyframes pulso-nucleo {
-  0% { box-shadow: 0 0 0 0 rgb(from var(--acento-1) r g b / .35); }
-  70% { box-shadow: 0 0 0 9px rgb(from var(--acento-1) r g b / 0); }
-  100% { box-shadow: 0 0 0 0 rgb(from var(--acento-1) r g b / 0); }
+@keyframes brillo-pasa {
+  0% { transform: translateX(-130%); }
+  60%, 100% { transform: translateX(130%); }
 }
-.pulso-nucleo { animation: pulso-nucleo 2.2s ease-out infinite var(--vel-anim); border-radius: 50%; }
-
-@keyframes niebla-grad {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
-.grad-animado {
-  background: var(--grad-acento);
-  background-size: 200% 200%;
-  animation: niebla-grad 8s ease infinite var(--vel-anim);
-}
-
-@keyframes raya-avanza {
-  to { stroke-dashoffset: -22; }
-}
-.linea-avanza { stroke-dasharray: 6 5; animation: raya-avanza 1.2s linear infinite var(--vel-anim); }
-
-@keyframes escribir { from { width: 0; } to { width: 100%; } }
-@keyframes cursor-parpadea { 50% { border-color: transparent; } }
-.titular-maquina {
-  display: inline-block; overflow: hidden; white-space: nowrap;
-  border-right: 2px solid var(--acento-1);
-  animation: escribir 1.6s steps(32) both, cursor-parpadea .8s step-end .4s infinite;
-}
-
-@keyframes onda-idle { 0% { transform: scaleY(.35); opacity: .4; } 50% { transform: scaleY(1); opacity: 1; } 100% { transform: scaleY(.35); opacity: .4; } }
-.barra-actividad { width: 3px; height: 14px; border-radius: 2px; background: var(--acento-2); display: inline-block; transform-origin: bottom; margin-right: 3px; animation: onda-idle 1.1s ease-in-out infinite var(--vel-anim); }
-.barra-actividad.b2 { animation-delay: .12s; }
-.barra-actividad.b3 { animation-delay: .24s; }
-
-@keyframes llega-tarjeta {
-  from { opacity: 0; transform: translateY(12px) scale(.995); }
+@keyframes entrar {
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: none; }
 }
-.t-led { animation: llega-tarjeta .5s cubic-bezier(.2,.85,.3,1) both var(--vel-anim); }
+@keyframes llega-tarjeta {
+  from { opacity: 0; transform: translateY(10px) scale(.995); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes viaja {
+  0% { left: -3%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { left: 101%; opacity: 0; }
+}
+@keyframes gira-borde { to { transform: rotate(360deg); } }
+@keyframes pulso-anillo {
+  0% { box-shadow: 0 0 0 0 rgb(from var(--acento-1) r g b / .5); }
+  80% { box-shadow: 0 0 0 9px rgb(from var(--acento-1) r g b / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(from var(--acento-1) r g b / 0); }
+}
+@keyframes sacude {
+  0%, 100% { transform: translateX(0); }
+  18% { transform: translateX(-7px); }
+  36% { transform: translateX(6px); }
+  54% { transform: translateX(-4px); }
+  72% { transform: translateX(3px); }
+  88% { transform: translateX(-1px); }
+}
+@keyframes degradado-corre { to { background-position: 200% 50%; } }
+@keyframes sube-brillo {
+  from { opacity: .35; transform: translateY(0); }
+  to { opacity: .9; transform: translateY(-3px); }
+}
 
+/* ---------- apariciones ---------- */
+.apa { animation: entrar calc(.5 * var(--veld)) cubic-bezier(.2,.8,.25,1) both; }
+.apa-1 { animation-delay: .07s; }
+.apa-2 { animation-delay: .14s; }
+.apa-3 { animation-delay: .21s; }
+.apa-4 { animation-delay: .28s; }
+
+/* alias de compatibilidad con componentes existentes */
+.aparecer { animation: entrar calc(.5 * var(--veld)) cubic-bezier(.2,.8,.25,1) both; }
+.aparecer-1 { animation-delay: .06s; }
+.aparecer-2 { animation-delay: .12s; }
+.aparecer-3 { animation-delay: .19s; }
+.t-led { animation: llega-tarjeta calc(.45 * var(--veld)) cubic-bezier(.2,.85,.3,1) both; }
+
+/* ---------- revela al hacer scroll ---------- */
+.revela {
+  opacity: 0; transform: translateY(20px);
+  transition: opacity .65s ease, transform .65s cubic-bezier(.2,.8,.25,1);
+}
+.revela.visto { opacity: 1; transform: none; }
+.revela-1 { transition-delay: .06s; }
+.revela-2 { transition-delay: .14s; }
+.revela-3 { transition-delay: .22s; }
+
+/* ---------- texto y detalles vivos ---------- */
+.titulo-animado {
+  background: linear-gradient(100deg, var(--texto) 0%, var(--acento-1) 28%, var(--texto) 55%, var(--acento-2) 82%, var(--texto) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: degradado-corre calc(9 * var(--veld)) linear infinite;
+}
+.sacude { animation: sacude .42s cubic-bezier(.36,.07,.19,.97) both; }
+.brinca:hover { animation: sube-brillo calc(.35 * var(--veld)) ease both; }
+
+/* ---------- apagado ---------- */
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .001s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; }
+  .revela { opacity: 1 !important; transform: none !important; }
 }
 html[data-anim="off"] * { animation: none !important; transition-duration: .15s !important; }
+html[data-anim="off"] .revela { opacity: 1 !important; transform: none !important; }
+html[data-anim="off"] .paquete { left: 45%; opacity: .18; }

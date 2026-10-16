@@ -65,13 +65,13 @@ export default function Informacion() {
             <div className="tarjeta t-led aparecer-2">
               <h2 className="seccion">Guía rápida en 4 pasos</h2>
               <ol className="nota" style={{ paddingLeft: 18, lineHeight: 1.9 }}>
-                <li><b>Crea cuenta</b> en la pestaña Entrar.</li>
-                <li><b>Conecta</b> en el Panel → aparecen tus 3 saltos en el mapa.</li>
+                <li><b>Crea cuenta</b> desde «Acceder» (arriba a la derecha).</li>
+                <li><b>Enciende la red</b> en la pestaña <b>Red</b> con el interruptor — llega apagada a propósito: nada se conecta hasta que tú lo pulsas.</li>
                 <li><b>Copia el comando</b> SOCKS5 y pégalo en la terminal (o configura el proxy en tu navegador: host jumpernet.duckdns.org, puerto 1080, con usuario+contraseña).</li>
-                <li>Cuando quiera <b>otra IP</b>, pulsa <b>Rotar</b>: nuevos nodos aleatorios al instante.</li>
+                <li>Cuando quieras <b>otra IP</b>, pulsa <b>Girar circuito</b>: nuevos nodos aleatorios al instante, sin cortar la sesión.</li>
               </ol>
               <div className="ok-msg" style={{ marginTop: 10 }}>
-                Si algo falla: ¿está conectado? · ¿la contraseña es la de la web? ·
+                Si algo falla: ¿has encendido el interruptor? · ¿la contraseña es la de la web? ·
                 ¿solo vas a puertos 80/443? Esas son las 3 causas del 95 % de los casos.
               </div>
             </div>
