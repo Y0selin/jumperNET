@@ -5,4 +5,5 @@ data/
 *.png
 !web/extension/*.png
 web/node_modules/
+web/extension/dist/
 web/dist/
