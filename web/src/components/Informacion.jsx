@@ -14,7 +14,7 @@ export default function Informacion() {
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
-      <div className="tarjeta visor t-led">
+      <div className="tarjeta t-led">
         <div className="fila-btn" style={{ maxWidth: 420 }}>
           <button className={`btn ${modo === "principiante" ? "primario" : ""}`} onClick={() => setModo("principiante")}>
             🎈 Empieza por aquí
@@ -27,7 +27,7 @@ export default function Informacion() {
 
       {modo === "principiante" ? (
         <>
-          <div className="tarjeta visor grande t-led aparecer">
+          <div className="tarjeta grande t-led aparecer">
             <h2 className="seccion">¿Qué es JumperNAT?</h2>
             <p className="nota" style={{ fontSize: 15, lineHeight: 1.7 }}>
               Imagina que quieres que una web vea otra IP que la tuya y, además, que
@@ -49,7 +49,7 @@ export default function Informacion() {
           </div>
 
           <div className="grid2">
-            <div className="tarjeta visor t-led aparecer-1">
+            <div className="tarjeta t-led aparecer-1">
               <h2 className="seccion">¿Y nadie ve mi conversación?</h2>
               <p className="nota" style={{ lineHeight: 1.7 }}>
                 Entre la entrada y el último nodo va <b>cifrado con ChaCha20-Poly1305</b> (lo mismo
@@ -62,7 +62,7 @@ export default function Informacion() {
                 tu circuito actual. <b>No hay histórico</b> de a qué te conectas.
               </p>
             </div>
-            <div className="tarjeta visor t-led aparecer-2">
+            <div className="tarjeta t-led aparecer-2">
               <h2 className="seccion">Guía rápida en 4 pasos</h2>
               <ol className="nota" style={{ paddingLeft: 18, lineHeight: 1.9 }}>
                 <li><b>Crea cuenta</b> en la pestaña Entrar.</li>
@@ -77,7 +77,7 @@ export default function Informacion() {
             </div>
           </div>
 
-          <div className="tarjeta visor t-led aparecer-3">
+          <div className="tarjeta t-led aparecer-3">
             <h2 className="seccion">Preguntas frecuentes</h2>
             <div className="dato"><span className="etq">¿Afecta esto al ping de los videojuegos?</span>
               <span className="val">sí: añades 3 saltos internos (~ms) y el retraso de red real hasta Estados Unidos. Para el tráfico HTTP/S académico está bien; para juegos, mejor no.</span></div>
@@ -91,7 +91,7 @@ export default function Informacion() {
         </>
       ) : (
         <>
-          <div className="tarjeta visor grande t-led aparecer">
+          <div className="tarjeta grande t-led aparecer">
             <h2 className="seccion">Ficha técnica del stack</h2>
             <div className="grid2">
               <div>
@@ -126,17 +126,17 @@ modo JENC (si hay CLAVE_SALTOS):
           </div>
 
           <div className="grid2">
-            <div className="tarjeta visor t-led aparecer-1">
+            <div className="tarjeta t-led aparecer-1">
               <h2 className="seccion">nodos (crudo de la API)</h2>
               <pre className="codigo">{crudo.nodos ? JSON.stringify(crudo.nodos, null, 2) : "cargando /nodos…"}</pre>
             </div>
-            <div className="tarjeta visor t-led aparecer-2">
+            <div className="tarjeta t-led aparecer-2">
               <h2 className="seccion">JWT (decodificado)</h2>
               <pre className="codigo">{getToken() && decodificaJwt(getToken()) ? JSON.stringify(decodificaJwt(getToken()), null, 2) : "sin sesión (entrar para ver el token)"}</pre>
             </div>
           </div>
 
-          <div className="tarjeta visor t-led aparecer-3">
+          <div className="tarjeta t-led aparecer-3">
             <h2 className="seccion">Inventario de seguridad</h2>
             <div className="dato"><span className="etq">contraseñas</span><span className="val">argon2id (16 MiB, time 2, par 2) · nunca en claro</span></div>
             <div className="dato"><span className="etq">sesión</span><span className="val">JWT firmado, caduca a las 2 h, sin rol admin</span></div>

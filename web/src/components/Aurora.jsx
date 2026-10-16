@@ -12,17 +12,17 @@ export default function Aurora() {
 
     function redimensiona() {
       cv.width = innerWidth; cv.height = innerHeight;
-      const densidad = Math.min(90, Math.floor(innerWidth / 16));
+      const densidad = Math.min(60, Math.floor(innerWidth / 24));
       paradas = Array.from({ length: densidad }, () => ({
         x: Math.random() * cv.width, y: Math.random() * cv.height,
-        vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35,
-        r: Math.random() * 1.7 + .5, c: Math.random() < .25 ? 2 : Math.random() < .55 ? 1 : 0,
+        vx: (Math.random() - .5) * .22, vy: (Math.random() - .5) * .22,
+        r: Math.random() * 1.3 + .4, c: Math.random() < .25 ? 2 : Math.random() < .55 ? 1 : 0,
       }));
     }
     redimensiona();
     addEventListener("resize", redimensiona);
 
-    const colores = ["#4f8cff", "#2ecc71", "#a06bff"];
+    const colores = ["#5b8def", "#34c48c", "#8f7cf1"];
     function leeTema() {
       const s = getComputedStyle(document.documentElement);
       refAnim.current.vel = parseFloat(s.getPropertyValue("--vel-anim")) || 1;
@@ -44,9 +44,9 @@ export default function Aurora() {
         for (let j = i + 1; j < paradas.length; j++) {
           const b = paradas[j];
           const dx = a.x - b.x, dy = a.y - b.y, d = Math.hypot(dx, dy);
-          if (d < 130) {
-            ctx.strokeStyle = `rgba(120, 160, 255, ${.14 * (1 - d / 130)})`;
-            ctx.lineWidth = .6;
+          if (d < 120) {
+            ctx.strokeStyle = `rgba(140, 170, 230, ${.09 * (1 - d / 120)})`;
+            ctx.lineWidth = .5;
             ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
           }
         }
@@ -69,5 +69,5 @@ export default function Aurora() {
     return () => { cancelAnimationFrame(raf); OBS.disconnect(); removeEventListener("resize", redimensiona); };
   }, []);
 
-  return <canvas ref={ref} style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", opacity: .55 }} />;
+  return <canvas ref={ref} style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", opacity: .4 }} />;
 }

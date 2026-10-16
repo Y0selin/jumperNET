@@ -3,6 +3,16 @@
 const CLAVE = "jumpernat-tema";
 
 export const PRESETS = {
+  "grafito-profesional": {
+    nombre: "Grafito Profesional",
+    variables: {
+      "--bg-1": "#0a0d14", "--bg-2": "#0e1320", "--panel": "21, 27, 42", "--panel-sol": "255, 255, 255",
+      "--borde": "#374460", "--acento-1": "#5b8def", "--acento-2": "#34c48c",
+      "--acento-3": "#8f7cf1", "--texto": "#e6eaf2", "--texto-suave": "#8a94a8",
+    },
+    forma: { "--radio": "12px", "--radio-2": "8px", "--tam-fuente": "14.5px", "--fuente": '"Inter", system-ui' },
+    efectos: { "--glow": "0.5", "--glass": "0.72", "--vel-anim": "1" },
+  },
   "neon-nocturno": {
     nombre: "Neón Nocturno",
     variables: {
@@ -11,7 +21,7 @@ export const PRESETS = {
       "--acento-3": "#a06bff", "--texto": "#e8edf8", "--texto-suave": "#93a0bd",
     },
     forma: { "--radio": "16px", "--radio-2": "10px", "--tam-fuente": "15px", "--fuente": '"Inter", system-ui' },
-    efectos: { "--glow": "1", "--glass": "0.55", "--vel-anim": "1" },
+    efectos: { "--glow": "1.1", "--glass": "0.55", "--vel-anim": "1" },
   },
   "oceano-profundo": {
     nombre: "Océano Profundo",
@@ -20,8 +30,8 @@ export const PRESETS = {
       "--borde": "#2f7fa6", "--acento-1": "#0ea5e9", "--acento-2": "#14b8a6",
       "--acento-3": "#22d3ee", "--texto": "#dff5ff", "--texto-suave": "#8fb6c9",
     },
-    forma: { "--radio": "20px", "--radio-2": "12px", "--tam-fuente": "15px", "--fuente": '"Inter", system-ui' },
-    efectos: { "--glow": "1.2", "--glass": "0.6", "--vel-anim": "1" },
+    forma: { "--radio": "18px", "--radio-2": "11px", "--tam-fuente": "15px", "--fuente": '"Inter", system-ui' },
+    efectos: { "--glow": "0.8", "--glass": "0.62", "--vel-anim": "1" },
   },
   "matrix": {
     nombre: "Matrix",
@@ -30,8 +40,8 @@ export const PRESETS = {
       "--borde": "#1f6e35", "--acento-1": "#22c55e", "--acento-2": "#4ade80",
       "--acento-3": "#86efac", "--texto": "#d8ffe6", "--texto-suave": "#7fae8a",
     },
-    forma: { "--radio": "6px", "--radio-2": "4px", "--tam-fuente": "14.5px", "--fuente": 'ui-monospace, "Cascadia Code", Consolas' },
-    efectos: { "--glow": "1.4", "--glass": "0.5", "--vel-anim": "1.2" },
+    forma: { "--radio": "6px", "--radio-2": "4px", "--tam-fuente": "14px", "--fuente": 'ui-monospace, "Cascadia Code", Consolas' },
+    efectos: { "--glow": "0.9", "--glass": "0.55", "--vel-anim": "1.1" },
   },
   "rubí": {
     nombre: "Rubí Rojo",
@@ -40,28 +50,28 @@ export const PRESETS = {
       "--borde": "#7f2440", "--acento-1": "#ff4d6d", "--acento-2": "#ff9f68",
       "--acento-3": "#e5484d", "--texto": "#ffe9ee", "--texto-suave": "#c08b98",
     },
-    forma: { "--radio": "14px", "--radio-2": "9px", "--tam-fuente": "15px", "--fuente": '"Inter", system-ui' },
-    efectos: { "--glow": "1.3", "--glass": "0.58", "--vel-anim": "1" },
+    forma: { "--radio": "12px", "--radio-2": "8px", "--tam-fuente": "14.5px", "--fuente": '"Inter", system-ui' },
+    efectos: { "--glow": "0.8", "--glass": "0.6", "--vel-anim": "1" },
   },
   "luz-blanca": {
     nombre: "Luz Blanca",
     variables: {
-      "--bg-1": "#eef2f9", "--bg-2": "#dfe7f5", "--panel": "255, 255, 255", "--panel-sol": "255,255,255",
-      "--borde": "#9db3d6", "--acento-1": "#2563eb", "--acento-2": "#059669",
-      "--acento-3": "#7c3aed", "--texto": "#101828", "--texto-suave": "#5b6b85",
+      "--bg-1": "#f4f6fa", "--bg-2": "#e8ecf4", "--panel": "255, 255, 255", "--panel-sol": "255,255,255",
+      "--borde": "#d0d9e6", "--acento-1": "#3b7ddd", "--acento-2": "#199d70",
+      "--acento-3": "#6d5ce6", "--texto": "#131b2a", "--texto-suave": "#5c6a83",
     },
-    forma: { "--radio": "16px", "--radio-2": "10px", "--tam-fuente": "15px", "--fuente": '"Inter", system-ui' },
-    efectos: { "--glow": "0.55", "--glass": "0.85", "--vel-anim": "1" },
+    forma: { "--radio": "12px", "--radio-2": "8px", "--tam-fuente": "14.5px", "--fuente": '"Inter", system-ui' },
+    efectos: { "--glow": "0.3", "--glass": "0.9", "--vel-anim": "1" },
   },
   "solar-de-oro": {
     nombre: "Solar de Oro",
     variables: {
-      "--bg-1": "#0d0a04", "--bg-2": "#241a05", "--panel": "40, 30, 10", "--panel-sol": "255, 230, 170",
-      "--borde": "#8a6d1d", "--acento-1": "#f5b83d", "--acento-2": "#ff9f1a",
-      "--acento-3": "#fff176", "--texto": "#fff6e0", "--texto-suave": "#c4ad7f",
+      "--bg-1": "#0d0a04", "--bg-2": "#221a08", "--panel": "40, 30, 12", "--panel-sol": "255, 230, 170",
+      "--borde": "#8a6d1d", "--acento-1": "#e9b13c", "--acento-2": "#d98d20",
+      "--acento-3": "#f2d477", "--texto": "#fff6e0", "--texto-suave": "#bfa87c",
     },
-    forma: { "--radio": "24px", "--radio-2": "14px", "--tam-fuente": "15.5px", "--fuente": '"Sora", system-ui' },
-    efectos: { "--glow": "1.35", "--glass": "0.6", "--vel-anim": "1.1" },
+    forma: { "--radio": "14px", "--radio-2": "9px", "--tam-fuente": "14.5px", "--fuente": '"Inter", system-ui' },
+    efectos: { "--glow": "0.7", "--glass": "0.62", "--vel-anim": "1" },
   },
 };
 
@@ -81,6 +91,6 @@ export function cargaTema() {
     const t = JSON.parse(localStorage.getItem(CLAVE));
     if (t && t.variables) return t;
   } catch { /* tema roto: preset */ }
-  return JSON.parse(JSON.stringify(PRESETS["neon-nocturno"]));
+  return JSON.parse(JSON.stringify(PRESETS["grafito-profesional"]));
 }
-export function temaPorId(id) { return JSON.parse(JSON.stringify(PRESETS[id] || PRESETS["neon-nocturno"])); }
+export function temaPorId(id) { return JSON.parse(JSON.stringify(PRESETS[id] || PRESETS["grafito-profesional"])); }

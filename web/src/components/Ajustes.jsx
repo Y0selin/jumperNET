@@ -28,7 +28,7 @@ export default function Ajustes({aviso}) {
 
   function guarda() { guardaTema({ ...tema, cssExtra }); aviso("tema guardado: se aplica en todo el sitio", "ok"); }
   function preset(id) { const t = temaPorId(id); setTema(t); setCssExtra(""); aplicaTema(t); guardaTema(t); aviso(`preestablecido «${PRESETS[id]?.nombre}» aplicado`, "ok"); }
-  function reset() { const t = temaPorId("neon-nocturno"); setTema(t); setCssExtra(""); aplicaTema(t); guardaTema(t); }
+  function reset() { const t = temaPorId("grafito-profesional"); setTema(t); setCssExtra(""); aplicaTema(t); guardaTema(t); }
 
   function exportar() {
     const blob = new Blob([JSON.stringify({ ...tema, cssExtra }, null, 2)], { type: "application/json" });
@@ -58,7 +58,7 @@ export default function Ajustes({aviso}) {
   return (
     <div style={{ display: "grid", gap: 16 }}>
 
-      <div className="tarjeta visor grande t-led aparecer">
+      <div className="tarjeta grande t-led aparecer">
         <h2 className="seccion">Preestablecidos (un clic)</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
           {Object.entries(PRESETS).map(([id, p]) => (
@@ -77,7 +77,7 @@ export default function Ajustes({aviso}) {
       </div>
 
       <div className="grid2">
-        <div className="tarjeta visor t-led aparecer aparecer-1">
+        <div className="tarjeta t-led aparecer aparecer-1">
           <h2 className="seccion">Colores</h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {COLOR_VARIABLES.map(([k, etq]) => (
@@ -107,7 +107,7 @@ export default function Ajustes({aviso}) {
           </label>
         </div>
 
-        <div className="tarjeta visor t-led aparecer aparecer-2">
+        <div className="tarjeta t-led aparecer aparecer-2">
           <h2 className="seccion">Forma y tipografía</h2>
           <label className="nota" style={{ display: "block", marginTop: 6 }}>
             Radio de esquinas: {tema.forma["--radio"]}
@@ -138,7 +138,7 @@ export default function Ajustes({aviso}) {
           <button className="btn primario" onClick={guarda}>💾 Guardar y aplicar en vivo</button>
           <button className="btn" onClick={exportar}>⬆ Exportar tema</button>
           <label className="btn" style={{ textAlign: "center" }}>⬇ Importar tema<input type="file" accept="application/json" style={{ display: "none" }} onChange={importar} /></label>
-          <button className="btn peligro" onClick={reset}>⟲ Volver a Neón Nocturno</button>
+          <button className="btn peligro" onClick={reset}>⟲ Volver al tema por defecto</button>
         </div>
         <p className="nota" style={{ marginTop: 10 }}>
           El tema se guarda en <b>localStorage</b> (solo en tu navegador) y se aplica

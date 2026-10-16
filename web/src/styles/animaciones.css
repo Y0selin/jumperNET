@@ -1,94 +1,67 @@
 /* ============================================================
-   animaciones.css — todas las animaciones pueden desactivarse
-   (el Diseñador usa --vel-anim=0 y html[data-anim="off"])
+   animaciones.css — micro-interacciones sutiles y elegantes.
+   Todas desactivables con --vel-anim=0 (data-anim="off").
    ============================================================ */
 
 @keyframes giro { to { transform: rotate(360deg); } }
 
-@keyframes brillo-logo {
-  0%, 100% { opacity: .25; transform: translateX(-60%); }
-  50% { opacity: .6; transform: translateX(60%); }
-}
-
 @keyframes aparecer {
-  from { opacity: 0; transform: translateY(14px) scale(.98); filter: blur(6px); }
-  to { opacity: 1; transform: none; filter: blur(0); }
-}
-.aparecer { animation: aparecer .6s cubic-bezier(.2,.8,.25,1) both var(--vel-anim); }
-.aparecer-1 { animation-delay: .08s; }
-.aparecer-2 { animation-delay: .18s; }
-.aparecer-3 { animation-delay: .28s; }
-.aparecer-4 { animation-delay: .4s; }
-
-@keyframes desliza-izq {
-  from { opacity: 0; transform: translateX(-30px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
 }
+.aparecer { animation: aparecer .5s cubic-bezier(.2,.8,.25,1) both var(--vel-anim); }
+.aparecer-1 { animation-delay: .06s; }
+.aparecer-2 { animation-delay: .12s; }
+.aparecer-3 { animation-delay: .19s; }
+.aparecer-4 { animation-delay: .26s; }
 
 @keyframes flota {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-7px); }
+  50% { transform: translateY(-4px); }
 }
-.flota { animation: flota 4.5s ease-in-out infinite var(--vel-anim); }
+.flota { animation: flota 5s ease-in-out infinite var(--vel-anim); }
 
 @keyframes pulso-nucleo {
-  0% { box-shadow: 0 0 0 0 rgb(from var(--acento-1) r g b / .5); }
-  70% { box-shadow: 0 0 0 14px rgb(from var(--acento-1) r g b / 0); }
+  0% { box-shadow: 0 0 0 0 rgb(from var(--acento-1) r g b / .35); }
+  70% { box-shadow: 0 0 0 9px rgb(from var(--acento-1) r g b / 0); }
   100% { box-shadow: 0 0 0 0 rgb(from var(--acento-1) r g b / 0); }
 }
-.pulso-nucleo { animation: pulso-nucleo 2s ease-out infinite var(--vel-anim); }
+.pulso-nucleo { animation: pulso-nucleo 2.2s ease-out infinite var(--vel-anim); border-radius: 50%; }
 
-@keyframes llama-gradiente {
+@keyframes niebla-grad {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
 }
 .grad-animado {
   background: var(--grad-acento);
-  background-size: 220% 220%;
-  animation: llama-gradiente 6s ease infinite var(--vel-anim);
+  background-size: 200% 200%;
+  animation: niebla-grad 8s ease infinite var(--vel-anim);
 }
 
 @keyframes raya-avanza {
-  to { stroke-dashoffset: -24; }
+  to { stroke-dashoffset: -22; }
 }
-.linea-avanza { stroke-dasharray: 10 5; animation: raya-avanza 1.4s linear infinite var(--vel-anim); }
+.linea-avanza { stroke-dasharray: 6 5; animation: raya-avanza 1.2s linear infinite var(--vel-anim); }
 
 @keyframes escribir { from { width: 0; } to { width: 100%; } }
 @keyframes cursor-parpadea { 50% { border-color: transparent; } }
 .titular-maquina {
-  border-right: 2px solid var(--acento-2);
-  white-space: nowrap; overflow: hidden;
-  animation: escribir 1.8s steps(38) both, cursor-parpadea .7s step-end infinite;
-  animation-duration: calc(1.8s * var(--vel-anim)), calc(.7s / var(--vel-anim));
+  display: inline-block; overflow: hidden; white-space: nowrap;
+  border-right: 2px solid var(--acento-1);
+  animation: escribir 1.6s steps(32) both, cursor-parpadea .8s step-end .4s infinite;
 }
 
-@keyframes onda-idle { 0% { transform: scaleY(.4); opacity: .4; } 50% { transform: scaleY(1); opacity: 1; } 100% { transform: scaleY(.4); opacity: .4; } }
-.barra-actividad { width: 4px; height: 16px; border-radius: 2px; background: var(--acento-2); display: inline-block; transform-origin: bottom; margin-right: 3px; }
-.barra-actividad.b2 { animation: onda-idle 1s ease-in-out .15s infinite var(--vel-anim); }
-.barra-actividad.b3 { animation: onda-idle 1s ease-in-out .3s infinite var(--vel-anim); }
-
-@keyframes parpadeo-suave { 50% { opacity: .55; } }
-.parpadea { animation: parpadeo-suave 2.4s ease-in-out infinite var(--vel-anim); }
+@keyframes onda-idle { 0% { transform: scaleY(.35); opacity: .4; } 50% { transform: scaleY(1); opacity: 1; } 100% { transform: scaleY(.35); opacity: .4; } }
+.barra-actividad { width: 3px; height: 14px; border-radius: 2px; background: var(--acento-2); display: inline-block; transform-origin: bottom; margin-right: 3px; animation: onda-idle 1.1s ease-in-out infinite var(--vel-anim); }
+.barra-actividad.b2 { animation-delay: .12s; }
+.barra-actividad.b3 { animation-delay: .24s; }
 
 @keyframes llega-tarjeta {
-  from { opacity: 0; transform: translateY(24px) rotateX(8deg); }
+  from { opacity: 0; transform: translateY(12px) scale(.995); }
   to { opacity: 1; transform: none; }
 }
-.t-led { animation: llega-tarjeta .55s cubic-bezier(.2,.85,.3,1.1) both var(--vel-anim); }
+.t-led { animation: llega-tarjeta .5s cubic-bezier(.2,.85,.3,1) both var(--vel-anim); }
 
-@keyframes resplandor-borde {
-  0%, 100% { box-shadow: inset 0 0 0 1px rgb(from var(--acento-1) r g b / .25); }
-  50% { box-shadow: inset 0 0 0 1px rgb(from var(--acento-1) r g b / .8); }
-}
-.borde-latiente { animation: resplandor-borde 2.6s ease-in-out infinite var(--vel-anim); }
-
-@keyframes brillo-pasa {
-  0% { transform: translateX(-120%); }
-  60%, 100% { transform: translateX(240%); }
-}
-/* .efecto-brillo y su ::after viven ahora en base.css */
-
-/* accesibilidad: menos movimiento */
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .001s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; }
 }

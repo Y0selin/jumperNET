@@ -50,8 +50,8 @@ export default function App() {
             <div className="logo-marca">
               <div className="logo-cubo flota">JN</div>
               <div>
-                <div style={{ fontWeight: 900, fontSize: 17, letterSpacing: ".04em" }}>JumperNAT</div>
-                <div className="nota" style={{ fontSize: 11.5 }}>torre de control · 3 saltos · cifrado en capas</div>
+                <div className="nombre">JumperNAT</div>
+                <div className="lema">torre de control · 3 saltos · cifrado en capas</div>
               </div>
             </div>
             <nav className="tabs">
@@ -111,7 +111,7 @@ export default function App() {
 
           {/* ======== CUENTA ======== */}
           {tab === "cuenta" && enSesion && (
-            <div className="tarjeta visor grande t-led" style={{ maxWidth: 520 }}>
+            <div className="tarjeta grande t-led" style={{ maxWidth: 520 }}>
               <h2 className="seccion">Tu cuenta</h2>
               <div className="dato"><span className="etq">email</span><span className="val">{yo.email}</span></div>
               <div className="dato"><span className="etq">id</span><span className="val">{yo.id}</span></div>

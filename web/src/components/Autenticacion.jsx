@@ -28,7 +28,7 @@ export default function Autenticacion({ alEntrar, aviso }) {
 
   return (
     <div className="grid2 aparecer">
-      <div className="tarjeta visor grande efecto-brillo">
+      <div className="tarjeta destacada grande t-led">
         <h2 className="seccion">{pesta === "login" ? "Iniciar sesión" : "Crear cuenta"}</h2>
 
         <div className="fila-btn" style={{ marginBottom: 16 }}>
@@ -53,7 +53,7 @@ export default function Autenticacion({ alEntrar, aviso }) {
         </p>
       </div>
 
-      <div className="tarjeta visor">
+      <div className="tarjeta t-led">
         <h2 className="seccion">¿En qué estás entrando?</h2>
         <ul style={{ listStyle: "none", display: "grid", gap: 12 }}>
           <li className="dato"><span className="etq"><b>1.</b> Creas/entras a tu cuenta</span><span className="val">JWT 2h</span></li>

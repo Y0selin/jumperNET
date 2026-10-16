@@ -17,7 +17,7 @@ function AnilloJwt({ token }) {
   if (!info) return null;
   const total = 7200, frac = Math.min(1, segundos / total), R = 26, C = 2 * Math.PI * R;
   return (
-    <div className="tarjeta visor t-led" style={{ display: "flex", alignItems: "center", gap: 14 }}>
+    <div className="tarjeta t-led" style={{ display: "flex", alignItems: "center", gap: 14 }}>
       <div className="pulso-nucleo" style={{ borderRadius: "50%", display: "grid", placeItems: "center" }}>
         <svg width="64" height="64" viewBox="0 0 64 64">
           <circle cx="32" cy="32" r={R} fill="none" stroke="rgb(255 255 255 / .12)" strokeWidth="5" />
@@ -140,7 +140,7 @@ export default function Panel({ yo: yoInicial, aviso }) {
     <div style={{ display: "grid", gap: 16 }}>
 
       {/* ===== estado del circuito ===== */}
-      <div className="tarjeta visor grande efecto-brillo t-led aparecer">
+      <div className="tarjeta destacada grande t-led aparecer">
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <span className={`chip ${activo ? "vivo" : "muerto"}`} style={{ fontSize: 14, padding: "8px 18px" }}>
             {activo ? "● CONECTADO" : "○ desconectado"}
@@ -173,7 +173,7 @@ export default function Panel({ yo: yoInicial, aviso }) {
       </div>
 
       {/* ===== viaje en vivo: mapa ===== */}
-      <div className="tarjeta visor grande t-led aparecer aparecer-1 borde-latiente">
+      <div className="tarjeta grande t-led aparecer aparecer-1">
         <h2 className="seccion">Viaje de tu conexión · en vivo</h2>
         <button className="btn" style={{ marginBottom: 8 }} onClick={vuelo}>🎬 Reproducir viaje (vuelo animado)</button>
         <div ref={mapaRef} style={{ height: 400, borderRadius: "var(--radio)", border: "1px solid rgb(from var(--borde) r g b / .4)", background: "#0b1020" }} />
@@ -190,7 +190,7 @@ export default function Panel({ yo: yoInicial, aviso }) {
           {(yo.circuito || []).map((n, i) => {
             const info = listaNodos.find((x) => x.nombre === n) || {};
             return (
-              <div key={n} className="tarjeta visor t-led" style={{ animationDelay: `${i * 0.1}s` }}>
+              <div key={n} className="tarjeta t-led" style={{ animationDelay: `${i * 0.1}s` }}>
                 <h2 className="seccion">Salto {i + 1} · {n}</h2>
                 <span className="chip info" style={{ marginBottom: 10 }}>
                   {i === 2 ? "🚪 EXIT (salida)" : "🔁 reenvío ciego"} {i === 0 && <span className="barra-actividad" />}
@@ -210,7 +210,7 @@ export default function Panel({ yo: yoInicial, aviso }) {
       <div className="grid2">
         <AnilloJwt token={getToken()} />
 
-        <div className="tarjeta visor t-led">
+        <div className="tarjeta t-led">
           <h2 className="seccion">Tu información</h2>
           <div className="dato"><span className="etq">cuenta</span><span className="val">{yo.email}</span></div>
           <div className="dato"><span className="etq">tu IP pública (ve el servidor)</span><span className="val">{yo.ip_real || "—"}</span></div>
@@ -223,7 +223,7 @@ export default function Panel({ yo: yoInicial, aviso }) {
       </div>
 
       {/* ===== comando socks ===== */}
-      <div className="tarjeta visor grande t-led aparecer-2">
+      <div className="tarjeta destacada grande t-led aparecer-2">
         <h2 className="seccion">Usa el proxy SOCKS5</h2>
         <p className="peque nota">Puerto 1080 · tus mismas credenciales · solo puertos 80/443 · cifrado en capas hasta el exit.</p>
         <pre className="codigo"># sustituye TU_CLAVE por tu contraseña
