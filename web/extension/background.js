@@ -120,9 +120,34 @@ navegador.webRequest.onAuthRequired.addListener(
 
 /* -------------------------------------------------------------- arranque */
 
+/*
+ * Primer arranque: si no hay nada guardado y la extension trae un fichero
+ * config.json (host, puerto, usuario, clave, activo), lo importa. Asi puedes
+ * desplegar la extension con las credenciales ya puestas (y los tests
+ * automatizados de empaquetado no necesitan tocar el popup).
+ * config.json se lee UNA vez; despues manda el storage del popup.
+ */
+async function importar_config_json() {
+  try {
+    const r = await fetch(navegador.runtime.getURL("config.json"));
+    if (!r.ok) return null;
+    const crudo = await r.json();
+    const config = { ...POR_DEFECTO, ...crudo };
+    await navegador.storage.local.set({ configJumperNAT: config });
+    console.log("[jumpernet] config.json importado al primer arranque");
+    return config;
+  } catch (e) {
+    return null; // sin config.json: flujo normal (popup)
+  }
+}
+
 async function cargar_y_aplicar() {
   const { configJumperNAT } = await navegador.storage.local.get(["configJumperNAT"]);
-  config_ahora = { ...POR_DEFECTO, ...(configJumperNAT || {}) };
+  if (configJumperNAT) {
+    config_ahora = { ...POR_DEFECTO, ...(configJumperNAT || {}) };
+  } else {
+    config_ahora = (await importar_config_json()) || { ...POR_DEFECTO };
+  }
   await aplicar();
   const estado = config_ahora.activo
     ? `activa via ${cadenaProxy(config_ahora)} (usuario ${config_ahora.usuario})`

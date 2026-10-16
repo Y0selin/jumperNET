@@ -55,3 +55,28 @@ cd web/extension && bash empaqueta.sh     # genera dist/chrome/ y dist/firefox(+
   si algo intenta salir a una IP privada o a la metadata del cloud, se niega.
 - El handshake de autenticación (Basic) es la única parte sin cifrar: por lo
   demás el volumen va HTTPS (CONNECT) o por el circuito JENC.
+
+## Extensión + relé local (HTTP 1081 aún cerrado)
+
+Hasta que se abra el 1081 en la Oracle Security List, la extensión no alcanza
+el servidor desde casa. El repo incluye un **relé HTTP local**
+(`cliente/rele_http.py`, gemelo de `rele_socks.py`): escucha en
+`127.0.0.1:1081` sin pedir clave y habla SOCKS5 autenticado con el VPS, así
+que la extensión funciona igual apuntándolo a él.
+
+Para desplegar la extensión **sin escribir nada en el popup**, crea
+`web/extension/config.json` antes de empaquetar:
+
+```json
+{"host": "127.0.0.1", "puerto": 1081, "usuario": "tu@correo.es", "clave": "tuClave", "activo": true}
+```
+
+`empaqueta.sh` lo copia a `dist/` y `background.js` lo importa en el primer
+arranque (solo si el storage está vacío; después manda el popup). Cuando se
+abra el 1081, basta con `"host": "jumpernet.duckdns.org"`.
+
+**Probado de extremo a extremo con Chromium 143 headless** (Linux, extensión
+cargada vía `--load-extension` y `config.json`): el destino externo vio la IP
+`129.213.137.20` (la del exit) y el log del relé registró los CONNECT del
+navegador, incluidos los que Chromium emite por su cuenta (`api.ipify.org:443`
+y `www.google.com:443`): todo el tráfico del navegador viajó por el circuito.

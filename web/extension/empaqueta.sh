@@ -13,7 +13,10 @@ rm -rf dist
 mkdir -p dist
 
 # ─── Chrome (MV3): manifest-chrome.json pasa a ser el manifest.json ────
+# config.json es OPCIONAL: si existe (credenciales prellenadas para desplegar
+# sin teclado), se copia a las dos entregas y la extension lo importa solo.
 FICHEROS="background.js popup.html popup.js icono.png icono128.png manifest-chrome.json"
+[ -f config.json ] && FICHEROS="$FICHEROS config.json"
 mkdir -p dist/chrome
 for f in $FICHEROS; do cp "$f" dist/chrome/; done
 mv dist/chrome/manifest-chrome.json dist/chrome/manifest.json
