@@ -1,0 +1,37 @@
+JumperNAT — instalación de la extensión (Chrome, Edge, Brave, Firefox · Windows y Linux)
+
+1) Descomprime este zip. Dentro hay dos carpetas: "chrome" y "firefox".
+
+──────────────────────────────────────────────────────────────────
+ Chrome / Edge / Brave  (la carpeta "chrome")
+──────────────────────────────────────────────────────────────────
+ 1. Abre chrome://extensions   (en Edge: edge://extensions)
+ 2. Activa "Modo de desarrollador" (arriba a la derecha).
+ 3. "Cargar sin comprimir" → elige la carpeta "chrome".
+ 4. Abre el botón de la extensión (JumperNAT):
+    escribe tu email y tu contraseña (los mismos de la web) y pulsa ACTIVAR.
+
+──────────────────────────────────────────────────────────────────
+ Firefox  (la carpeta "firefox")
+──────────────────────────────────────────────────────────────────
+ PROBAR (temporal, ~1 min):
+ 1. Abre about:debugging#/runtime/this-firefox
+ 2. "Cargar complemento temporal" → escoge el manifest.json de la carpeta "firefox".
+ 3. En el botón de la extensión: tu email + contraseña → ACTIVAR.
+    (se desinstala al cerrar Firefox)
+
+ PERMANENTE: requiere paquete firmado por Mozilla:
+ sube dist/firefox.xpi en https://addons.mozilla.org/developers
+ ("for self-distribution") y Firefox aceptará el .xpi firmado.
+
+──────────────────────────────────────────────────────────────────
+ Requisito: la RED tiene que estar ENCENDIDA en el panel
+ (pestaña Red → interruptor). El servidor rechaza usuarios sin circuito.
+
+ Con la extensión ACTIVA, todo el tráfico del navegador (y el DNS) sale por
+ tu circuito de 3 saltos con la IP del nodo de salida. Botón: Activar /
+ Desactivar / Olvidar. No toca tu perfil ni tus otras extensiones.
+
+ Sin navegadores externos: si el puerto 1081 aún no está abierto en el
+ servidor y ves errores de conexión, ejecuta en tu máquina el relé local
+ del repo (cliente/rele_http.py) y usa en la extensión host 127.0.0.1, puerto 1081.

@@ -30,6 +30,14 @@ rm -f dist/firefox/manifest-chrome.json
 if command -v zip >/dev/null 2>&1; then
   (cd dist/firefox && zip -q -r ../firefox.xpi .)
   echo "generado dist/firefox.xpi"
+  # paquete PUBLICO de descarga desde el panel: las dos entregas listas
+  cp LEEME.txt dist/ 2>/dev/null || echo "(crea LEEME.txt para el zip publico)"
+  (cd dist && rm -f jumpernet-extension.zip && zip -q -r jumpernet-extension.zip chrome firefox LEEME.txt 2>/dev/null || zip -q -r jumpernet-extension.zip chrome firefox)
+  # si el public/ del panel esta a mano, lo renueva para que la web lo sirva
+  if [ -d ../public ]; then
+    cp dist/jumpernet-extension.zip ../public/extension.zip
+    echo "publicado tambien en web/public/extension.zip (el panel lo sirve en Pages)"
+  fi
 else
   echo "(aviso: sin 'zip'; en Windows usa PowerShell: Compress-Archive dist/firefox/* firefox.zip; y renombra a .xpi)"
 fi
