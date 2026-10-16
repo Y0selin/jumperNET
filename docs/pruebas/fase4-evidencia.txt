@@ -1,0 +1,29 @@
+# Evidencia Fase 4 — 2026-10-16T09:22:20Z
+
+## Certificado Let Encrypt emitido por Caddy (tls-alpn-01)
+{"level":"info","ts":1792142491.7132587,"logger":"http.acme_client","msg":"successfully downloaded available certificate chains","count":3,"first_url":"https://acme-v02.api.letsencrypt.org/acme/cert/053b194c469fe2ae6562f4039a095b8a4969"}
+{"level":"info","ts":1792142491.7136323,"logger":"tls.obtain","msg":"certificate obtained successfully","identifier":"jumpernet.duckdns.org","issuer":"acme-v02.api.letsencrypt.org-directory"}
+
+## Prueba HTTPS desde fuera (Kali local -> 129.213.137.20)
+puertos: 80/443 ABIERTOS, 1080 PENDIENTE (regla no aplicada aun)
+
+## API por HTTPS:
+GET /nodos -> HTTP 200
+GET /me sin token -> HTTP 401
+
+## redirect http->https (80)
+GET http://.../ -> HTTP 308 (location: https://jumpernet.duckdns.org/)
+
+## iptables INPUT (numericas, top 5)
+Chain INPUT (policy ACCEPT)
+num  target     prot opt source               destination         
+1    ACCEPT     6    --  0.0.0.0/0            0.0.0.0/0            tcp dpt:1080
+2    ACCEPT     6    --  0.0.0.0/0            0.0.0.0/0            tcp dpt:443
+3    ACCEPT     6    --  0.0.0.0/0            0.0.0.0/0            tcp dpt:80
+
+## persistencia netfilter-persistent:
+-rw-r-----   1 root root  6874 Oct 15 18:56 rules.v4
+-rw-r-----   1 root root   845 Oct 15 18:56 rules.v6
+
+## backups pre-fase4:
+-rw-r--r-- 1 root   root   6739 Oct 15 18:56 iptables-pre-fase4-20261015.rules
