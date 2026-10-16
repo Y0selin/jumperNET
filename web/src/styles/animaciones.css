@@ -1,0 +1,102 @@
+/* ============================================================
+   animaciones.css — todas las animaciones pueden desactivarse
+   (el Diseñador usa --vel-anim=0 y html[data-anim="off"])
+   ============================================================ */
+
+@keyframes giro { to { transform: rotate(360deg); } }
+
+@keyframes brillo-logo {
+  0%, 100% { opacity: .25; transform: translateX(-60%); }
+  50% { opacity: .6; transform: translateX(60%); }
+}
+
+@keyframes aparecer {
+  from { opacity: 0; transform: translateY(14px) scale(.98); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+.aparecer { animation: aparecer .6s cubic-bezier(.2,.8,.25,1) both var(--vel-anim); }
+.aparecer-1 { animation-delay: .08s; }
+.aparecer-2 { animation-delay: .18s; }
+.aparecer-3 { animation-delay: .28s; }
+.aparecer-4 { animation-delay: .4s; }
+
+@keyframes desliza-izq {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes flota {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+.flota { animation: flota 4.5s ease-in-out infinite var(--vel-anim); }
+
+@keyframes pulso-nucleo {
+  0% { box-shadow: 0 0 0 0 rgb(from var(--acento-1) r g b / .5); }
+  70% { box-shadow: 0 0 0 14px rgb(from var(--acento-1) r g b / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(from var(--acento-1) r g b / 0); }
+}
+.pulso-nucleo { animation: pulso-nucleo 2s ease-out infinite var(--vel-anim); }
+
+@keyframes llama-gradiente {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.grad-animado {
+  background: var(--grad-acento);
+  background-size: 220% 220%;
+  animation: llama-gradiente 6s ease infinite var(--vel-anim);
+}
+
+@keyframes raya-avanza {
+  to { stroke-dashoffset: -24; }
+}
+.linea-avanza { stroke-dasharray: 10 5; animation: raya-avanza 1.4s linear infinite var(--vel-anim); }
+
+@keyframes escribir { from { width: 0; } to { width: 100%; } }
+@keyframes cursor-parpadea { 50% { border-color: transparent; } }
+.titular-maquina {
+  border-right: 2px solid var(--acento-2);
+  white-space: nowrap; overflow: hidden;
+  animation: escribir 1.8s steps(38) both, cursor-parpadea .7s step-end infinite;
+  animation-duration: calc(1.8s * var(--vel-anim)), calc(.7s / var(--vel-anim));
+}
+
+@keyframes onda-idle { 0% { transform: scaleY(.4); opacity: .4; } 50% { transform: scaleY(1); opacity: 1; } 100% { transform: scaleY(.4); opacity: .4; } }
+.barra-actividad { width: 4px; height: 16px; border-radius: 2px; background: var(--acento-2); display: inline-block; transform-origin: bottom; margin-right: 3px; }
+.barra-actividad.b2 { animation: onda-idle 1s ease-in-out .15s infinite var(--vel-anim); }
+.barra-actividad.b3 { animation: onda-idle 1s ease-in-out .3s infinite var(--vel-anim); }
+
+@keyframes parpadeo-suave { 50% { opacity: .55; } }
+.parpadea { animation: parpadeo-suave 2.4s ease-in-out infinite var(--vel-anim); }
+
+@keyframes llega-tarjeta {
+  from { opacity: 0; transform: translateY(24px) rotateX(8deg); }
+  to { opacity: 1; transform: none; }
+}
+.t-led { animation: llega-tarjeta .55s cubic-bezier(.2,.85,.3,1.1) both var(--vel-anim); }
+
+@keyframes resplandor-borde {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgb(from var(--acento-1) r g b / .25); }
+  50% { box-shadow: inset 0 0 0 1px rgb(from var(--acento-1) r g b / .8); }
+}
+.borde-latiente { animation: resplandor-borde 2.6s ease-in-out infinite var(--vel-anim); }
+
+@keyframes brillo-pasa {
+  0% { transform: translateX(-120%); }
+  60%, 100% { transform: translateX(240%); }
+}
+.efecto-brillo { position: relative; overflow: hidden; }
+.efecto-brillo::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 38%;
+  background: linear-gradient(100deg, transparent, rgb(255 255 255 / .18), transparent);
+  transform: translateX(-120%);
+  animation: brillo-pasa 3.6s ease-in-out infinite var(--vel-anim);
+  pointer-events: none;
+}
+
+/* accesibilidad: menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; }
+}
+html[data-anim="off"] * { animation: none !important; transition-duration: .15s !important; }

@@ -3,7 +3,7 @@ name: Desplegar web en GitHub Pages
 on:
   push:
     branches: [main]
-    paths: ["index.html", ".github/workflows/pages.yml"]
+    paths: ["web/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -23,13 +23,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Preparar el sitio (solo la web, no el resto del repo)
-        run: |
-          mkdir -p _site
-          cp index.html _site/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Instalar dependencias (React + Vite)
+        run: npm ci --no-audit --no-fund
+        working-directory: web
+      - name: Compilar (vite build)
+        run: npm run build
+        working-directory: web
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: web/dist
       - id: deployment
         uses: actions/deploy-pages@v4
