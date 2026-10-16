@@ -1,71 +1,92 @@
-# Fase 6 — Frontend de gestión en GitHub Pages
+# Fase 6 — Frontend React en GitHub Pages
 
 ## Objetivo
-Web para crear cuenta, entrar, **conectar / rotar / desconectar el circuito**
-y ver **en vivo el viaje de la conexión** (nodos, IPs, mapa). Alojada en
-**GitHub Pages** (despliegue automático con GitHub Actions) y con la API en
-`https://jumpernet.duckdns.org`.
+Web **React + Vite (Node.js)** para gestionar circuitos: entrar, conectar /
+rotar / desconectar, ver el **viaje en vivo** (mapa, nodos, IPs) y
+**diseñar la propia página** desde Ajustes. Alojada en GitHub Pages con
+despliegue automático por **GitHub Actions** (compila con Node).
 
 ## URL
-`https://y0selin.github.io/jumperNET/`  *(puede tardar ~1 min tras el push:
-el workflow `pages.yml` despliega por Actions)*
+`https://y0selin.github.io/jumperNET/`
+
+## Stack
+- **React 18 + Vite** (build con Node 20 en Actions, artefacto estático en Pages).
+- Gráficas/animaciones con **CSS puro** (keyframes, glassmorphism) + un
+  **canvas de partículas** propio (Aurora) — sin frameworks de UI.
+- **Leaflet + OpenStreetMap** para el mapa del viaje.
+-Sin dependencias pesadas: react, react-dom, leaflet, vite.
+
+## Estructura
+```
+web/
+  index.html            # raíz del SPA
+  package.json          # deps y scripts (dev/build/preview)
+  vite.config.js        # base relativa (subruta de Pages)
+  src/
+    main.jsx            # bootstrap React
+    App.jsx             # shell: nav animada, toasts, sesion, tabs
+    components/
+      Aurora.jsx        # fondo animado de particulas/constelaciones
+      Autenticacion.jsx # login/registro + onboarding
+      Panel.jsx         # estado, viaje en vivo (mapa+paradas), nodos, JWT ring
+      Ajustes.jsx       # DISEÑADOR VISUAL del tema
+      Informacion.jsx   # modo principiante / modo avanzado
+    lib/
+      api.js            # cliente API (token, JWT decode, latencia, geo)
+      temas.js          # presets y aplicación de variables CSS
+    styles/
+      base.css          # todo el diseño bajo variables (--acento-1, --radio…)
+      animaciones.css   # catálogo de animaciones (respeta data-anim="off")
+```
+
+## Diseñador visual (Ajustes) — lo que el usuario puede cambiar desde la web
+- **Colores** (8 variables): fondos, bordes, acentos, textos (color pickers).
+- **Forma**: radio de esquinas, tamaño de letra, **fuente** (Inter, mono, serif…).
+- **Efectos**: intensidad de glow, transparencia del glass, **velocidad global
+  de todas las animaciones** (0 = sin animaciones, accesible).
+- **CSS personalizado libre** (textarea avanzado, tiene la última palabra).
+- **6 preestablecidos**: Neón Nocturno, Océano Profundo, Matrix, Rubí Rojo,
+  Luz Blanca, Solar de Oro.
+- **Exportar/importar tema** (JSON) y persistencia en localStorage.
+- El sistema entero funciona reescribiendo `css variables` en vivo:
+  cambia `--acento-1` y cambiará botones, mapa, aurora y brillos a la vez.
+
+## Información doble (nuevos / avanzados)
+- **Modo principiante**: qué es un circuito con la analogía del autobús con
+  3 cambios de conductor, guía en 4 pasos, FAQ, seguridad en lenguaje fácil.
+- **Modo avanzado**: ficha técnica del plan/control y del data-plane (formato
+  de registro JENC con diagrama ASCII), tabla de endpoints, límites docker,
+  `/nodos` **en JSON crudo**, **JWT decodificado** en vivo y **anillo de
+  cuenta atrás** de expiración, inventario de seguridad, latencia por consulta.
+
+## Panel (viaje en vivo)
+- Línea de paradas animada `TÚ → nodo1 → nodo2 → nodo3 (exit) → destino` con
+  pulso en saltos activos y botón «Reproducir viaje» (vuelo animado por el mapa).
+- Mapa con tu ubicación real (geolocalización de tu IP vía ipapi.co), el
+  servidor (Ashburn) y estelas por salto.
+- Tarjeta por nodo: dirección interna, estado por heartbeat, hacia quién
+  salta, tipo de enlace y si ve o no tu contenido.
+- Comando SOCKS5 listo para copiar.
+- Nota de honestidad visible: los saltos son lógicos (misma máquina).
 
 ## Despliegue (GitHub Actions)
-Pages está configurado en el repo con fuente **GitHub Actions** (no branch),
-así que el despliegue lo hace `.github/workflows/pages.yml`:
-1. `on: push` con cambios en `index.html` (o manual con `workflow_dispatch`).
-2. Prepara `./_site` con **solo** `index.html` (no publica docs ni código).
-3. `upload-pages-artifact` → `deploy-pages@v4`.
-
-## El fichero
-- `index.html` (raíz del repo): SPA **en un solo fichero** (HTML+CSS+JS sin
-  frameworks; Leaflet por CDN solo para el mapa).
-
-## Qué enseña el panel (v2)
-- **Estado de tu circuito**: conectado/desconectado, circuito con 3 saltos,
-  nodo de salida, botones Conectar / Rotar / Desconectar.
-- **Comando listo del proxy SOCKS5** con tu cuenta (botón copiar).
-- **Viaje en vivo**:
-  - línea de paradas `TÚ → nodo1 → nodo2 → nodo3 → destino` (con pulso en
-    el primer salto activo);
-  - **mapa** (Leaflet + OpenStreetMap): tu ubicación real (geolocalización
-    de TU IP pública vía ipapi.co, en el navegador), la del servidor
-    (Ashburn) y la línea TÚ → servidor → internet;
-  - **tarjeta por cada nodo del circuito**: nombre, dirección interna,
-    estado (vivo/caído por heartbeat), hacia quién salta y el enlace
-    cifrado ChaCha20-Poly1305 (Fase 8);
-  - **tu información de sesión**: cuenta, tu IP pública tal como la ve el
-    servidor, qué IP ve internet cuando usas el circuito (la del exit),
-    circuito actual, estado y último cambio.
-- **Nota de honestidad** en el propio panel: los 3 saltos viven en el mismo
-  servidor Oracle (Ashburn); la separación es lógica (contenedores a
- islados), no geográfica.
+Pages configurado con fuente **GitHub Actions** → `.github/workflows/pages.yml`:
+1. `on: push` con cambios en `web/**` (o manual `workflow_dispatch`).
+2. `npm ci` + `npm run build` (Node 20, caché de npm).
+3. Sube `web/dist` como artefacto de Pages y despliega.
 
 ## Seguridad del cliente
-- JWT en `localStorage`, mandado como `Authorization: Bearer`.
-- La contraseña NO se guarda: solo el token.
-- `/me` sin token → 401 → vuelve al login automáticamente.
-- La geolocalización de tu IP se pide al navegador a ipapi.co (servicio
-  público); el servidor no guarda geolocalización.
+- JWT en localStorage; la contraseña nunca se guarda (solo el token).
+- 401 → logout automático y aviso de sesión caducada.
+- La geolocalización de tu IP la pide el navegador a ipapi.co; el servidor
+  no guarda geolocalización ni histórico.
 
-## Interacciones con la API usadas
-| llamada | uso |
-|---|---|
-| `POST /register` | alta de usuario |
-| `POST /login` | obtención del JWT |
-| `GET /me` | circuito, salida, estado, IP real |
-| `GET /nodos` | nombre/dirección/estado de cada nodo (público) |
-| `POST /connect` | crear circuito con 3 saltos aleatorios |
-| `POST /rotate` | rotar circuito (nuevos nodos) |
-| `POST /disconnect` | desactivar (rompe el circuito → SOCKS5 lo rechaza) |
-| `DELETE /me` | eliminar cuenta |
+## Verificación
+- Build local: `vite build` ✓ (42 módulos, 102 KB gzip del JS).
+- Production: `https://y0selin.github.io/jumperNET/` sirve los assets del
+  build React (HTTP 200) ✓ y **Chrome headless** renderiza el app sin
+  errores (login, panel y textos onboarding presentes) ✓.
 
 ## CORS
-Fase 4 ya restringe `CORS_ORIGINS` a `https://y0selin.github.io`.
-
-## Comprobación
-```bash
-curl -s https://y0selin.github.io/jumperNET/ | grep -c "JumperNAT"
-```
-Y en el navegador: entrar → Conectar → ver el viaje del circuito en el mapa
-y las tarjetas de nodos → copiar el comando y probarlo en una terminal (200).
+Fase 4 restringe `CORS_ORIGINS` a `https://y0selin.github.io`; verificado
+con login/`/me` reales desde el origen de Pages.
