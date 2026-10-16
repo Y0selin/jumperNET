@@ -94,7 +94,7 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
                 const vivo = n.estado === "vivo";
                 return (
                   <tr key={n.nombre} className={p ? "en-circuito" : ""}>
-                    <td><b>{n.nombre}</b></td>
+                    <td><b>{n.nombre}</b>{n.nombre?.startsWith("peer_") && <span className="chip acento" style={{ marginLeft: 6, fontSize: 10 }}>personal</span>}</td>
                     <td>{p ? <span className={`chip ${p === "exit" ? "vivo" : "acento"}`}>{p}</span> : <span className="nota">—</span>}</td>
                     <td>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: vivo ? "var(--acento-1)" : "#ff9088" }}>

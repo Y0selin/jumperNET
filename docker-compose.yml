@@ -100,6 +100,9 @@ services:
     environment:
       DB_PATH: /data/jumpernat.db
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      # Fase 9: token de los nodos PERSONALES de usuarios (peers), separado del
+      # interno para que un amigo no necesita conocer los secretos de sistemas
+      PEER_TOKEN: ${PEER_TOKEN:-}
       UMBRAL_CAIDO_SEG: "35"
     volumes:
       - ./data:/data

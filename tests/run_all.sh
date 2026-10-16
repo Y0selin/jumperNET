@@ -66,6 +66,9 @@ docker compose up -d --build 2>&1 | tail -2
 # contenedores efimeros de docker heredan IP y fase3 no puede registrar. Con la
 # API reiniciada, la suite parte de ventanas limpias y es repetible.
 docker compose restart api >/dev/null 2>&1
+# si una tirada anterior dejó el peer de prueba vivo, solo contaminaría el
+# pool con un hop inalcanzable: se borra SIEMPRE al comenzar
+docker rm -f peer_prueba >/dev/null 2>&1
 esperar_api || { echo "la API no responde"; exit 1; }
 esperar_nodos || { echo "aviso: los nodos tardan en aceptar TCP (se continua igualmente)"; }
 
@@ -83,6 +86,12 @@ prepara_socks() {
   ACT=$(curl -s -H "Authorization: Bearer $T" http://127.0.0.1:8000/me | python3 -c 'import json,sys;print(1 if json.load(sys.stdin)["activo"] else 0)')
   if [ "$ACT" != "1" ]; then
     curl -s -o /dev/null -X POST -H "Authorization: Bearer $T" http://127.0.0.1:8000/connect || return 1
+  else
+    # si venia activo de otra tirada, su circuito puede referir un hop que ya
+    # no existe (peer de prueba borrado): se re-elig e con el pool ACTIVO de
+    # ahora para que los tests SOCKS no luchen contra un circuito cadaver
+    curl -s -o /dev/null -X POST -H "Authorization: Bearer $T" http://127.0.0.1:8000/disconnect
+    curl -s -o /dev/null -X POST -H "Authorization: Bearer $T" http://127.0.0.1:8000/connect
   fi
   curl -s -o /dev/null -X POST 127.0.0.1:8000/register -H "Content-Type: application/json" \
     -d "{\"email\":\"$SOCKS_USER_NC\",\"password\":\"$SOCKS_PASS_NC\"}"
@@ -187,8 +196,77 @@ paso 5.6 "entrada HTTP (1081): 407 sin clave, circuito con clave y privado deneg
   entra_http
 
 paso 8.1 "cifrado en capas JENC: e2e probado con registro y clave real (ChaCha20)" \
-  docker compose run --rm -e SOCKS_USER -e SOCKS_PASS -e SOCKS_USER_NC -e SOCKS_PASS_NC -e CLAVE_SALTOS \
-  cliente-test fase8_cifrado.py
+  docker compose run --rm -e SOCKS_USER -e SOCKS_PASS -e SOCKS_USER_NC -e SOCKS_PASS_NC -e CLAVE_SALTOS cliente-test fase8_cifrado.py
+
+# ---------------------------------------------------------------- nodos personales (Fase 9)
+# El modelo TOR: el equipo de un usuario puede entrar en la red como salto
+# voluntario. Ha de registrarse con PEER_TOKEN y un nombre peer_* (jac no
+# necesita -- ni debe tener -- el token interno de sistemas).
+
+peer_prueba_tokens() {
+  local INTERNO PEER code
+  INTERNO=$(sed -n 's/^INTERNAL_TOKEN=//p' .env 2>/dev/null | tr -d "\"'")
+  PEER=$(sed -n 's/^PEER_TOKEN=//p' .env 2>/dev/null | tr -d "\"'")
+  if [ -z "$PEER" ]; then echo "PEER_TOKEN no esta en .env: saltando los tests de peers"; return 0; fi
+
+  # (a) token de peer con nombre SIN peer_ -> 401
+  code=$(curl -s -o /dev/null -w '%{http_code}' -X POST 127.0.0.1:8000/nodos/heartbeat \
+    -H 'Content-Type: application/json' -H "X-Interno: $PEER" \
+    -d '{"nombre":"mal_intento","direccion":"1.2.3.4:9000","conexiones":0}')
+  [ "$code" = "401" ] || { echo "  peer con nombre sin peer_ fue aceptado ($code): eso no debe pasar"; return 1; }
+  # (b) token de peer CORRECTO + nombre peer_* -> 200 y aparece vivo
+  code=$(curl -s -o /dev/null -w '%{http_code}' -X POST 127.0.0.1:8000/nodos/heartbeat \
+    -H 'Content-Type: application/json' -H "X-Interno: $PEER" \
+    -d '{"nombre":"peer_ejemplo","direccion":"93.184.216.34:9000","conexiones":0}')
+  [ "$code" = "200" ] || { echo "  peer con token de peer rechazado ($code)"; return 1; }
+  curl -s 127.0.0.1:8000/nodos | grep -q '"peer_ejemplo"' || { echo "  peer no aparece en /nodos"; return 1; }
+  echo "  peer_ejemplo registrado con PEER_TOKEN y vivo en /nodos"
+  return 0
+}
+
+paso 9.1 "nodos personales: PEER_TOKEN valido (peer_*), token interno o malo rechazados" peer_prueba_tokens
+
+# 9.2: un peer REAL (el mismo programa de nodo) se lanza como 'peer_prueba'
+# dentro de la red de docker y se rota la sesion hasta que su circuito lo
+# incluyoo; entonces una peticion atraviesa el salto personal y responde
+dec_circuito_con_peer() {
+  local T PEER isl i
+  trap 'docker rm -f peer_prueba >/dev/null 2>&1' RETURN  # pase lo que pase, no queda peer colgado
+  PEER=$(sed -n 's/^PEER_TOKEN=//p' .env 2>/dev/null | tr -d "\"'")
+  [ -n "$PEER" ] || return 0
+  docker rm -f peer_prueba >/dev/null 2>&1
+  docker compose run -d --name peer_prueba -e NODO_NOMBRE=peer_prueba nodo1 >/dev/null || { echo "  no pude lanzar el peer de prueba"; return 1; }
+  # espera a que peer_ejemplo (registrado en 9.1 con direccion inalcanzable)
+  # expire el heartbeat (35 s) y no pueda colarse en los circuitos
+  sleep 37
+  curl -s 127.0.0.1:8000/nodos | python3 -c 'import json,sys; d={n["nombre"]:n["estado"] for n in json.load(sys.stdin)}; raise SystemExit(0 if d.get("peer_prueba") == "vivo" else 1)' || { echo "  peer_prueba no se registro"; return 1; }
+  if ! curl -s 127.0.0.1:8000/nodos | python3 -c 'import json,sys; d={n["nombre"]:n["estado"] for n in json.load(sys.stdin)}; raise SystemExit(0 if d.get("peer_ejemplo") != "vivo" else 1)'; then
+    echo "  peer_ejemplo sigue vivo: el heartbeat vencido no se expira"; docker rm -f peer_prueba >/dev/null 2>&1; return 1
+  fi
+  # usuario de prueba: rota hasta que el circuito incluya el peer
+  T=$(curl -s -X POST 127.0.0.1:8000/login -H 'Content-Type: application/json' \
+    -d "{\"email\":\"$SOCKS_USER\",\"password\":\"$SOCKS_PASS\"}" | python3 -c 'import json,sys;print(json.load(sys.stdin)["token"])')
+  for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    isl=$(curl -s -X POST 127.0.0.1:8000/rotate -H "Authorization: Bearer $T")
+    echo "$isl" | grep -q 'peer_prueba' && break
+  done
+  echo "$isl" | grep -q 'peer_prueba' || { echo "  tras 12 rotaciones no salio un circuito con el peer"; return 1; }
+  echo "  circuito con el peer personal: $(echo "$isl" | python3 -c 'import json,sys;print(json.load(sys.stdin)["circuito"])')"
+  # e2e REAL via web-destino con el peer en la cadena
+  curl -fsS --max-time 25 --socks5-hostname \
+    "$(python3 -c "print('$SOCKS_USER'.replace('@','%40'))"):$SOCKS_PASS@127.0.0.1:1080" \
+    http://web-destino/ | grep -q 'IP de origen vista' || { echo "  la peticion no atraveso el canal con el peer"; return 1; }
+  echo "  peticion reenviada a traves del peer personal OK"
+  # deja la sesion de prueba con un circuito nuevo SIN el peer (que se borra):
+  # si no, los 5.x/8.1 usarian un circuto que referencia un hop muerto
+  curl -s -o /dev/null -X POST 127.0.0.1:8000/disconnect -H "Authorization: Bearer $T"
+  curl -s -o /dev/null -X POST 127.0.0.1:8000/connect -H "Authorization: Bearer $T"
+  echo "  sesion de prueba restaurada con circuito limpio (sin el peer)"
+  return 0
+}
+
+paso 9.2 "nodos personales: entra al pool + salto e2e con peer_prueba" \
+  dec_circuito_con_peer
 
 # ---------------------------------------------------------------- resumen
 echo ""

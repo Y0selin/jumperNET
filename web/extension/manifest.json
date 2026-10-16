@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "JumperNAT — tu red",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Configura el navegador para que TODO tu trafico salga por tu circuito JumperNAT (3 saltos + IP del exit). Solo para tu cuenta: nada se configura a mano, como FoxyProxy pero automatico.",
   "permissions": [
     "proxy",

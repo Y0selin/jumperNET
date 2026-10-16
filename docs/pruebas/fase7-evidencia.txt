@@ -1,6 +1,6 @@
 >>> asegurando el stack levantado...
- Container jumpernat-nodo6-1 Started 
  Container jumpernat-nodo1-1 Started 
+ Container jumpernat-nodo2-1 Started 
 
 ==============================================================
  PRUEBA 1.1: saltos manuales: 3 reenvíos encadenados hasta web-destino
@@ -65,6 +65,16 @@
   --> OK (log: /tmp/runall_8.1.log)
 
 ==============================================================
+ PRUEBA 9.1: nodos personales: PEER_TOKEN valido (peer_*), token interno o malo rechazados
+==============================================================
+  --> OK (log: /tmp/runall_9.1.log)
+
+==============================================================
+ PRUEBA 9.2: nodos personales: entra al pool + salto e2e con peer_prueba
+==============================================================
+  --> OK (log: /tmp/runall_9.2.log)
+
+==============================================================
  RESUMEN DE PRUEBAS INTEGRALES
 ==============================================================
   OK    | 1.1 | saltos manuales: 3 reenvíos encadenados hasta web-destino
@@ -79,5 +89,7 @@
   OK    | 5.5 | SOCKS5: la salida del circuito es la IP publica REAL del servidor
   OK    | 5.6 | entrada HTTP (1081): 407 sin clave, circuito con clave y privado denegado
   OK    | 8.1 | cifrado en capas JENC: e2e probado con registro y clave real (ChaCha20)
+  OK    | 9.1 | nodos personales: PEER_TOKEN valido (peer_*), token interno o malo rechazados
+  OK    | 9.2 | nodos personales: entra al pool + salto e2e con peer_prueba
 --------------------------------------------------------------
-  RESULTADO: ✅ TODAS LAS PRUEBAS (12/12) SUPERADAS
+  RESULTADO: ✅ TODAS LAS PRUEBAS (14/14) SUPERADAS

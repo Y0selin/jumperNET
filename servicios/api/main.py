@@ -250,6 +250,11 @@ def fila_a_dict(f) -> dict:
 
 # ---------------------------------------------------------------- nodos (Fase 2)
 
+# token de los nodos PERSONALES de usuarios (peers). Vive en .env del VPS:
+# ya unificada con INTERNAL_TOKEN en el modelo TOR, es lo que les das a los
+# amigos cuando quieres que su equipo sea un saltificio de la red.
+PEER_TOKEN = os.environ.get("PEER_TOKEN", "")
+
 class Heartbeat(BaseModel):
     nombre: str
     direccion: str
@@ -258,8 +263,19 @@ class Heartbeat(BaseModel):
 
 @app.post("/nodos/heartbeat")
 def heartbeat(hb: Heartbeat, x_interno: str | None = Header(default=None)):
-    if INTERNAL_TOKEN and x_interno != INTERNAL_TOKEN:
-        raise HTTPException(status_code=401, detail="token interno no valido")
+    # Dos formas de probarse vivo (Fase 9, nodos personales):
+    #   INTERNAL_TOKEN -> los nodos de la infraestructura (docker)
+    #   PEER_TOKEN     -> nodos PERSONALES de usuarios que se unen a la red
+    #                     (nombre obligatoriamente peer_*); se envian como un
+    #                     relay de TOR: su IP se ve como hop y su equipo puede
+    #                     ser exit si es el ultimo salto.
+    # Nadie necesita INTERNAL_TOKEN para unirse como peer con nombre peer_*.
+    token_valido = (
+        (INTERNAL_TOKEN and x_interno == INTERNAL_TOKEN)
+        or (PEER_TOKEN and x_interno == PEER_TOKEN and hb.nombre.startswith("peer_"))
+    )
+    if not token_valido:
+        raise HTTPException(status_code=401, detail="token no valido")
     refrescar_estados()
     c = conex()
     # columna nueva (Fase 9): numero de conexiones vivas que reenvia el nodo
