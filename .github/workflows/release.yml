@@ -11,6 +11,8 @@ jobs:
   publicar:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Descargar artefactos oficiales del servidor
         run: |
           base="https://jumpernet.duckdns.org/bajares"
