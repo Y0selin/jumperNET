@@ -11,7 +11,7 @@
 	handle /docs {
 		redir /docs/ 308
 	}
-	handle_path /docs/* {
+	handle /docs/* {
 		reverse_proxy wp:80
 	}
 	reverse_proxy api:8000

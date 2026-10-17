@@ -1,5 +1,5 @@
 /*
- * JumperNAT Browser — Chromium dedicado con TODO el trafico por tu circuito.
+ * JumperNET Browser — Chromium dedicado con TODO el trafico por tu circuito.
  *
  * Como Tor Browser, pero sobre tu red: al arrancar identifica tu cuenta, se
  * asegura la RED encendida (/connect) y pone el proxy del circuito en la
@@ -144,7 +144,7 @@ function crearVentana() {
       spellcheck: false,
     },
     icon: path.join(__dirname, "recursos", "jumpernat.png"),
-    title: "JumperNAT Browser",
+    title: "JumperNET Browser",
   });
   ventana.loadFile(path.join(__dirname, "ventana", "index.html"));
   ventana.setMenuBarVisibility(false);
@@ -188,7 +188,7 @@ app.whenReady().then(() => {
   cargarCuenta();
   const s = sesionPrincipal();
   // cabeceras fuera si falla el circuito: el UI avisa; sin dejar colgadas las paginas
-  s.setUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 JumperNATBrowser/1.0");
+  s.setUserAgent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 JumperNETBrowser/1.0");
   crearVentana();
   app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) crearVentana(); });
 });

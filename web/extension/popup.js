@@ -44,8 +44,8 @@ async function probarIp() {
 
 async function comprobarRed() {
   const caja = $("estadoRed");
-  const { configJumperNAT } = await navegador.storage.local.get(["configJumperNAT"]);
-  const config = configJumperNAT || {};
+  const { configJumperNET } = await navegador.storage.local.get(["configJumperNET"]);
+  const config = configJumperNET || {};
   if (!config.usuario || !config.clave) {
     caja.className = "estado-red mono";
     caja.textContent = "· sin credenciales todavía: escribe tu email y clave y pulsa ACTIVAR";
@@ -78,11 +78,11 @@ async function comprobarRed() {
 }
 
 async function cargar() {
-  const { configJumperNAT, conflictoJumperNAT } = await navegador.storage.local.get(["configJumperNAT", "conflictoJumperNAT"]);
-  const config = configJumperNAT || {};
+  const { configJumperNET, conflictoJumperNET } = await navegador.storage.local.get(["configJumperNET", "conflictoJumperNET"]);
+  const config = configJumperNET || {};
   $("usuario").value = config.usuario || "";
   $("clave").value = config.clave || "";
-  pintaConflicto(conflictoJumperNAT || null);
+  pintaConflicto(conflictoJumperNET || null);
   refrescarEstado();
 }
 
@@ -98,19 +98,19 @@ function pintaConflicto(txt) {
   caja.append(
     "\u26a0 Otra extensi\u00f3n proxy est\u00e1 pisando el ajuste del navegador (\u00bFTienes FoxyProxy?). ",
     Object.assign(document.createElement("b"), { textContent: "Desinst\u00e1lala" }),
-    " (chrome://extensions) o ponla con opci\u00f3n \u00abde proxy desactivada\u00bb. JumperNAT re-afirma la suya cada minuto.",
+    " (chrome://extensions) o ponla con opci\u00f3n \u00abde proxy desactivada\u00bb. JumperNET re-afirma la suya cada minuto.",
   );
 }
 
 try {
   navegador.storage.onChanged.addListener((cambios, area) => {
-    if (area === "local" && cambios.conflictoJumperNAT) pintaConflicto(cambios.conflictoJumperNAT.newValue || null);
+    if (area === "local" && cambios.conflictoJumperNET) pintaConflicto(cambios.conflictoJumperNET.newValue || null);
   });
 } catch { /* navegadores sin onChanged en el popup: la carga inicial vale */ }
 
 async function refrescarEstado() {
-  const { configJumperNAT } = await navegador.storage.local.get(["configJumperNAT"]);
-  const config = configJumperNAT || {};
+  const { configJumperNET } = await navegador.storage.local.get(["configJumperNET"]);
+  const config = configJumperNET || {};
   const viva = !!(config.activo && config.usuario && config.clave);
   $("punto").className = "punto" + (viva ? " viva" : "");
   $("estadoTxt").textContent = viva
@@ -128,7 +128,7 @@ async function guardar(extra) {
     activo: false,
     ...(extra || {}),
   };
-  await navegador.storage.local.set({ configJumperNAT: config });
+  await navegador.storage.local.set({ configJumperNET: config });
   return config;
 }
 

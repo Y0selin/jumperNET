@@ -1,5 +1,5 @@
 /*
- * JumperNAT — extension del navegador.
+ * JumperNET — extension del navegador.
  *
  * Hace de FoxyProxy automatico: apunta el proxy del navegador a la entrada
  * HTTP de tu circuito (host:1081) y RESPONDE EL SOLO a las peticiones de
@@ -132,11 +132,11 @@ async function vigiar() {
       // SEQUESTRO REAL: reaplicamos ours AHORA y aterrizamos el aviso en el popup
       conflicto_txt = (nivel || "otra cosa") + " · " + JSON.stringify(dato && dato.value).slice(0, 160);
       try {
-        await navegador.storage.local.set({ conflictoJumperNAT: conflicto_txt });
+        await navegador.storage.local.set({ conflictoJumperNET: conflicto_txt });
       } catch (e0) { /* storage: nunca fatal */ }
       console.warn("[jumpernet] SECUESTRO del proxy detectado — reafirmando:", conflicto_txt);
       await aplicar();
-      pon_badge("\u00a1", "#ffb454", "JumperNAT: otra extension (¿FoxyProxy?) escribió el proxy después que esta\ny le quitó la ruta a tu circuito. JumperNAT la ha reafirmado —\npor consistencia, desáctvala o desactiva su opción proxy.");
+      pon_badge("\u00a1", "#ffb454", "JumperNET: otra extension (¿FoxyProxy?) escribió el proxy después que esta\ny le quitó la ruta a tu circuito. JumperNET la ha reafirmado —\npor consistencia, desáctvala o desactiva su opción proxy.");
     }
   } catch (e) { /* navegadores sin get detallado: nada */ }
 }
@@ -213,7 +213,7 @@ async function importar_config_json() {
     if (!r.ok) return null;
     const crudo = await r.json();
     const config = { ...POR_DEFECTO, ...crudo };
-    await navegador.storage.local.set({ configJumperNAT: config });
+    await navegador.storage.local.set({ configJumperNET: config });
     console.log("[jumpernet] config.json importado al primer arranque");
     return config;
   } catch (e) {
@@ -222,9 +222,9 @@ async function importar_config_json() {
 }
 
 async function cargar_y_aplicar() {
-  const { configJumperNAT } = await navegador.storage.local.get(["configJumperNAT"]);
-  if (configJumperNAT) {
-    config_ahora = { ...POR_DEFECTO, ...(configJumperNAT || {}) };
+  const { configJumperNET } = await navegador.storage.local.get(["configJumperNET"]);
+  if (configJumperNET) {
+    config_ahora = { ...POR_DEFECTO, ...(configJumperNET || {}) };
   } else {
     config_ahora = (await importar_config_json()) || { ...POR_DEFECTO };
   }
@@ -255,29 +255,29 @@ function pon_badge(texto, color, titulo) {
 async function señal_estado() {
   try {
     if (!config_ahora.activo) {
-      pon_badge("", "#555", "JumperNAT: apagada");
+      pon_badge("", "#555", "JumperNET: apagada");
       conflicto_txt = null;
-      try { await navegador.storage.local.remove("conflictoJumperNAT"); } catch (e0) { /* nada */ }
+      try { await navegador.storage.local.remove("conflictoJumperNET"); } catch (e0) { /* nada */ }
       return;
     }
-    pon_badge("…", "#8a6", "JumperNAT: comprobando el proxy…");
+    pon_badge("…", "#8a6", "JumperNET: comprobando el proxy…");
     const r = await fetch(`https://api.ipify.org?cachebust=${Date.now()}`, { cache: "no-store" });
     const ip = (await r.text()).trim().slice(0, 64);
-    pon_badge("\u2713", "#34d47c", `JumperNAT: proxy OK — internet te ve con ${ip}`);
+    pon_badge("\u2713", "#34d47c", `JumperNET: proxy OK — internet te ve con ${ip}`);
   } catch (e) {
-    pon_badge("\u2717", "#ff5a6a", "JumperNAT: el trafico no consigue salir por el proxy\n(revisa que la RED este encendida en la web y las credenciales)");
+    pon_badge("\u2717", "#ff5a6a", "JumperNET: el trafico no consigue salir por el proxy\n(revisa que la RED este encendida en la web y las credenciales)");
   }
 }
 
 try {
   navegador.proxy.onProxyError.addListener(() => {
-    pon_badge("\u00a1", "#ffb454", "JumperNAT: error del proxy (mira el popup por detalles)");
+    pon_badge("\u00a1", "#ffb454", "JumperNET: error del proxy (mira el popup por detalles)");
   });
 } catch (e) { /* navegador sin proxy.onProxyError: sin señal extra */ }
 
 navegador.storage.onChanged.addListener((cambios, area) => {
-  if (area === "local" && cambios.configJumperNAT) {
-    config_ahora = { ...POR_DEFECTO, ...(cambios.configJumperNAT.newValue || {}) };
+  if (area === "local" && cambios.configJumperNET) {
+    config_ahora = { ...POR_DEFECTO, ...(cambios.configJumperNET.newValue || {}) };
     aplicar();
   }
 });

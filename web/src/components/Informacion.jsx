@@ -28,10 +28,10 @@ export default function Informacion() {
       {modo === "principiante" ? (
         <>
           <div className="tarjeta grande t-led aparecer">
-            <h2 className="seccion">¿Qué es JumperNAT?</h2>
+            <h2 className="seccion">¿Qué es JumperNET?</h2>
             <p className="nota" style={{ fontSize: 15, lineHeight: 1.7 }}>
               Imagina que quieres que una web vea otra IP que la tuya y, además, que
-              <b> nadie vea lo que hablas</b> por el camino. JumperNAT lo resuelve con un
+              <b> nadie vea lo que hablas</b> por el camino. JumperNET lo resuelve con un
               <b> autobús con 3 cambios de conductor</b>:
             </p>
             <div style={{ display: "grid", gap: 10, marginTop: 14 }}>

@@ -3,6 +3,7 @@ import GlifosFondo from "./components/GlifosFondo.jsx";
 import Ajustes from "./components/Ajustes.jsx";
 import Info from "./components/Informacion.jsx";
 import Landing from "./components/Landing.jsx";
+import Descargas from "./components/Descargas.jsx";
 import Autenticacion from "./components/Autenticacion.jsx";
 import Red from "./components/Red.jsx";
 import Nodos from "./components/Nodos.jsx";
@@ -16,6 +17,7 @@ const NAV_SESION = [
     { id: "nodos", texto: "Nodos", ico: "⛓" },
   ] },
   { grupo: "tu cuenta", items: [
+    { id: "descargas", texto: "Descargas", ico: "⬇" },
     { id: "cuenta", texto: "Cuenta", ico: "☻" },
     { id: "info", texto: "Documentación", ico: "▤" },
     { id: "ajustes", texto: "Diseñador", ico: "✦" },
@@ -25,12 +27,14 @@ const NAV_SESION = [
 const PROMPT = {
   red: "status --red",
   nodos: "ls -la nodos/",
+  descargas: "ls -la descargas/",
   cuenta: "whoami",
-  info: "man jumpernat",
+  info: "man jumpernet",
   ajustes: "theme --editar",
   inicio: "cat bienvenida.md",
   auth: "./acceder",
 };
+const DOCS_URL = "https://jumpernet.duckdns.org/docs/";
 
 export default function App() {
   const [tab, setTab] = useState(getToken() ? "red" : "inicio");
@@ -100,6 +104,12 @@ export default function App() {
                   <span className="ico">⇥</span><span>Acceder</span>
                 </button>
               )}
+              <button className={`lateral-btn ${tab === "descargas" ? "activa" : ""}`} onClick={() => ir("descargas")}>
+                <span className="ico">⬇</span><span>Descargas</span>
+              </button>
+              <a className="lateral-btn link-externa" href={DOCS_URL} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+                <span className="ico">📚</span><span>Documentación</span><span style={{ marginLeft: "auto", opacity: .6, fontSize: 10 }}>↗</span>
+              </a>
             </div>
 
             {enSesion && NAV_SESION.map((g) => (
@@ -152,6 +162,20 @@ export default function App() {
 
           <main className="contenido">
             {tab === "inicio" && <Landing irAuth={irAuth} enSesion={enSesion} />}
+
+            {tab === "descargas" && (
+              <div className="apa">
+                <div className="cab-seccion">
+                  <div className="cubo-ico">⬇</div>
+                  <div>
+                    <span className="migas">público / descargas</span>
+                    <h1>Descarga y navega por el circuito</h1>
+                    <p className="sub">Tres maneras de usar tu red: la extensión para el navegador que ya tienes, o el navegador completo para Windows y Linux (ya viene conectado).</p>
+                  </div>
+                </div>
+                <Descargas />
+              </div>
+            )}
 
             {tab === "auth" && !enSesion && (
               <Autenticacion alEntrar={alEntrar} aviso={aviso} modoInicial={authModo} volver={() => ir("inicio")} />
@@ -206,7 +230,7 @@ export default function App() {
             )}
 
             <footer className="nota mono" style={{ textAlign: "center", marginTop: 44, fontSize: 10.5 }}>
-              JumperNAT · 3 saltos · ChaCha20-Poly1305 · api: jumpernet.duckdns.org
+              JumperNET · 3 saltos · ChaCha20-Poly1305 · api: jumpernet.duckdns.org
               <br />
               <span style={{ opacity: .7 }}>proyecto educativo · la red solo se activa cuando tú lo decides</span>
             </footer>

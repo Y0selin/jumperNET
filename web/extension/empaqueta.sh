@@ -1,5 +1,5 @@
 #!/bin/bash
-# Empaqueta la extension JumperNAT para los dos navegadores desde un solo
+# Empaqueta la extension JumperNET para los dos navegadores desde un solo
 # codigo fuente:
 #   dist/chrome/      -> carpeta lista para "Cargar sin comprimir" (Chrome/Edge/Brave)
 #   dist/firefox.xpi  -> paquete firmable (Firefox; forzoso firmarlo en AMO

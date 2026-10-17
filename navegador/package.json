@@ -1,8 +1,8 @@
 {
   "name": "jumpernat-navegador",
-  "productName": "JumperNAT Browser",
+  "productName": "JumperNET Browser",
   "version": "1.0.0",
-  "description": "Navegador JumperNAT: Chromium con TODO el trafico por tu circuito de 3 saltos, como Tor Browser pero con tu red",
+  "description": "Navegador JumperNET: Chromium con TODO el trafico por tu circuito de 3 saltos, como Tor Browser pero con tu red",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -16,7 +16,7 @@
   },
   "build": {
     "appId": "org.jumpernat.navegador",
-    "productName": "JumperNAT Browser",
+    "productName": "JumperNET Browser",
     "directories": { "output": "salida", "buildResources": "recursos" },
     "files": ["main.js", "ventana/**/*", "recursos/**/*", "package.json", "!recursos/hace_iconos.py"],
     "win": {
@@ -31,6 +31,6 @@
       "category": "Network"
     },
     "nsis": { "oneClick": true, "perMachine": false, "deleteAppDataOnUninstall": false },
-    "appImage": { "artifactName": "JumperNAT-${version}.AppImage" }
+    "appImage": { "artifactName": "JumperNET-${version}.AppImage" }
   }
 }

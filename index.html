@@ -1,81 +1,394 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;" />
-  <title>JumperNET Browser</title>
-  <link rel="stylesheet" href="ui.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JumperNET — control de circuitos</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#12161f; --panel2:#1a2030; --borde:#27304a;
+    --texto:#e6eaf2; --apagado:#8b94ab; --azul:#4f8cff; --verde:#2ecc71;
+    --rojo:#e74c3c; --amarillo:#f5b83d;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--texto);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
+  .contenedor{max-width:960px;margin:0 auto;padding:24px 16px 60px}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+  h1{font-size:22px;letter-spacing:.5px}
+  .logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#4f8cff,#2ecc71);display:flex;align-items:center;justify-content:center;font-weight:700;color:#081020}
+  .sub{color:var(--apagado);font-size:13px}
+  .tarjeta{background:var(--panel);border:1px solid var(--borde);border-radius:12px;padding:20px;margin-bottom:16px}
+  .tarjeta h2{font-size:15px;margin-bottom:12px;color:var(--azul);text-transform:uppercase;letter-spacing:1px}
+  input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--borde);background:var(--panel2);color:var(--texto);margin-bottom:10px;font-size:15px}
+  input:focus{outline:none;border-color:var(--azul)}
+  button{padding:10px 16px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:14px;color:#081020}
+  button.primario{background:var(--azul);color:#fff}
+  button.peligro{background:var(--rojo);color:#fff}
+  button.aviso{background:var(--amarillo)}
+  button.sec{background:var(--panel2);color:var(--texto);border:1px solid var(--borde)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .fila{display:flex;gap:10px;flex-wrap:wrap}
+  .fila button{flex:1;min-width:110px}
+  .estado{padding:8px 14px;border-radius:999px;font-size:13px;font-weight:600;display:inline-block}
+  .vivo{background:rgba(46,204,113,.15);color:var(--verde)}
+  .muerto{background:rgba(231,76,60,.15);color:var(--rojo)}
+  .dato{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px dashed var(--borde)}
+  .dato:last-child{border-bottom:none}
+  .dato .etq{color:var(--apagado)}
+  .dato .val{font-family:var(--mono);font-size:13px;text-align:right;word-break:break-all}
+  .error{background:rgba(231,76,60,.12);border:1px solid var(--rojo);color:#ffb4ad;padding:10px 14px;border-radius:8px;margin-top:10px;font-size:14px}
+  .aviso-ok{background:rgba(46,204,113,.12);border:1px solid var(--verde);color:#8fe6b0;padding:10px 14px;border-radius:8px;margin-top:10px;font-size:14px}
+  pre.comando{background:#080b10;border:1px solid var(--borde);border-radius:8px;padding:12px;font-family:var(--mono);font-size:12.5px;overflow-x:auto;color:#9ee6b8;margin-top:8px}
+  .peque{font-size:12.5px;color:var(--apagado)}
+  a{color:var(--azul)}
+  .oculto{display:none}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid #fff8;border-top-color:#fff;border-radius:50%;animation:giro .7s linear infinite;vertical-align:-2px}
+  @keyframes giro{to{transform:rotate(360deg)}}
+  footer{margin-top:30px;text-align:center;color:var(--apagado);font-size:12px}
+
+  /* ------- viaje en vivo ------- */
+  #mapa{height:380px;border-radius:10px;border:1px solid var(--borde);margin-top:12px;background:#0d1020}
+  .ruta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;margin-top:6px}
+  .ruta .parada{background:var(--panel2);border:1px solid var(--borde);padding:6px 10px;border-radius:8px;position:relative}
+  .ruta .parada.tu{border-color:var(--azul)}
+  .ruta .parada.salida{border-color:var(--verde)}
+  .ruta .flecha{color:var(--apagado)}
+  .ruta .parada .mini{display:block;font-size:10.5px;color:var(--apagado)}
+  .parada.pulso::after{content:"";position:absolute;inset:-4px;border-radius:11px;border:2px solid var(--azul);opacity:.6;animation:pulso 1.6s ease-out infinite}
+  @keyframes pulso{0%{transform:scale(.96);opacity:.7}100%{transform:scale(1.12);opacity:0}}
+  .nota{font-size:12px;color:var(--amarillo);margin-top:10px;line-height:1.45}
+  .nodo-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:12px}
+  .nodo-card{background:var(--panel2);border:1px solid var(--borde);border-radius:10px;padding:12px}
+  .nodo-card h3{font-size:13.5px;margin-bottom:6px}
+  .nodo-card .dato{border-bottom:none;font-size:12.5px;padding:3px 0}
+  .nodo-card b{color:var(--azul)}
+  .cargando-geo{color:var(--apagado);font-size:13px}
+  .leaflet-popup-content{color:#101318}
+</style>
 </head>
 <body>
+<div class="contenedor">
 
-  <!-- ───── barra propia de la ventana (frame:false) ───── -->
-  <div class="barra">
-    <div class="logo" id="arrastrar">
-      <span class="onda">≋</span>
-      <span class="nombre">JumperNET</span>
-      <span class="chip" id="chipEstado" title="estado del circuito">…</span>
+  <header>
+    <div class="logo">JN</div>
+    <div>
+      <h1>JumperNET · control de circuitos</h1>
+      <div class="sub">API: https://jumpernet.duckdns.org · socket → 3 saltos → destino</div>
     </div>
-    <div class="controles">
-      <button class="ctrl" id="bMin" title="Minimizar">—</button>
-      <button class="ctrl" id="bMax" title="Maximizar">▢</button>
-      <button class="ctrl cerrar" id="bCerrar" title="Cerrar">✕</button>
-    </div>
-  </div>
+  </header>
 
-  <!-- ───── navegador: pestañas + omnibox + circuito ───── -->
-  <div class="chrome">
-
-    <div class="fila-pestanas">
-      <div class="pestanas" id="pestanas"></div>
-      <button class="nueva" id="bNueva" title="Nueva pestaña">＋</button>
-    </div>
-
-    <div class="fila-nav">
-      <button class="nav" id="bAtras" title="Atrás">←</button>
-      <button class="nav" id="bDelante" title="Delante">→</button>
-      <button class="nav" id="bRecargar" title="Recargar">⟳</button>
-      <div class="omnibox">
-        <span class="candado" id="candado">●</span>
-        <input id="url" type="text" placeholder="Busca en la web o escribe una dirección…" spellcheck="false" autocomplete="off" />
+  <!-- ===================== SIN SESION ===================== -->
+  <div id="sin-sesion">
+    <div class="tarjeta">
+      <div class="fila">
+        <button class="primario" id="pest-login" onclick="pesta('login')">Entrar</button>
+        <button class="sec" id="pest-registro" onclick="pesta('registro')">Crear cuenta</button>
       </div>
-      <button class="nav circuito" id="bCircuito" title="Circuito actual (nuevo = Tor Browser)">⌖</button>
-      <button class="nav" id="bMenu" title="Circuito / cuenta">☰</button>
-    </div>
 
-    <!-- panel desplegable: circuito tipo Tor + cuenta + rotation -->
-    <div class="menu" id="menu" hidden>
-      <div class="tarjeta-menu">
-        <div class="tit-menu">CIRCUITO</div>
-        <div class="cadena" id="cadenaCircuit">—</div>
-        <div class="nota-menu" id="notaCircuit">exit: —</div>
-        <button class="btn primario" id="bRotar">⟳ Nuevo circuito (3 saltos)</button>
-        <button class="btn" id="bReiniciar">⟲ Reiniciar navegador (nueva conexión)</button>
-        <div class="tit-menu">CUENTA</div>
-        <div class="nota-menu" id="notaCuenta">sin sesión</div>
-        <button class="btn" id="bCerrarSesion">Salir de la red</button>
+      <div id="form-login" style="margin-top:14px">
+        <h2>Iniciar sesión</h2>
+        <input type="email" id="lg-email" placeholder="tu@correo.com" autocomplete="username">
+        <input type="password" id="lg-pass" placeholder="contraseña" autocomplete="current-password">
+        <button class="primario" id="btn-login" onclick="iniciar()" style="width:100%">Entrar</button>
       </div>
-    </div>
 
-  </div>
+      <div id="form-registro" class="oculto" style="margin-top:14px">
+        <h2>Crear cuenta</h2>
+        <input type="email" id="rg-email" placeholder="tu@correo.com" autocomplete="username">
+        <input type="password" id="rg-pass" placeholder="contraseña (mínimo 8 caracteres)" autocomplete="new-password">
+        <button class="primario" id="btn-registro" onclick="registrar()" style="width:100%">Crear cuenta</button>
+        <p class="peque" style="margin-top:8px">Con la cuenta creada podrás conectar tu circuito y usar el proxy SOCKS5 con estas credenciales.</p>
+      </div>
 
-  <!-- ───── zona de páginas ───── -->
-  <div class="paginas" id="paginas"></div>
-
-  <!-- ───── acceso si no hay sesión ───── -->
-  <div class="mascara" id="acceso" hidden>
-    <div class="caja-acceso">
-      <div class="onda grande">≋</div>
-      <h1>JumperNET Browser</h1>
-      <p class="slogan">Todo tu tráfico, tres saltos, la IP del nodo de salida.<br/>Sin extensiones ni configuración: este navegador ya viene conectado.</p>
-      <label for="eEmail">Email de tu cuenta</label>
-      <input id="eEmail" type="email" autocomplete="username" spellcheck="false" placeholder="tu@correo.es" />
-      <label for="eClave">Contraseña</label>
-      <input id="eClave" type="password" autocomplete="current-password" placeholder="••••••••" />
-      <button class="btn primario ancho" id="bEntrar">Conectar el circuito →</button>
-      <div class="estado" id="estadoAcceso">…</div>
+      <div id="msg-anon"></div>
     </div>
   </div>
 
-  <script src="ui.js"></script>
+  <!-- ===================== CON SESION ===================== -->
+  <div id="con-sesion" class="oculto">
+    <div class="tarjeta">
+      <h2>Estado de tu circuito</h2>
+      <div class="fila" style="align-items:center;margin-bottom:12px">
+        <span class="estado muerto" id="badge-estado">desconectado</span>
+        <span class="peque" id="quien"></span>
+      </div>
+      <div id="detalle-circuito"></div>
+      <div class="fila" style="margin-top:14px">
+        <button class="primario" id="btn-conectar" onclick="conectar()">Conectar</button>
+        <button class="aviso" id="btn-rotar" onclick="rotar()" disabled>Rotar circuito</button>
+        <button class="sec" id="btn-desconectar" onclick="desconectar()" disabled>Desconectar</button>
+      </div>
+      <div id="msg-panel"></div>
+    </div>
+
+    <div class="tarjeta" id="tarjeta-uso">
+      <h2>Cómo usar el proxy SOCKS5</h2>
+      <p class="peque">Puerto 1080 · autenticación con tus mismas credenciales · solo puertos destino 80/443 · cifrado en capas (ChaCha20-Poly1305) entre entrada y salida.</p>
+      <pre class="comando" id="comando-socks"></pre>
+      <button class="sec" onclick="copiar(this)" data-src="comando-socks">Copiar</button>
+    </div>
+
+    <div class="tarjeta" id="tarjeta-viaje">
+      <h2>Viaje de tu conexión · en vivo</h2>
+      <div class="ruta" id="ruta-linea"></div>
+      <div id="mapa"></div>
+      <div class="nota">ℹ Los saltos <b>están en el mismo servidor</b> (Oracle Cloud, Ashburn, us-ashburn-1): la separación es lógica (contenedores aislados), no geográfica. El mapa muestra el recorrido REAL de tu conexión: TÚ → servidor (con 3 saltos internos cifrados) → destino en internet.</div>
+      <div class="nodo-cards" id="nodos-viaje"></div>
+      <div class="cargando-geo" id="cargando-geo">localizando tu conexión y el servidor…</div>
+    </div>
+
+    <div class="tarjeta">
+      <h2>Tu información de sesión</h2>
+      <div id="info-usuario"></div>
+    </div>
+
+    <div class="tarjeta">
+      <h2>Cuenta</h2>
+      <div class="fila">
+        <button class="sec" onclick="cargarMe(this)" id="btn-refrescar">Refrescar vivo</button>
+        <button class="sec" onclick="salir()">Cerrar sesión</button>
+        <button class="peligro" onclick="borrarCuenta()">Eliminar cuenta</button>
+      </div>
+      <p class="peque" style="margin-top:10px">Eliminar cuenta es irreversible: borra tu circuito y tu registro inmediatamente (solo se guarda tu estado, no hay histórico).</p>
+    </div>
+  </div>
+
+  <footer>JumperNET · proyecto educativo de anonimato por circuito de saltos</footer>
+</div>
+
+<script>
+const API = "https://jumpernet.duckdns.org";
+const SERVIDOR_IP = "129.213.137.20";   // IP publica estable registrada en DuckDNS
+let TOKEN = localStorage.getItem("token") || null;
+let MAPA = null, CAPA_RUTA = null;
+let YO_ACTUAL = null;
+
+// ---------- utilidades ----------
+function $(id){ return document.getElementById(id); }
+function errorEn(idCont, texto){
+  $(idCont).innerHTML = `<div class="error">⚠ ${texto}</div>`;
+  setTimeout(()=>{ $(idCont).innerHTML=""; }, 6000);
+}
+function okEn(idCont, texto){
+  $(idCont).innerHTML = `<div class="aviso-ok">✓ ${texto}</div>`;
+  setTimeout(()=>{ $(idCont).innerHTML=""; }, 6000);
+}
+function ocupando(btn, cargando, textoNormal){
+  if(cargando){ btn.disabled=true; btn.innerHTML='<span class="spinner"></span>'; }
+  else{ btn.disabled=false; btn.textContent=textoNormal; }
+}
+
+async function api(metodo, ruta, cuerpo, autorizado=true){
+  const cabec = {"Content-Type":"application/json"};
+  if(autorizado && TOKEN) cabec["Authorization"] = "Bearer " + TOKEN;
+  let resp;
+  try{
+    resp = await fetch(API+ruta, { method:metodo, headers:cabec, body:cuerpo?JSON.stringify(cuerpo):undefined });
+  }catch(e){ throw new Error("sin conexión con la API"); }
+  let datos=null;
+  try{ datos = await resp.json(); }catch(e){}
+  if(resp.status===401 && autorizado && TOKEN){ salir(); throw new Error("sesión caducada, entra de nuevo"); }
+  if(!resp.ok) throw new Error((datos && datos.detail) || ("HTTP "+resp.status));
+  return datos;
+}
+
+// ---------- pestañas ----------
+function pesta(cual){
+  $("form-login").classList.toggle("oculto", cual!=="login");
+  $("form-registro").classList.toggle("oculto", cual!=="registro");
+  $("pest-login").classList.toggle("primario", cual==="login");
+  $("pest-registro").classList.toggle("primario", cual==="registro");
+}
+
+// ---------- acciones ----------
+async function iniciar(){
+  const btn = $("btn-login");
+  try{
+    ocupando(btn,true);
+    const r = await api("POST","/login", {email:$("lg-email").value.trim(), password:$("lg-pass").value}, false);
+    TOKEN = r.token; localStorage.setItem("token", TOKEN);
+    $("lg-pass").value=""; $("msg-anon").innerHTML="";
+    vistaAutenticada();
+  }catch(e){ errorEn("msg-anon", e.message); }
+  finally{ ocupando(btn,false,"Entrar"); }
+}
+
+async function registrar(){
+  const btn = $("btn-registro");
+  try{
+    ocupando(btn,true);
+    const r = await api("POST","/register", {email:$("rg-email").value.trim(), password:$("rg-pass").value}, false);
+    okEn("msg-anon", "cuenta creada ("+r.email+"), ahora ENTRA y pulsa Conectar");
+    $("rg-email").value=""; $("rg-pass").value=""; pesta("login");
+  }catch(e){ errorEn("msg-anon", e.message); }
+  finally{ ocupando(btn,false,"Crear cuenta"); }
+}
+
+async function conectar(){
+  const btn = $("btn-conectar");
+  try{ ocupando(btn,true); await api("POST","/connect"); okEn("msg-panel","circuito conectado ✓"); await cargarMe(); }
+  catch(e){ errorEn("msg-panel",e.message); }
+  finally{ ocupando(btn,false,"Conectar"); }
+}
+
+async function rotar(){
+  const btn = $("btn-rotar");
+  try{ ocupando(btn,true); await api("POST","/rotate"); okEn("msg-panel","circuito rotado: nuevos saltos ✓"); await cargarMe(); }
+  catch(e){ errorEn("msg-panel",e.message); }
+  finally{ ocupando(btn,false,"Rotar circuito"); }
+}
+
+async function desconectar(){
+  const btn = $("btn-desconectar");
+  try{ ocupando(btn,true); await api("POST","/disconnect"); okEn("msg-panel","circuito desconectado"); await cargarMe(); }
+  catch(e){ errorEn("msg-panel",e.message); }
+  finally{ ocupando(btn,false,"Desconectar"); }
+}
+
+async function borrarCuenta(){
+  if(!confirm("¿ELIMINAR tu cuenta para siempre? Se borra tu circuito y tu registro."))return;
+  try{ await api("DELETE","/me"); salir(); }
+  catch(e){ errorEn("msg-panel",e.message); }
+}
+
+function salir(){
+  TOKEN = null; localStorage.removeItem("token");
+  $("con-sesion").classList.add("oculto");
+  $("sin-sesion").classList.remove("oculto");
+}
+
+async function cargarMe(btn){
+  if(btn) ocupando(btn,true);
+  try{
+    const yo = await api("GET","/me");
+    pintar(yo);
+  }catch(e){ errorEn("msg-panel",e.message); }
+  finally{ if(btn) ocupando(btn,false,"Refrescar estado"); }
+}
+
+// ---------- mapa y viaje en vivo ----------
+function geo(ip){
+  return fetch(`https://ipapi.co/${ip}/json/`)
+    .then(r=>r.json())
+    .then(d=>({lat:d.latitude, lon:d.longitude, lugar:[d.city,d.region,d.country_name].filter(Boolean).join(", "), org:d.org}))
+    .catch(()=>null);
+}
+
+function initMapa(tu, servidor, activa){
+  if(!MAPA){
+    MAPA = L.map("mapa", {zoomControl:true}).setView([38.0,-77.0], 6);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:18, attribution:"&copy; OpenStreetMap"}).addTo(MAPA);
+    CAPA_RUTA = L.layerGroup().addTo(MAPA);
+  }
+  if(MAPA._container && MAPA._container.clientWidth===0){ setTimeout(()=>MAPA.invalidateSize(),60); }
+  CAPA_RUTA.clearLayers();
+
+  const marcaUser = L.marker([tu.lat,tu.lon]).addTo(CAPA_RUTA)
+    .bindPopup(`<b>TÚ</b><br>${tu.lugar||tu.ip}<br>IP pública: ${tu.ip}`);
+  const marcaSrv = L.marker([servidor.lat,servidor.lon]).addTo(CAPA_RUTA)
+    .bindPopup(`<b>Nodos JumperNET</b><br>${servidor.lugar||servidor.ip}<br>3 saltos internos (misma máquina)`);
+  L.polyline([[tu.lat,tu.lon],[servidor.lat,servidor.lon]], {color:"#4f8cff", weight:3}).addTo(CAPA_RUTA);
+  L.polyline([[servidor.lat,servidor.lon],[servidor.lat+1.6,servidor.lon+2.2]], {color:"#2ecc71", weight:2, dashArray:"6 8"}).addTo(CAPA_RUTA)
+    .bindPopup("→ destino en internet (HTTP/S:80/443)");
+  MAPA.fitBounds(L.latLngBounds([[tu.lat,tu.lon],[servidor.lat,servidor.lon]]).pad(0.3));
+}
+
+async function pintarViaje(yo){
+  const activa = !!yo.activo;
+  // linea de paradas Tú -> nodo1 -> nodo2 -> nodo3 -> destino
+  const paradas = ["TÚ (tu conexión)", ...(yo.circuito||["nodo?","nodo?","nodo?"]), "DESTINO (internet)"];
+  const clase = ["tu","","","", activa ? "salida":""];
+  $("ruta-linea").innerHTML = paradas.map((p,i)=>{
+    const saltando = activa && i>=1 && i<=3;
+    return `<span class="parada ${clase[i]||""} ${i===1&&saltando?"pulso":""}">${p}
+      <span class="mini">${i===0?"tu IP real":i===4?"puerto 80/443":"encr. JENC"}</span></span>${i<4?'<span class="flecha">→</span>':""}`;
+  }).join("");
+
+  // tarjetas de nodo con la info de /nodos (nombre, dirección, estado)
+  try{
+    const nodos = await api("GET","/nodos",null,false);
+    const mapa_ = Object.fromEntries(nodos.map(n=>[n.nombre,n]));
+    $("nodos-viaje").innerHTML = (yo.circuito||[]).map((n,i)=>{
+      const ninfo = mapa_[n]||{};
+      const proximo = i<2 ? (yo.circuito[i+1]||"?") : "destino final (80/443)";
+      const vivo = ninfo.estado==="vivo";
+      return `<div class="nodo-card" id="nc-${i}">
+        <h3>SALTO ${i+1} · <b>${n}</b> ${vivo?badgeVivo():""}</h3>
+        <div class="dato"><span class="etq">dirección</span><span class="val">${ninfo.direccion||"—"}</span></div>
+        <div class="dato"><span class="etq">estado</span><span class="val">${ninfo.estado||"—"}</span></div>
+        <div class="dato"><span class="etq">salta hacia →</span><span class="val">${proximo}</span></div>
+        <div class="dato"><span class="etq">enlace</span><span class="val">ChaCha20-Poly1305</span></div>
+      </div>`;
+    }).join("");
+  }catch(e){ $("nodos-viaje").innerHTML = ""; }
+
+  // info del usuario
+  $("info-usuario").innerHTML = `
+    <div class="dato"><span class="etq">Cuenta</span><span class="val">${yo.email}</span></div>
+    <div class="dato"><span class="etq">Tu IP pública (la ve el servidor)</span><span class="val">${yo.ip_real||"—"}</span></div>
+    <div class="dato"><span class="etq">La IP que ve internet cuando usa el circuito</span><span class="val">${yo.activo?yo.ip_salida+" (nodo exit, IP del servidor)":"—"}</span></div>
+    <div class="dato"><span class="etq">Circuito actual</span><span class="val">${yo.circuito?yo.circuito.join(" → "):"—"}</span></div>
+    <div class="dato"><span class="etq">Estado</span><span class="val">${yo.activo?"CONECTADO (cifrado JENC activo)":"desconectado"}</span></div>
+    <div class="dato"><span class="etq">Último cambio de circuito</span><span class="val">${new Date().toLocaleString()}</span></div>`;
+
+  // geolocalización usuario + servidor y pintar mapa
+  const [tu, srv] = await Promise.all([ geo(yo.ip_real||""), geo(SERVIDOR_IP) ]);
+  const tuGeo  = tu  || {lat:40.0, lon:-3.7, lugar:"", ip: yo.ip_real||"?"};
+  const srvGeo = srv || {lat:39.04, lon:-77.49, lugar:"Ashburn, Virginia, EE. UU.", ip: SERVIDOR_IP};
+  $("cargando-geo").classList.add("oculto");
+  initMapa(tuGeo, srvGeo, yo.activo);
+}
+
+function badgeVivo(){ return `<span class="estado vivo" style="padding:2px 8px;font-size:11px">vivo</span>`; }
+
+// ---------- presentacion ----------
+function pintar(yo){
+  $("sin-sesion").classList.add("oculto");
+  $("con-sesion").classList.remove("oculto");
+  YO_ACTUAL = yo;
+  $("quien").textContent = yo.email;
+  const activa = !!yo.activo;
+  const badge = $("badge-estado");
+  badge.textContent = activa ? "CONECTADO" : "desconectado";
+  badge.className = "estado " + (activa ? "vivo":"muerto");
+  $("btn-conectar").disabled = activa;
+  $("btn-rotar").disabled = !activa;
+  $("btn-desconectar").disabled = !activa;
+
+  const fd = new Date(yo.ultimo_cambio*1000 ? yo.ultimo_cambio*1000 : Date.now()).toLocaleString();
+  if(activa){
+    $("detalle-circuito").innerHTML = `
+      <div class="dato"><span class="etq">Circuito (3 saltos)</span><span class="val">${yo.circuito.join(" → ")}</span></div>
+      <div class="dato"><span class="etq">Nodo de salida</span><span class="val">${yo.ip_salida}</span></div>
+      <div class="dato"><span class="etq">Último cambio de circuito</span><span class="val">${fd}</span></div>`;
+    $("tarjeta-uso").classList.remove("oculto");
+    const proxy = `${yo.email}:TU_CLAVE@jumpernet.duckdns.org:1080`;
+    $("comando-socks").textContent =
+`# sustituye TU_CLAVE por tu contraseña
+curl --socks5-hostname "${proxy}" https://example.com/`;
+  }else{
+    $("detalle-circuito").innerHTML = `
+      <div class="dato"><span class="etq">Circuito</span><span class="val">—</span></div>
+      <div class="dato"><span class="etq">Último cambio</span><span class="val">${fd}</span></div>`;
+  }
+  pintarViaje(yo);
+}
+
+function copiar(btn){
+  const txt = $(btn.dataset.src);
+  navigator.clipboard.writeText(txt.textContent).then(()=>{ btn.textContent="¡copiado ✓!"; setTimeout(()=>btn.textContent="Copiar",2000); });
+}
+
+// ---------- arranque ----------
+(async function(){
+  if(TOKEN){
+    try{ await cargarMe(); }
+    catch(e){ /* salir() ya se gestiono en api() */ }
+  }
+})();
+</script>
 </body>
 </html>

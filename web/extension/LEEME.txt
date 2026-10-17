@@ -1,4 +1,4 @@
-JumperNAT — instalación de la extensión (Chrome, Edge, Brave, Firefox · Windows y Linux)
+JumperNET — instalación de la extensión (Chrome, Edge, Brave, Firefox · Windows y Linux)
 
 1) Descomprime este zip. Dentro hay dos carpetas: "chrome" y "firefox".
 
@@ -8,7 +8,7 @@ JumperNAT — instalación de la extensión (Chrome, Edge, Brave, Firefox · Win
  1. Abre chrome://extensions   (en Edge: edge://extensions)
  2. Activa "Modo de desarrollador" (arriba a la derecha).
  3. "Cargar sin comprimir" → elige la carpeta "chrome".
- 4. Abre el botón de la extensión (JumperNAT):
+ 4. Abre el botón de la extensión (JumperNET):
     escribe tu email y tu contraseña (los mismos de la web) y pulsa ACTIVAR.
 
 ──────────────────────────────────────────────────────────────────

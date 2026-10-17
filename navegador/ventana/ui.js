@@ -1,4 +1,4 @@
-/* JumperNAT Browser — UI: pestañas, omnibox, circuito tipo Tor */
+/* JumperNET Browser — UI: pestañas, omnibox, circuito tipo Tor */
 "use strict";
 
 const $ = (id) => document.getElementById(id);

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import TerminalVivo from "./TerminalVivo.jsx";
+import Descargas from "./Descargas.jsx";
 import Revela from "./Revela.jsx";
 import { Stat, Tuberia, Escalon, Hecho } from "./Piezas.jsx";
 
@@ -74,7 +75,7 @@ export default function Landing({ irAuth }) {
       <section className="hero">
         <span className="etiqueta-seccion mono">[ red de anonimato por saltos · casera, como una TOR de laboratorio ]</span>
         <h1 className="titulo-animado" style={{ fontSize: "clamp(36px, 7vw, 62px)", lineHeight: 1.08, letterSpacing: "-.03em" }}>
-          JumperNAT
+          JumperNET
         </h1>
         <p className="mono" style={{ fontSize: "clamp(15px, 2.4vw, 20px)", color: "var(--texto)", margin: "12px 0 6px", minHeight: 30 }}>
           Tu conexión <Typewriter phrases={FRASES} />
@@ -109,6 +110,19 @@ export default function Landing({ irAuth }) {
           <Stat etq="sesión" val={<Contador hasta={120} sufijo=" min" />} pie="JWT renovable" tono="aviso" />
         </div>
       </section>
+
+      {/* ───────────── descargas (siempre, con o sin sesión) ───────────── */}
+      <Revela>
+        <div className="cab-seccion">
+          <div className="cubo-ico">⬇</div>
+          <div>
+            <span className="migas">público · antes y después de la sesión</span>
+            <h1>Descargas: extensión y navegador</h1>
+            <p className="sub">Los tres caminos para llevar el circuito a tu vida diaria — disponibles siempre, sin entrar.</p>
+          </div>
+        </div>
+        <Descargas compacto />
+      </Revela>
 
       {/* ───────────── la IP cambia de verdad ───────────── */}
       <Revela>

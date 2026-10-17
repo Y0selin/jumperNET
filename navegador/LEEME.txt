@@ -1,4 +1,4 @@
-JumperNAT Browser — el navegador que ya viene conectado a tu red
+JumperNET Browser — el navegador que ya viene conectado a tu red
 ================================================================
 
 Es un Chromium propio (Electron) con TU circuito integrado: no configura
@@ -17,12 +17,12 @@ NUEVOS SALTOS (estilo Tor Browser)
 
 INSTALAR EN WINDOWS
   · Descomprime el zip «jumpernat-navegador-windows.zip» donde quieras
-    (p. ej. C:\JumperNAT) y ejecuta «JumperNAT Browser.exe».
+    (p. ej. C:\JumperNET) y ejecuta «JumperNET Browser.exe».
   · La primera vez Windows (SmartScreen) dirá «aplicación sin firmar»:
     pulsa «Más información» → «Ejecutar de todas formas».
 
 INSTALAR EN LINUX
-  · chmod +x JumperNAT-1.0.0.AppImage && ./JumperNAT-1.0.0.AppImage
+  · chmod +x JumperNET-1.0.0.AppImage && ./JumperNET-1.0.0.AppImage
   · (En algunas distros instala libfuse2: sudo apt install libfuse2)
 
 Detalles técnicos
@@ -30,10 +30,10 @@ Detalles técnicos
     Basic de tu cuenta; las credenciales del 407 se responden en el propio
     navegador, sin ventanas y sin tocar la configuración del navegador.
   · Las pestañas usan una partición de sesión persistente propia
-    (persist:jn): cookies y logins del navegador JumperNAT no se mezclan
+    (persist:jn): cookies y logins del navegador JumperNET no se mezclan
     con Chrome ni Firefox de tu sistema.
-  · localStorage de la cuenta: ~/.config/JumperNAT Browser (Linux) /
-    %APPDATA%\JumperNAT Browser (Windows). Solo ahí están tu email, clave
+  · localStorage de la cuenta: ~/.config/JumperNET Browser (Linux) /
+    %APPDATA%\JumperNET Browser (Windows). Solo ahí están tu email, clave
     y token (modo 0600 en Linux).
 
 Nota: los servidores del circuito admiten puertos 80 y 443 (HTTP/HTTPS),

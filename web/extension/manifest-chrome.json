@@ -1,14 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "JumperNAT — tu red",
-  "version": "1.0.4",
-  "description": "Configura el navegador para que TODO tu trafico salga por tu circuito JumperNAT (3 saltos + IP del exit). Solo para tu cuenta: nada se configura a mano, como FoxyProxy pero automatico.",
+  "name": "JumperNET — tu red",
+  "version": "1.0.5",
+  "description": "Configura el navegador para que TODO tu trafico salga por tu circuito JumperNET (3 saltos + IP del exit). Solo para tu cuenta: nada se configura a mano, como FoxyProxy pero automatico.",
   "minimum_chrome_version": "108",
   "permissions": ["proxy", "storage", "webRequest", "webRequestAuthProvider", "alarms"],
   "host_permissions": ["<all_urls>"],
   "background": { "service_worker": "background.js" },
   "action": {
-    "default_title": "JumperNAT",
+    "default_title": "JumperNET",
     "default_popup": "popup.html",
     "default_icon": {
       "48": "icono.png",

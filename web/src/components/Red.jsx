@@ -97,11 +97,11 @@ function AvisoExtension({ alCerrar, email }) {
         extensiones “desde la web” directamente: hay que cargarlas tú, 1 minuto.
       </p>
       <p className="nota" style={{ fontSize: 12.5 }}>
-        ¿Prefieres no instalar nada? El <b>JumperNAT Browser</b> es un navegador completo que ya
+        ¿Prefieres no instalar nada? El <b>JumperNET Browser</b> es un navegador completo que ya
         viene conectado a tu red: todo el tráfico por el circuito de 3 saltos nada más abrirlo,
         con sus botones de <b>nuevo circuito</b> y <b>reiniciar</b> estilo Tor.
-        <a style={{ textDecoration: "none" }} className="btn" href="https://jumpernet.duckdns.org/bajares/jumpernat-navegador-windows.zip">⬇ Windows (portátil)</a>
-        <a style={{ textDecoration: "none" }} className="btn" href="https://jumpernet.duckdns.org/bajares/JumperNAT-1.0.0.AppImage">⬇ Linux (AppImage)</a>
+        <a style={{ textDecoration: "none" }} className="btn" href="https://jumpernet.duckdns.org/bajares/jumpernet-navegador-windows.zip">⬇ Windows (portátil)</a>
+        <a style={{ textDecoration: "none" }} className="btn" href="https://jumpernet.duckdns.org/bajares/JumperNET-1.0.0.AppImage">⬇ Linux (AppImage)</a>
         <a style={{ textDecoration: "none" }} className="btn" href="https://jumpernet.duckdns.org/bajares/LEEME-navegador.txt">Instrucciones</a>
       </p>
       <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
