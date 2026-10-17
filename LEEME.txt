@@ -1,0 +1,45 @@
+JumperNET Browser — el navegador que ya viene conectado a tu red
+================================================================
+
+Es un Chromium propio (Electron) con TU circuito integrado: no configura
+nada, no usa FoxyProxy, no pesca conflictos de extensiones. Al abrirlo:
+
+  1. Escribe tu email y contraseña (los de la web) y pulsa «Conectar».
+  2. El navegador enciende la RED por ti (si estaba apagada) y manda
+     TODO el tráfico — páginas, WebSockets, fetch — por tu circuito de
+     3 saltos con la IP del nodo de salida.
+
+BUSCADOR  (motor por defecto: DuckDuckGo, igual que en Tor Browser)
+  · Cada pestaña nueva abre una página de INICIO propia (jn://inicio) con
+    caja de búsqueda: escribes y los resultados van por DuckDuckGo a través
+    de tu circuito. El omnibox también busca: texto libre → DuckDuckGo.
+
+NUEVOS SALTOS (estilo Tor Browser)
+  · Botón ⌖ (o ☰ → «Nuevo circuito (3 saltos)»): rota el circuito en el
+    servidor y el tráfico nuevo sale por otros 3 nodos.
+  · ☰ → «Reiniciar navegador»: cierra y relanza la conexión desde cero,
+    como el reinicio del circuito del Tor Browser.
+
+INSTALAR EN WINDOWS
+  · Descomprime el zip «jumpernat-navegador-windows.zip» donde quieras
+    (p. ej. C:\JumperNET) y ejecuta «JumperNET Browser.exe».
+  · La primera vez Windows (SmartScreen) dirá «aplicación sin firmar»:
+    pulsa «Más información» → «Ejecutar de todas formas».
+
+INSTALAR EN LINUX
+  · chmod +x JumperNET-1.0.0.AppImage && ./JumperNET-1.0.0.AppImage
+  · (En algunas distros instala libfuse2: sudo apt install libfuse2)
+
+Detalles técnicos
+  · El proxy es la entrada HTTP del circuito (host:1081) con autenticación
+    Basic de tu cuenta; las credenciales del 407 se responden en el propio
+    navegador, sin ventanas y sin tocar la configuración del navegador.
+  · Las pestañas usan una partición de sesión persistente propia
+    (persist:jn): cookies y logins del navegador JumperNET no se mezclan
+    con Chrome ni Firefox de tu sistema.
+  · localStorage de la cuenta: ~/.config/JumperNET Browser (Linux) /
+    %APPDATA%\JumperNET Browser (Windows). Solo ahí están tu email, clave
+    y token (modo 0600 en Linux).
+
+Nota: los servidores del circuito admiten puertos 80 y 443 (HTTP/HTTPS),
+que es lo que usa la navegación web.
