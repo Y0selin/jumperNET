@@ -193,3 +193,36 @@ services:
     working_dir: /tests
     entrypoint: ["python"]
     networks: [red_jumper]
+
+  # ─── Documentación (WordPress): caddy la sirve en https://DOMINIO/docs/ ───
+  wp_db:
+    image: mariadb:10.11
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wp
+      MYSQL_PASSWORD: ${WP_DB_PASS}
+      MYSQL_ROOT_PASSWORD: ${WP_DB_ROOT}
+    command: --max_allowed_packet=16M --innodb_buffer_pool_size=48M
+    volumes:
+      - ./data/wp_db:/var/lib/mysql
+    networks: [red_jumper]
+    mem_limit: 192m
+
+  wp:
+    image: wordpress:6-php8.2-apache
+    restart: unless-stopped
+    environment:
+      WORDPRESS_DB_HOST: wp_db
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: ${WP_DB_PASS}
+      WORDPRESS_CONFIG_EXTRA: |
+        define("WP_HOME", "https://jumpernet.duckdns.org/docs");
+        define("WP_SITEURL", "https://jumpernet.duckdns.org/docs");
+        define("DISALLOW_FILE_EDIT", true);
+    volumes:
+      - ./data/wp:/var/www/html
+    depends_on: [wp_db]
+    networks: [red_jumper]
+    mem_limit: 224m

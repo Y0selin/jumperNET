@@ -1,0 +1,25 @@
+<h2>La idea en una frase</h2>
+<p>JumperNET es un <b>circuito de anonimato de tres saltos</b> montado sobre contenedores Docker reales: tu tráfico entra por un proxy autenticado (SOCKS5 o HTTP), salta por <b>tres nodos elegidos al azar</b> que solo reenvían bytes sin entenderlos, va <b>cifrado capa tras capa</b> entre el primer salto y el último, y sale a internet con <b>la IP del nodo de salida</b>. La web de destino nunca ve la tuya.</p>
+
+<h2>Qué NO es</h2>
+<p>No es la red Tor pública: los saltos son nodos de laboratorio corriendo en el mismo servidor del proyecto. No es mágico: si el nodo de salida está comprometido, ese punto conoce el destino (por eso no registran contenido y solo se permite 80/443). Y no es para acelerar juegos: añade saltos reales y, con ellos, latencia real.</p>
+
+<h2>Por qué está hecho así</h2>
+<p>El diseño copia la estrategia de Tor a escala de laboratorio por una razón didáctica y práctica: separar <b>quién eres</b> (la entrada, que sí te autentica) de <b>a dónde vas</b> (la salida, que solo ve un destino). Entre ambas, hop intermediarios que reenvían ciegamente. Si alguien logra ver la conexión entrada→primer salto, solo descubre cifrado; si inspecciona el exit, solo descubre el destino final de un circuito identificado por una marca efímera de conexión.</p>
+
+<h2>Las tres caras de la misma red</h2>
+<ul>
+<li><b>Panel web</b> (GitHub Pages + API): la torre de control. Cuentas, interruptor de encendido, nodos vivos, comprobación real de IP y descargas.</li>
+<li><b>Navegador JumperNET</b>: un Chromium dedicado (Electron) que ya viene conectado: tú abres, entras y TODO sale por el circuito, con «nuevo circuito» estilo Tor.</li>
+<li><b>Extensión</b>: la alternativa ligera para tu navegador de siempre (Chrome/Edge/Brave/Firefox): fija el proxy del navegador a la entrada HTTP y responde sola al 407.</li>
+</ul>
+
+<h2>Nombre: JumperNET, no JumperNAT</h2>
+<p>El proyecto se llamó JumperNAT en su fase de laboratorio por su parecido con un NAT de tres puertos. El nombre correcto es <b>JumperNET</b>: no hay traducción de direcciones, hay <b>red de saltos</b>. Todo el producto (extensión, navegador, panel y esta documentación) usa ya JumperNET.</p>
+
+<h2>Cómo se prueba que funciona</h2>
+<p>Cada afirmación de esta doc está respalda por una prueba que puedes repetir: el propio panel tiene una <b>comprobación real</b> donde escribes tu contraseña y el servidor pregunta a internet, pasando por tu circuito, qué IP ve. Y con curl:</p>
+<pre><code>curl --socks5-hostname jumpernet.duckdns.org:1080 \
+     --proxy-user 'tu@correo:TU_CLAVE' \
+     https://api.ipify.org</code></pre>
+<p>Si devuelve la IP de salida (y no la tuya), el circuito está vivo. Esa es la filosofía del proyecto: nada de promesas, IP a la vista.</p>

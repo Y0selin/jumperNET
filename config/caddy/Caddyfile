@@ -1,12 +1,18 @@
 # Caddy: HTTPS automatico (certificado Let s Encrypt) para el dominio
 # y proxy inverso hacia la API interna. La web de GitHub Pages llama a
 # https://jumpernet.duckdns.org/... y aqui la sirve la API. /bajares/*
-# sirve los binarios del navegador JumperNAT (statico).
+# sirve los binarios del navegador (estatico) y /docs/* la documentacion.
 {$DOMINIO} {
 	encode gzip
 	handle_path /bajares/* {
 		root * /srv/bajares
 		file_server
+	}
+	handle /docs {
+		redir /docs/ 308
+	}
+	handle_path /docs/* {
+		reverse_proxy wp:80
 	}
 	reverse_proxy api:8000
 }
