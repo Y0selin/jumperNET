@@ -1,0 +1,72 @@
+name: Publicar release (segunda via de descarga)
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Marcar version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Descargar artefactos oficiales del servidor
+        run: |
+          set -e
+          base="https://jumpernet.duckdns.org/bajares"
+          curl -fL --retry 3 -o "JumperNET-${VERSION}.AppImage" "$base/JumperNET-1.0.0.AppImage"
+          curl -fL --retry 3 -o "jumpernet-navegador-windows-${VERSION}.zip" "$base/jumpernet-navegador-windows.zip"
+          curl -fL --retry 3 -o "LEEME-navegador.txt" "$base/LEEME-navegador.txt"
+
+      - name: Crear release con notas y subir activos
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ env.VERSION }}
+        run: |
+          set -e
+          notes="$(cat <<'EOF'
+          # JumperNET v1.0.0 — navegador con tu circuito integrado
+
+          Todos los archivos de esta release son la **misma descarga que ofrece el
+          panel web** (seccion Descargas): son el mismo binario, publicados aqui
+          como segunda via para que no dependas de un solo servidor.
+
+          ## Archivos de esta release
+
+          ### jumpernet-navegador-windows-${VERSION}.zip (~128 MB)
+          JumperNET Browser para Windows (portatil). El navegador ya viene
+          conectado: lo abres, escribes email y contrasena (los de la web),
+          pulsa «Conectar» y TODO el trafico sale por tu circuito de 3 saltos
+          con la IP del nodo de salida. Buscador por defecto DuckDuckGo (como
+          Tor Browser); boton «Nuevo circuito» para rotar los saltos.
+          Instalacion: descomprime donde quieras (p. ej. C:\JumperNET) y ejecuta
+          «JumperNET Browser.exe». SmartScreen dirara «aplicacion sin firmar»:
+          «Mas informacion» → «Ejecutar de todas formas».
+
+          ### JumperNET-${VERSION}.AppImage (~110 MB)
+          JumperNET Browser para Linux, mismo navegador. Instalacion:
+          `chmod +x JumperNET-1.0.0.AppImage && ./JumperNET-1.0.0.AppImage`
+          (en algunas distros hace falta `sudo apt install libfuse2`).
+
+          ### LEEME-navegador.txt
+          Instrucciones de uso e instalacion de ambos paquetes + detalles
+          tecnicos (particion de sesion persist:jn, donde guarda la cuenta,
+          como responde el 407 del proxy).
+
+          ## Extension (ruta ligera)
+
+          Si prefieres usar tu Chrome/Firefox de siempre, el panel tambien
+          ofrece la extension (visible en la seccion Descargas del panel): es
+          la ruta ligera, con el proxy HTTP + auth 407 automatica.
+          EOF
+          )"
+          gh release create "${GITHUB_REF_NAME}" \
+            "JumperNET-${VERSION}.AppImage" \
+            "jumpernet-navegador-windows-${VERSION}.zip" \
+            "LEEME-navegador.txt" \
+            --title "JumperNET ${VERSION} — navegador + circuito de 3 saltos" \
+            --notes "$(echo "$notes" | sed 's/^          //')"
