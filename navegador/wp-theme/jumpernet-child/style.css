@@ -1,17 +1,18 @@
 /*
 Theme Name: JumperNET Docs
-Description: Tema hijo de Twenty Twenty-Four con el diseño oscuro/terminal de JumperNET para la documentación: portada hero, tarjetas de índice, tablas y bloques de código estilo consola.
+Description: Tema hijo de Twenty Twenty-Four con el diseño oscuro/terminal de JumperNET para la documentación: portada hero, tarjetas de índice, tablas y bloques de código estilo consola. v1.0.3: reequilibrio tipográfico, foco alto-contraste, mejores enlaces, kbd, callouts y detalles de portada.
 Author: jumpernet
 Template: twentytwentyfour
-Version: 1.0.1
+Version: 1.0.3
 */
 
 :root{
   --jn-bg:#0b0b10; --jn-bg2:#12121a; --jn-bg3:#17171f;
-  --jn-borde:#262631; --jn-texto:#e8e8ea; --jn-suave:#9a9aa2;
-  --jn-acento:#6c5ce7; --jn-acento2:#8f7bff; --jn-cyan:#38bdf8;
+  --jn-borde:#262631; --jn-texto:#f2f2f5; --jn-suave:#a5a5ae;
+  --jn-acento:#6c5ce7; --jn-acento2:#a79bff; --jn-cyan:#67c5f8;
   --jn-ok:#34d47c; --jn-warn:#ffb454; --jn-error:#ff8a95;
   --jn-mono:ui-monospace,"JetBrains Mono","Fira Code",Consolas,monospace;
+  --jn-luz:rgb(167 155 255/.55);   /* luz violeta para bordes hover */
 }
 
 /* ── base ── */
@@ -28,8 +29,9 @@ body{
   font-family:system-ui,"Segoe UI",sans-serif;
 }
 ::selection{background:rgb(108 92 231/.45)}
-a{color:var(--jn-acento2)!important;text-decoration-color:rgb(143 123 255/.45)}
-a:hover{color:#b4a9ff!important}
+a{color:var(--jn-acento2)!important;text-decoration-color:rgb(167 155 255/.45);text-underline-offset:3px}
+a:hover{color:#c5bbff!important;text-decoration-color:#c5bbff}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--jn-acento2);outline-offset:2px;border-radius:4px}
 
 /* ── cabecera ── */
 .wp-site-blocks > header{
@@ -47,41 +49,41 @@ header .wp-block-site-title a::before{
 
 /* ── contenedor de contenido ── */
 .entry-content,.wp-block-post-content,.wp-block-post-content-is-layout-flow{max-width:840px;margin-inline:auto}
-.entry-content{font-size:15.5px;line-height:1.75}
+.entry-content{font-size:16px;line-height:1.72}
 .wp-block-post-date time,.wp-block-post-date{font-family:var(--jn-mono);font-size:12.5px;color:var(--jn-suave)}
 
 /* ── encabezados estilo terminal ── */
 .entry-content h1{color:var(--jn-texto)!important;letter-spacing:-.02em}
-.entry-content h2{color:var(--jn-texto)!important;letter-spacing:-.02em;margin-top:38px!important;font-size:26px!important;margin-bottom:12px!important}
-.entry-content h2::before{content:"## ";color:var(--jn-acento);font-family:var(--jn-mono);font-weight:600}
-.entry-content h3{color:var(--jn-texto)!important;margin-top:26px!important;font-size:19px!important}
-.entry-content h3::before{content:"### ";color:var(--jn-acento);opacity:.7;font-family:var(--jn-mono)}
+.entry-content h2{color:var(--jn-texto)!important;letter-spacing:-.02em;margin-top:40px!important;font-size:27px!important;margin-bottom:14px!important}
+.entry-content h2::before{content:"## ";color:var(--jn-acento2);font-family:var(--jn-mono);font-weight:600}
+.entry-content h3{color:var(--jn-texto)!important;margin-top:28px!important;font-size:20px!important}
+.entry-content h3::before{content:"### ";color:var(--jn-acento2);opacity:.75;font-family:var(--jn-mono)}
 .entry-content h2 + p,.entry-content h3 + p{color:var(--jn-texto)}
 
 /* ── listas ── */
 .entry-content ul,.entry-content ol{padding-left:22px;margin:14px 0}
 .entry-content ul li::marker{color:var(--jn-acento2)}
 .entry-content ol li::marker{color:var(--jn-acento2);font-family:var(--jn-mono)}
-.entry-content li{margin:7px 0;color:var(--jn-texto)}
+.entry-content li{margin:8px 0;color:var(--jn-texto)}
 .entry-content li b{color:#fff}
 .mono,.entry-content code{font-family:var(--jn-mono)}
 
 /* código en línea */
 .entry-content code{
-  background:rgb(108 92 231/.13) !important;border:1px solid rgb(108 92 231/.3);
-  padding:1.5px 6px;border-radius:6px;font-size:.88em;color:#cfc7ff!important
+  background:rgb(122 105 255/.14) !important;border:1px solid rgb(122 105 255/.3);
+  padding:1.5px 6px;border-radius:6px;font-size:.9em;color:#d9d3ff!important
 }
 
-/* ── bloques de código ⌨ estilo consola ── */
+/* ── bloques de código estilo consola ── */
 .entry-content pre{
   background:#0d0d13 !important;border:1px solid var(--jn-borde)!important;
   border-radius:13px !important;padding:14px 18px 16px !important;margin:18px 0 !important;
   overflow-x:auto;position:relative;
-  line-height:1.6;color:#c8d2cc !important;
+  line-height:1.6;color:#cdd8d2 !important;  /* verde consola suave, alto contraste sobre #0d0d13 */
   box-shadow:0 10px 30px rgb(0 0 0/.35);
 }
 .entry-content pre::before{
-  content:"● ● ●";display:block;margin:0 0 10px;color:#34343e;
+  content:"● ● ●";display:block;margin:0 0 10px;color:#43434f;
   font-size:11px;letter-spacing:4px;font-family:var(--jn-mono);
 }
 .entry-content pre code{background:transparent !important;border:0 !important;padding:0 !important;color:inherit!important}
@@ -92,11 +94,11 @@ header .wp-block-site-title a::before{
   border:1px solid var(--jn-borde);border-radius:14px;overflow:hidden;font-size:14px;
 }
 .entry-content th{
-  background:rgb(108 92 231/.16)!important;color:var(--jn-acento2)!important;text-align:left;
+  background:rgb(122 105 255/.15) !important;color:#c9c2ff !important;text-align:left;
   font-family:var(--jn-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;padding:12px 15px!important
 }
 .entry-content td{padding:11px 15px!important;border-top:1px solid var(--jn-borde);color:var(--jn-texto);vertical-align:top}
-.entry-content tr:hover td{background:rgb(255 255 255/.03)}
+.entry-content tr:hover td{background:rgb(255 255 255/.035)}
 .entry-content td:first-child{font-family:var(--jn-mono);color:var(--jn-acento2);white-space:nowrap;font-size:13px}
 
 /* ── imágenes / separadores / citas ── */
@@ -105,12 +107,14 @@ header .wp-block-site-title a::before{
   border-left:3px solid var(--jn-acento);background:rgb(108 92 231/.07);
   border-radius:0 12px 12px 0;padding:12px 18px;color:var(--jn-texto)
 }
+.entry-content blockquote p{margin:0}
 
 /* ══ portada (página índice) ══ */
 .jn-hero{
-  padding:42px 36px;border:1px solid var(--jn-borde);border-radius:24px;
-  background:radial-gradient(700px 300px at 85% -20%, rgb(108 92 231/.28), transparent 62%),linear-gradient(180deg,#14141c,#0e0e14);
-  position:relative;overflow:hidden;margin-bottom:36px
+  padding:46px 38px;border:1px solid var(--jn-borde);border-radius:26px;
+  background:radial-gradient(700px 300px at 85% -20%, rgb(108 92 231/.30), transparent 62%),linear-gradient(180deg,#15151e,#0e0e14);
+  position:relative;overflow:hidden;margin-bottom:38px;
+  box-shadow:0 18px 50px rgb(0 0 0/.4)
 }
 .jn-hero::after{
   content:"≋";position:absolute;right:-18px;bottom:-64px;font-size:200px;line-height:1;
@@ -118,40 +122,40 @@ header .wp-block-site-title a::before{
 }
 .jn-badge{
   display:inline-block;font-family:var(--jn-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
-  color:var(--jn-acento2);border:1px solid rgb(108 92 231/.45);border-radius:999px;padding:5px 13px;
-  background:rgb(108 92 231/.12)
+  color:#c9c2ff;border:1px solid rgb(122 105 255/.5);border-radius:999px;padding:5px 13px;
+  background:rgb(122 105 255/.14)
 }
 .jn-titulo{font-size:clamp(30px,4.6vw,46px);line-height:1.12;letter-spacing:-.03em;color:var(--jn-texto)!important;margin:14px 0 10px!important}
-.jn-titulo span{background:linear-gradient(90deg,var(--jn-acento2),var(--jn-cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
-.jn-sub{color:var(--jn-suave)!important;font-size:15.5px;max-width:640px;margin:0!important}
-.jn-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:24px}
-.jn-stats div{border:1px solid var(--jn-borde);border-radius:12px;padding:12px 15px;background:rgb(255 255 255/.02)}
-.jn-stats b{display:block;font-size:20px;color:var(--jn-acento2);font-family:var(--jn-mono);letter-spacing:-.01em}
+.jn-titulo span{background:linear-gradient(90deg,#a79bff,#67c5f8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.jn-sub{color:#c3c3cc!important;font-size:16px;max-width:640px;margin:0!important;line-height:1.65}
+.jn-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:26px}
+.jn-stats div{border:1px solid var(--jn-borde);border-radius:12px;padding:13px 15px;background:rgb(255 255 255/.02)}
+.jn-stats b{display:block;font-size:22px;color:#b7abff;font-family:var(--jn-mono);letter-spacing:-.01em}
 .jn-stats span{font-size:11.5px;color:var(--jn-suave)}
 
 .jn-seccion-tit{font-size:24px!important;letter-spacing:-.02em;margin:0 0 16px!important}
-.jn-seccion-tit::before{content:"// ";color:var(--jn-acento);font-family:var(--jn-mono)}
+.jn-seccion-tit::before{content:"// ";color:var(--jn-acento2);font-family:var(--jn-mono)}
 
 .jn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(285px,1fr));gap:14px}
 .jn-card{
-  position:relative;display:grid;gap:5px;align-content:start;padding:20px;
+  position:relative;display:grid;gap:5px;align-content:start;padding:21px;
   border:1px solid var(--jn-borde);border-radius:16px;
   background:linear-gradient(180deg,var(--jn-bg2),#0e0e13);
   text-decoration:none!important;overflow:hidden;
   transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease
 }
 .jn-card::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--c,var(--jn-acento));opacity:.95}
-.jn-card:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--c,var(--jn-acento)) 55%,transparent);box-shadow:0 14px 36px rgb(0 0 0/.45)}
+.jn-card:hover{transform:translateY(-3px);border-color:var(--c,var(--jn-acento));box-shadow:0 14px 36px rgb(0 0 0/.45)}
 .jn-num{font-family:var(--jn-mono);color:var(--c,var(--jn-acento));font-size:12px;letter-spacing:.14em}
-.jn-card h3{color:var(--jn-texto)!important;font-size:16.5px!important;margin:0!important}
-.jn-card p{color:var(--jn-suave)!important;font-size:13.5px;margin:0!important;line-height:1.55}
+.jn-card h3{color:var(--jn-texto)!important;font-size:17px!important;margin:0!important}
+.jn-card p{color:#bdbdc7!important;font-size:13.5px;margin:0!important;line-height:1.55}
 .jn-card--1{--c:#6c5ce7}.jn-card--2{--c:#38bdf8}.jn-card--3{--c:#34d47c}.jn-card--4{--c:#ffb454}
 .jn-card--5{--c:#ff8a95}.jn-card--6{--c:#a78bfa}.jn-card--7{--c:#22d3ee}.jn-card--8{--c:#f472b6}
 .jn-card--9{--c:#60a5fa}.jn-card--10{--c:#fbbf24}
 
 .jn-nota-pie{
   margin-top:22px;padding:18px 20px;border:1px dashed var(--jn-borde);border-radius:14px;
-  color:var(--jn-suave);font-size:14px;background:rgb(255 255 255/.015)
+  color:#bdbdc7;font-size:14px;background:rgb(255 255 255/.015)
 }
 .jn-nota-pie .mono{color:var(--jn-acento2)}
 
@@ -161,7 +165,7 @@ header .wp-block-site-title a::before{
   background:linear-gradient(180deg,var(--jn-bg2),transparent)
 }
 .jn-serie h2{margin-top:0!important;font-size:17px!important}
-.jn-serie h2::before{content:"// ";color:var(--jn-acento);font-family:var(--jn-mono)}
+.jn-serie h2::before{content:"// ";color:var(--jn-acento2);font-family:var(--jn-mono)}
 .jn-serie ol{margin:10px 0 0!important;columns:2;column-gap:26px;padding-left:18px!important}
 @media (max-width:640px){.jn-serie ol{columns:1}}
 .jn-serie li{margin:4px 0;font-size:13.5px}
@@ -169,16 +173,184 @@ header .wp-block-site-title a::before{
 
 /* ══ pie del sitio ══ */
 .wp-site-blocks > footer{border-top:1px solid var(--jn-borde)!important;background:#0a0a0e!important}
-footer,footer *{color:var(--jn-suave)!important}
+footer,footer *{color:#b9b9c3!important}
 footer .mono{font-family:var(--jn-mono)}
 
 /* scrollbars */
 ::-webkit-scrollbar{width:10px;height:10px}
-::-webkit-scrollbar-thumb{background:#2a2a35;border-radius:99px}
+::-webkit-scrollbar-thumb{background:#2f2f3b;border-radius:99px}
 ::-webkit-scrollbar-track{background:transparent}
 
 /* móvil */
 @media (max-width:640px){
-  .jn-hero{padding:28px 22px}
-  .entry-content{font-size:15px}
+  .jn-hero{padding:30px 22px}
+  .entry-content{font-size:15.5px}
+  .jn-grid{grid-template-columns:1fr}
 }
+
+/* ═══════════════ MEDIDAS FUERTES DE COLOR: nada de texto oscuro sobre oscuro ═══════════════
+   El tema padre (TT4) define "base" blanca (=secciones claras) y contrastes
+   casi negros para el texto. Aquí se re-asignan las piezas usadas para que
+   el texto SIEMPRE sea claro sobre el fondo oscuro de JumperNET. */
+
+/* cualquier sección con fondo "base" del padre pasa a ser la suave de JumperNET */
+:root :where(.has-base-background-color),:root :where(.has-base-2-background-color){
+  background-color:var(--jn-bg2)!important
+}
+/* cualquier texto con color de contraste del padre pasa a claro */
+:root :where(.has-contrast-color),
+:root :where(.has-contrast-2-color),
+:root :where(.has-contrast-3-color){
+  color:var(--jn-texto)!important
+}
+/* todo lo demás hereda claro */
+.wp-site-blocks, .wp-site-blocks section, article, aside{
+  color:var(--jn-texto) !important
+}
+p, .entry-content p, .wp-block-post-content p,
+.wp-block-post-excerpt__excerpt, .wp-block-post-excerpt, dd, dt{
+  color:var(--jn-texto) !important
+}
+.entry-content b,.entry-content strong{color:#fff !important}
+.entry-content td,.entry-content th,.entry-content li,.entry-content dd{color:var(--jn-texto) !important}
+figcaption,.wp-block-pullquote,.wp-block-audio,.wp-block-embed{color:var(--jn-suave) !important}
+.wp-block-quote cite,.wp-block-pullquote cite{color:var(--jn-acento2) !important}
+.wp-block-pullquote{
+  background:rgb(108 92 231/.08)!important;color:var(--jn-texto)!important;
+  border-color:var(--jn-acento)!important
+}
+
+/* cabecera: navegación, título y menú */
+.wp-block-navigation,.wp-block-navigation a,
+.wp-block-navigation .wp-block-navigation-item__content,
+.wp-block-navigation .wp-block-navigation__submenu-container{color:#cfc8ff !important}
+.wp-block-navigation a:hover{color:#c5bbff !important}
+.wp-block-site-title, .wp-block-site-title a{color:var(--jn-texto) !important}
+header .wp-block-heading{color:var(--jn-texto) !important}
+
+/* meta de artículos: fecha y términos como chips */
+.wp-block-post-date,.wp-block-post-terms{
+  font-family:var(--jn-mono);font-size:11.5px !important;
+  color:#c9c2ff !important;
+  border:1px solid rgb(122 105 255/.45);border-radius:999px;
+  padding:4px 11px;background:rgb(122 105 255/.11);display:inline-block;margin:0 6px 6px 0
+}
+.wp-block-post-terms a,.wp-block-post-date a{color:#c9c2ff !important;text-decoration:none}
+
+/* título de artículo: degradado */
+.wp-block-post-title{letter-spacing:-.02em;margin-top:8px}
+article .wp-block-post-title{background:linear-gradient(90deg,var(--jn-texto),#c5bbff);-webkit-background-clip:text;background-clip:text;color:transparent !important}
+
+/* botones del tema padre */
+.wp-element-button,.wp-block-button__link{
+  background:linear-gradient(135deg,var(--jn-acento),#5747e0) !important;color:#fff !important;
+  border:0;border-radius:11px;padding:12px 24px !important;font-weight:600
+}
+.wp-element-button:hover,.wp-block-button__link:hover{background:linear-gradient(135deg,#7a6bf0,#6455e8) !important}
+
+/* buscador público */
+.wp-block-search__input{
+  background:#0e0e13 !important;color:var(--jn-texto) !important;
+  border:1px solid var(--jn-borde) !important;border-radius:10px 0 0 10px
+}
+.wp-block-search__input::placeholder{color:#767682}
+.wp-block-search__button{background:var(--jn-acento) !important;color:#fff !important;border-radius:0 10px 10px 0}
+
+/* pie completo */
+footer .wp-block-heading,footer p,footer div,footer a,footer{color:#b9b9c3 !important}
+footer a:hover{color:#c5bbff !important}
+footer .wp-block-social-links svg{fill:#b9b9c3 !important}
+
+/* admin-bar para admin */
+#wpadminbar{background:#12121a !important;color:var(--jn-texto) !important}
+#wpadminbar a,#wpadminbar .ab-item{color:var(--jn-texto) !important}
+
+/* ── enlaces y detalles de diseño refined ── */
+:not(pre) > code{border-color: rgb(122 105 255/.3)}
+
+/* ═══ pie de la plantilla estética para comentarios, navegación y sekundaria ═══ */
+
+/* navegación prev/next del tema padre — ligera y con hover claro */
+.wp-block-post-navigation-link{
+  border:1px solid var(--jn-borde);border-radius:13px;background:rgb(255 255 255/.02);
+  padding:12px 16px;font-size:14px
+}
+.wp-block-post-navigation-link a{color:#c9c2ff!important;text-decoration:none}
+.wp-block-post-navigation-link a:hover{color:#c5bbff!important}
+.wp-block-post-navigation-link__arrow-previous,
+.wp-block-post-navigation-link__arrow-next{color:var(--jn-acento2)}
+
+/* formulario de comentarios — inputs oscuros con texto claro */
+.wp-block-post-comments-form input:not([type=submit]):not([type=checkbox]),
+.wp-block-post-comments-form textarea{
+  background:#0e0e13 !important;border:1px solid var(--jn-borde) !important;
+  border-radius:11px;color:var(--jn-texto) !important;
+  padding:11px 14px !important;font-size:14.5px
+}
+.wp-block-post-comments-form input:not([type=submit]):not([type=checkbox]):focus,
+.wp-block-post-comments-form textarea:focus{border-color:var(--jn-acento) !important;outline:none}
+.wp-block-post-comments-form ::placeholder{color:#767682}
+.wp-block-post-comments-form label,
+.wp-block-post-comments-form .comment-reply-title,
+.wp-block-post-comments-form .comment-notes,
+.wp-block-post-comments-form .form-submit{
+  color:var(--jn-suave) !important;font-family:var(--jn-mono);font-size:12.5px
+}
+.wp-block-post-comments-form .comment-reply-title{font-size:16px !important;color:var(--jn-texto)!important}
+.wp-block-post-comments-form input[type=submit]{
+  background:linear-gradient(135deg,var(--jn-acento),#5747e0)!important;color:#fff!important;
+  border:0;border-radius:11px;padding:11px 22px!important;font-weight:600;font-size:14px
+}
+.wp-block-post-comments-form input[type=submit]:hover{background:linear-gradient(135deg,#7a6bf0,#6455e8)!important}
+
+/* la lista/bloque de comentarios heredado */
+.wp-block-comments,.wp-block-comments-query-loop{color:var(--jn-texto) !important}
+.wp-block-comments .comment-meta,
+.wp-block-comments .comment-author,
+.wp-block-posts__list li{color:var(--jn-suave) !important}
+/* botones outline del padre pasan a estilo outline violeta */
+:root :where(.wp-block-button .wp-block-button__link.is-style-outline),
+:root :where(.wp-block-button.is-style-outline>.wp-block-button__link){
+  background:transparent !important;border:1.5px solid rgb(122 105 255/.55)!important;
+  color:#c9c2ff!important;border-radius:11px
+}
+:root :where(.wp-block-button .wp-block-button__link.is-style-outline:hover),
+:root :where(.wp-block-button.is-style-outline>.wp-block-button__link:hover){
+  background:rgb(122 105 255/.14)!important;border-color:var(--jn-acento2)!important
+}
+/* separador con acento suave */
+.wp-block-separator{border-color:var(--jn-borde)!important;background:var(--jn-borde)!important}
+/* títulos dentro de párrafos con strong suelto: fuerce línea compacta */
+.entry-content .wp-block-heading{margin-bottom:6px}
+/* subtítulos del posts list del footer missing */
+.wp-block-navigation .wp-block-pages-list__item__link{color:#cfc8ff!important}
+kbd,.entry-content kbd{
+  font-family:var(--jn-mono);font-size:.85em;background:#16161d;border:1px solid #34343f;
+  border-bottom-width:2px;border-radius:6px;padding:2px 7px;color:#e8e8ee;white-space:nowrap
+}
+/* imágenes trincadas */
+.entry-content img{border-radius:13px;border:1px solid var(--jn-borde)}
+/* listas no-marcadas heredan el estilo */
+.entry-content .jn-lista-limpia{list-style:none;padding:0}
+.entry-content li > ul, .entry-content li > ol{margin-top:8px}
+/* texto destacado dentro de parrafos */
+.entry-content p > strong:first-child:last-child{
+  display:inline-block;background:rgb(122 105 255/.1);border:1px solid rgb(122 105 255/.25);
+  border-radius:10px;padding:8px 13px;margin:4px 0;color:var(--jn-texto)!important
+}
+/* texto dentro de listas de bloques */
+.entry-content .wp-block-list li::marker{color:var(--jn-acento2)}
+/* líneas de acento bajo el H2 de seccion y de titulos de overlays */
+.entry-content h2{position:relative}
+.entry-content h2::after{
+  content:"";display:block;height:2px;width:66px;margin-top:11px;border-radius:2px;
+  background:linear-gradient(90deg,var(--jn-acento2),transparent)
+}
+.jn-card h3::before{content:"→ ";color:var(--c,var(--jn-acento));font-family:var(--jn-mono)}
+/* brillo interno en cards al hover */
+.jn-card::after{
+  content:"";position:absolute;inset:0;border-radius:16px;pointer-events:none;
+  background:radial-gradient(240px 90px at 20% 0%, color-mix(in srgb, var(--c,var(--jn-acento)) 22%, transparent), transparent 70%);
+  opacity:0;transition:opacity .2s ease
+}
+.jn-card:hover::after{opacity:1}
