@@ -19,6 +19,8 @@ const { app, BrowserWindow, ipcMain, session, shell, Menu } = require("electron"
 const fs = require("fs");
 const path = require("path");
 
+const PART_PESTANAS = "persist:jn"; // particion de las pestanas de la UI
+
 const API_URL = "https://jumpernet.duckdns.org";
 const PROXY_HOST = "jumpernet.duckdns.org";
 const PROXY_PUERTO = 1081; // entrada HTTP con auth Basic (Connect 80/443)
@@ -51,14 +53,21 @@ async function api(metodo, ruta, cuerpo, extra = {}) {
 /* ------------------------------------------------------------- proxy global */
 
 async function ponProxy(activo) {
-  const s = sesionPrincipal();
-  if (activo && cuenta) {
-    await s.setProxy({
-      proxyRules: `http=${PROXY_HOST}:${PROXY_PUERTO};https=${PROXY_HOST}:${PROXY_PUERTO}`,
-      proxyBypassRules: "localhost,127.0.0.1,[::1]",
-    });
-  } else {
-    await s.setProxy({ proxyRules: "direct" });
+  // HAY DOS SESIONES: la por defecto (main/UI) y la particion de las pestanas
+  // (persist:jn) — el <webview partition=...> usa SU session propia y si solo
+  // pones el proxy en defaultSession, las pestanas navegan DIRECTO (tu IP real
+  // con la red encendida: el mismo sintoma de la extension). Se pone en TODAS.
+  console.log("[jn-proxy] ponProxy(" + activo + ") sobre default + " + PART_PESTANAS);
+  const sesiones = [session.defaultSession, session.fromPartition(PART_PESTANAS)];
+  for (const s of sesiones) {
+    if (activo && cuenta) {
+      await s.setProxy({
+        proxyRules: `http=${PROXY_HOST}:${PROXY_PUERTO};https=${PROXY_HOST}:${PROXY_PUERTO}`,
+        proxyBypassRules: "localhost,127.0.0.1,[::1]",
+      });
+    } else {
+      await s.setProxy({ proxyRules: "direct" });
+    }
   }
 }
 
@@ -70,8 +79,12 @@ function sesionPrincipal() {
  * navegador dedicado hereda de la extension pero al nivel del main, para
  * TODAS las ventanas y sesiones. */
 app.on("login", (evento, webContenidos, detalles, authInfo, cb) => {
-  if (!detalles.isProxy || !cuenta) return;
+  console.log("[jn-auth] login event:", JSON.stringify({det: detalles, auth: authInfo}).slice(0, 400));
+  // Electron puso el flag isProxy en authenticationResponseDetails.authInfo (no en detalles):
+  const authInfoReal = (authInfo && authInfo.authInfo) || (detalles && detalles.isProxy !== undefined ? detalles : authInfo) || {};
+  if (!authInfoReal.isProxy || !cuenta) return;
   evento.preventDefault();
+  console.log("[jn-auth] respondiendo 407 con", cuenta.email);
   cb(cuenta.email, cuenta.clave); // Basic del usuario real contra entrada-http
 });
 
