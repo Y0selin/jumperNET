@@ -46,10 +46,16 @@ jobs:
       - name: Mostrar release resultante
         run: gh release view "$GITHUB_REF_NAME" --json assets,url 2>&1 | tee -a gh.log
 
-      - name: Guardar diagnostico con la salida de gh
+      - name: Publicar diagnostico en la rama diag-release (legible sin auth)
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: diagnostico-release
-          path: gh.log
-          if-no-files-found: ignore
+        run: |
+          set -e
+          if [ -f gh.log ]; then
+            git config user.email "bot@jumpernet"
+            git config user.name "bot-dialogo"
+            git checkout -q -B diag-release
+            cp gh.log diagnostico-release.txt
+            git add -f diagnostico-release.txt
+            git commit -qm "diagnostico de la publicacion del release"
+            git push -q -f origin diag-release
+          fi
