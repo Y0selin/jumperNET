@@ -5,7 +5,11 @@ const $ = (id) => document.getElementById(id);
 const pestanas = []; // [{view, capturada:bool, titulo}]
 let ptab = -1;       // índice de la pestaña activa
 
-const HOME = "https://duckduckgo.com";
+/* La home es LOCAL (: jn://inicio, página propia con el buscador integrado —
+ * como la página-cta del Tor Browser pero nuestra). El MOTOR por defecto es
+ * DuckDuckGo, igual que Tor: cualquier texto libre del omnibox va a
+ * duckduckgo.com/?q=… a través del circuito. */
+const HOME = "jn://inicio";
 
 /* ───── estado de la red (chip + menú) ───── */
 function pintaEstado(st) {
@@ -37,13 +41,10 @@ async function refrescaEstado() {
   try { pintaEstado(await window.jn.estado()); } catch { /* sin API aún */ }
 }
 
-/* ───── pestañas ───── */
 function creaPestana(url = HOME) {
   const view = document.createElement("webview");
-  const part = document.createElement("div");
-  part.setAttribute("partition", "persist:jn"); // sesión persistente del navegador
   view.style.display = "none";
-  view.setAttribute("partition", "persist:jn");
+  view.setAttribute("partition", "persist:jn"); // sesión persistente del navegador
   view.setAttribute("allowpopups", "");
   view.src = url;
   $("paginas").appendChild(view);
@@ -57,7 +58,10 @@ function creaPestana(url = HOME) {
   });
   view.addEventListener("did-navigate", () => { if (pestanas[ptab] === p) pintaNav(view); });
   view.addEventListener("did-navigate-in-page", () => { if (pestanas[ptab] === p) pintaNav(view); });
-  view.addEventListener("dom-ready", () => pintaNav(view));
+  view.addEventListener("dom-ready", () => {
+    try { pintaNav(view); } catch { /* nada */ }
+    try { view.focus(); } catch { /* nada */ }
+  });
   view.addEventListener("did-fail-load", (e) => {
     if (e.errorCode === -3) return; // carga abortada
     if (pestanas[ptab] === p) {
@@ -106,12 +110,22 @@ function pintaPestanas() {
 
 /* ───── omnibox ───── */
 function pintaNav(v) {
-  const u = v.getURL ? v.getURL() : "";
-  $("url").value = /^https:/.test(u) ? u.replace(/^https:\/\//, "") : u;
+  /* los getters del webview LANZAN hasta que no hace "dom-ready" (por ejemplo
+   * justo tras crear la pestana). Nada de esto puede romper el flujo del
+   * login: si no estara listo, usamos el src que conocemos y ya. */
+  let u = "";
+  try { u = v.getURL ? v.getURL() : ""; } catch { u = v.src || ""; }
+  if (/^jn:/.test(u)) $("url").value = u;              // esquema propio, sin trims
+  else $("url").value = /^https:/.test(u) ? u.replace(/^https:\/\//, "") : u;
   $("candado").className = "candado" + (/^https:/.test(u) ? " https" : "");
   $("candado").style.color = "";
   const i = pestanas.findIndex((p) => p.view === v);
-  if (i >= 0) { pestanas[i].titulo = v.getTitle ? (v.getTitle() || pestanas[i].titulo) : pestanas[i].titulo; pintaPestanas(); }
+  if (i >= 0) {
+    let titulo;
+    try { titulo = v.getTitle ? v.getTitle() : null; } catch { titulo = null; }
+    pestanas[i].titulo = titulo || pestanas[i].titulo;
+    pintaPestanas();
+  }
 }
 
 function normalizaAUrl(txt) {
@@ -163,11 +177,14 @@ window.addEventListener("DOMContentLoaded", async () => {
     try {
       const st = await window.jn.entrar({ email, clave });
       if (st.error) { est.className = "estado error"; est.textContent = st.error; return; }
-      est.className = "estado ok"; est.textContent = "conectado ✓";
-      $("acceso").hidden = true;
-      if (!pestanas.length) creaPestana(HOME);
-      refrescaEstado();
-    } catch (e) { est.className = "estado error"; est.textContent = String(e.message || e).slice(0, 100); }
+    } catch (e) { est.className = "estado error"; est.textContent = String(e.message || e).slice(0, 100); return; }
+    est.className = "estado ok";
+    est.textContent = "conectado ✓";
+    $("acceso").hidden = true;
+    try {
+      if (!pestanas.length) creaPestana(HOME);   // si aún no está lista, la pinta el dom-ready
+    } catch { /* nunca deja el UI a medias */ }
+    refrescaEstado();
   };
 
   window.jn.alNuevaPestana((url) => creaPestana(url));
@@ -176,7 +193,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   const st = await window.jn.estado();
   if (st.conectado) {
     $("acceso").hidden = true;
-    if (!pestanas.length) creaPestana(HOME);
+    try { if (!pestanas.length) creaPestana(HOME); } catch { /* dom-ready la pinta */ }
   } else {
     $("acceso").hidden = false;
   }
