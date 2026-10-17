@@ -96,6 +96,14 @@ function AvisoExtension({ alCerrar, email }) {
         credenciales <b>({email})</b> una vez en su popup. Los navegadores no permiten instalar
         extensiones “desde la web” directamente: hay que cargarlas tú, 1 minuto.
       </p>
+      <p className="nota" style={{ fontSize: 12.5 }}>
+        ¿Prefieres no instalar nada? El <b>JumperNAT Browser</b> es un navegador completo que ya
+        viene conectado a tu red: todo el tráfico por el circuito de 3 saltos nada más abrirlo,
+        con sus botones de <b>nuevo circuito</b> y <b>reiniciar</b> estilo Tor.
+        <a style={{ textDecoration: "none" }} className="btn" href="https://jumpernet.duckdns.org/bajares/jumpernat-navegador-windows.zip">⬇ Windows (portátil)</a>
+        <a style={{ textDecoration: "none" }} className="btn" href="https://jumpernet.duckdns.org/bajares/JumperNAT-1.0.0.AppImage">⬇ Linux (AppImage)</a>
+        <a style={{ textDecoration: "none" }} className="btn" href="https://jumpernet.duckdns.org/bajares/LEEME-navegador.txt">Instrucciones</a>
+      </p>
       <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
         <div className="tarjeta" style={{ margin: 0 }}>
           <div style={{ fontWeight: 700, marginBottom: 6 }}>Firefox</div>
@@ -169,32 +177,22 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
   /* mapa: se crea una vez y se repinta con cada dato nuevo */
   useEffect(() => {
     if (mapa.current || !divMapa.current) return;
-    const m = L.map(divMapa.current, { attributionControl: true });
-    // mapa oscuro (Carto, basado en OpenStreetMap): encaja con el tema y no
-    // deslumbra al lado de las tarjetas del panel. RESPALDO VECTORIAL: algunos
-    // proveedores de tiles se atascan por política o límite y devuelven en la
-    // propia imagen mensajes tipo «API KEY REQUIRED»: con 3 fallos se quita el
-    // proveedor y el mapa se dibuja igual con un GeoJSON de países que vive en
-    // el propio panel (sin tiles, sin claves, sin terceros).
-    const t = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 20,
-      subdomains: "abcd",
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>',
-    }).addTo(m);
-    let fallosTiles = 0;
-    t.on("tileerror", async () => {
-      fallosTiles += 1;
-      if (fallosTiles < 3 || mapa._jn_vectorial) return;
-      mapa._jn_vectorial = true;
-      try { m.removeLayer(t); } catch { /* ya quitado */ }
-      const r = await fetch(`${import.meta.env.BASE_URL}mundo.json`);
-      const mundo = await r.json();
-      L.geoJSON(mundo, {
-        style: { color: "#3a3a44", weight: .6, fillColor: "#1c1c24", fillOpacity: 1 },
-        interactive: false,
-      }).addTo(m);
-      m.setView(m.getCenter(), m.getZoom());
-    });
+    const m = L.map(divMapa.current, { attributionControl: false });
+    // FONDO VECTORIAL ÚNICO: los proveedores de tiles responden HTTP 200 con
+    // la imagen del mensaje «API KEY REQUIRED» (no hay tileerror que detectar,
+    // el mapa queda en hueso) y encima dependen de terceros. Con el GeoJSON
+    // de países que vive en el propio panel el mapa SIEMPRE se pinta: sin
+    // tiles, sin claves, sin red necesaria para el fondo.
+    (async () => {
+      try {
+        const r = await fetch(`${import.meta.env.BASE_URL}mundo.json`);
+        const mundo = await r.json();
+        L.geoJSON(mundo, {
+          style: { color: "#3a3a44", weight: .6, fillColor: "#1c1c24", fillOpacity: 1 },
+          interactive: false,
+        }).addTo(m);
+      } catch (e) { /* sin fondo: los marcadores siguen funcionando */ }
+    })();
     capa.current = L.layerGroup().addTo(m);
     mapa.current = m;
     m.setView([40, -30], 3);

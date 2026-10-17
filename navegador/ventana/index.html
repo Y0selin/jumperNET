@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;" />
+  <title>JumperNAT Browser</title>
+  <link rel="stylesheet" href="ui.css" />
+</head>
+<body>
+
+  <!-- ───── barra propia de la ventana (frame:false) ───── -->
+  <div class="barra">
+    <div class="logo" id="arrastrar">
+      <span class="onda">≋</span>
+      <span class="nombre">JumperNAT</span>
+      <span class="chip" id="chipEstado" title="estado del circuito">…</span>
+    </div>
+    <div class="controles">
+      <button class="ctrl" id="bMin" title="Minimizar">—</button>
+      <button class="ctrl" id="bMax" title="Maximizar">▢</button>
+      <button class="ctrl cerrar" id="bCerrar" title="Cerrar">✕</button>
+    </div>
+  </div>
+
+  <!-- ───── navegador: pestañas + omnibox + circuito ───── -->
+  <div class="chrome">
+
+    <div class="fila-pestanas">
+      <div class="pestanas" id="pestanas"></div>
+      <button class="nueva" id="bNueva" title="Nueva pestaña">＋</button>
+    </div>
+
+    <div class="fila-nav">
+      <button class="nav" id="bAtras" title="Atrás">←</button>
+      <button class="nav" id="bDelante" title="Delante">→</button>
+      <button class="nav" id="bRecargar" title="Recargar">⟳</button>
+      <div class="omnibox">
+        <span class="candado" id="candado">●</span>
+        <input id="url" type="text" placeholder="Busca en la web o escribe una dirección…" spellcheck="false" autocomplete="off" />
+      </div>
+      <button class="nav circuito" id="bCircuito" title="Circuito actual (nuevo = Tor Browser)">⌖</button>
+      <button class="nav" id="bMenu" title="Circuito / cuenta">☰</button>
+    </div>
+
+    <!-- panel desplegable: circuito tipo Tor + cuenta + rotation -->
+    <div class="menu" id="menu" hidden>
+      <div class="tarjeta-menu">
+        <div class="tit-menu">CIRCUITO</div>
+        <div class="cadena" id="cadenaCircuit">—</div>
+        <div class="nota-menu" id="notaCircuit">exit: —</div>
+        <button class="btn primario" id="bRotar">⟳ Nuevo circuito (3 saltos)</button>
+        <button class="btn" id="bReiniciar">⟲ Reiniciar navegador (nueva conexión)</button>
+        <div class="tit-menu">CUENTA</div>
+        <div class="nota-menu" id="notaCuenta">sin sesión</div>
+        <button class="btn" id="bCerrarSesion">Salir de la red</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ───── zona de páginas ───── -->
+  <div class="paginas" id="paginas"></div>
+
+  <!-- ───── acceso si no hay sesión ───── -->
+  <div class="mascara" id="acceso" hidden>
+    <div class="caja-acceso">
+      <div class="onda grande">≋</div>
+      <h1>JumperNAT Browser</h1>
+      <p class="slogan">Todo tu tráfico, tres saltos, la IP del nodo de salida.<br/>Sin extensiones ni configuración: este navegador ya viene conectado.</p>
+      <label for="eEmail">Email de tu cuenta</label>
+      <input id="eEmail" type="email" autocomplete="username" spellcheck="false" placeholder="tu@correo.es" />
+      <label for="eClave">Contraseña</label>
+      <input id="eClave" type="password" autocomplete="current-password" placeholder="••••••••" />
+      <button class="btn primario ancho" id="bEntrar">Conectar el circuito →</button>
+      <div class="estado" id="estadoAcceso">…</div>
+    </div>
+  </div>
+
+  <script src="ui.js"></script>
+</body>
+</html>

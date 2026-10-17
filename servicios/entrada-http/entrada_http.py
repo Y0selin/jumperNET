@@ -135,8 +135,14 @@ async def retransmitir(a: asyncio.StreamReader, b: asyncio.StreamWriter):
             pass
 
 
-async def retransmitir_cifrado(a_reader, b_writer, aead):
+async def retransmitir_cifrado(a_reader, b_writer, aead, peticion_inicial: bytes = b""):
+    """Cliente -> circuito. peticion_inicial se envia ya como PRIMER registro
+    JENC (la magia sale sola en el primer enviar): el exit lee 4 bytes y tiene
+    que ver JENC, no 'GET '. Si se escribe la peticion http:// en claro antes
+    de la magia, el exit entra en modo plano y todo muere en silencio."""
     emisor = cifra.Emisor(aead)
+    if peticion_inicial:
+        await emisor.enviar(b_writer, peticion_inicial)
     try:
         while True:
             datos = await a_reader.read(cifra.CHUNK)
@@ -352,16 +358,20 @@ async def atender(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
             except Exception:
                 continue
         peticion_limpia += b"Connection: close\r\n\r\n"
-        writer_n.write(peticion_limpia)
-        await writer_n.drain()
         print(f"[entrada-http] HTTP {partes[0]} http://{destino_completo}{ruta} para {usuario!r} via {saltos}", flush=True)
         if CLAVE_SALTOS:
+            # Fase 8: la peticion http:// tambien va cifrada (primer registro:
+            # sin esto el exit leia 'GET ' como prefijo, no reconocia JENC y se
+            # pasada a modo plano + retransmision a medias => navegador sin respuesta)
             aead = cifra.aead_desde_secreto(CLAVE_SALTOS)
             await asyncio.gather(
-                retransmitir_cifrado(reader, writer_n, aead),
+                retransmitir_cifrado(reader, writer_n, aead, peticion_limpia),
                 retransmitir_descifrado(reader_n, writer, aead),
             )
         else:
+            # modo sin cifrado igual que siempre (escritura directa + dos tuberias)
+            writer_n.write(peticion_limpia)
+            await writer_n.drain()
             await asyncio.gather(retransmitir(reader, writer_n), retransmitir(reader_n, writer))
     except (asyncio.IncompleteReadError, asyncio.TimeoutError, ConnectionError, OSError, ValueError) as e:
         print(f"[entrada-http] error con {peer}: {type(e).__name__} {e}", flush=True)

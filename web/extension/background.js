@@ -14,7 +14,12 @@
 "use strict";
 
 const navegador = typeof browser !== "undefined" ? browser : chrome;
-const ES_FIREFOX = typeof browser !== "undefined" && !!navegador.proxy?.settings?.set;
+/* DETECCIÓN CANÓNICA DE FIREFOX: typeof browser ya NO sirve — Chrome 131+ da
+ * el alias browser también en MV3, y con él la rama Firefox metía un objeto
+ * {proxyType} inválido en chrome.proxy.settings.set (Invalid invocation):
+ * el proxy JAMÁS se aplicaba y el navegador quedaba en modo system => «veo mi
+ * IP real». runtime.getBrowserInfo solo existe en el Firefox real. */
+const ES_FIREFOX = typeof navegador.runtime?.getBrowserInfo === "function";
 
 const POR_DEFECTO = {
   host: "jumpernet.duckdns.org",
@@ -25,6 +30,13 @@ const POR_DEFECTO = {
 };
 
 let config_ahora = { ...POR_DEFECTO };
+
+/* Vigía del secuestro: FoxyProxy (o cualquier otra extension de proxy, o el
+ * navegador mismo) escribe chrome.proxy.settings DESPUES que nosotros y esa
+ * escritura GANA (ultimio escritor manda). Resultado: nuestro proxy se desvanece
+ * y el navegador navega directo — exactamente el sintoma «veo mi IP real».
+ * Solucion: comprobar el ajuste vigente (levelOfControl) y RE-AFIRMAR el nuestro
+ * cada minuto mientras el usuario lo tenga activo. */
 
 function cadenaProxy(config) {
   return `${config.host}:${config.puerto}`;
@@ -82,10 +94,62 @@ async function aplicar() {
       // apagado: devolver el control al sistema (la configuracion del navegador queda igual que antes de instalar)
       await fijado({ proxyType: ES_FIREFOX ? "system" : "direct" });
     }
+    await crear_vigia();
   } catch (e) {
     console.warn("[jumpernet] no se pudo aplicar el proxy:", e);
   }
 }
+
+/* ------------------------------------------------------- vigía del secuestro */
+
+let conflicto_txt = null;
+
+/* ¡ DIFERATES NAVEGADORES !
+ * Chromium: proxy.settings.get() da { value:{mode,..}, levelOfControl };
+ * como FoxyProxy escribe al final, el nivel deja de ser controllable_by_this_
+ * extension y las regs no son las nuestras (o directamente mode != fixed_servers).
+ * Firefox: misma idea con proxyType (manual) y la cadena http/ssl de la Guzzle. */
+async function _reglas_nuestras(dato) {
+  if (!dato || !dato.value) return false;
+  const v = dato.value;
+  if (ES_FIREFOX) {
+    return v.proxyType === "manual" &&
+      (v.http || "").startsWith(config_ahora.host) &&
+      (v.ssl || "").startsWith(config_ahora.host);
+  }
+  return v.mode === "fixed_servers" && v.rules &&
+    v.rules.singleProxy && v.rules.singleProxy.host === config_ahora.host &&
+    v.rules.singleProxy.port === config_ahora.puerto;
+}
+
+async function vigiar() {
+  try {
+    if (!config_ahora.activo) return; // apagada: no hay nada que pelear
+    const dato = await navegador.proxy.settings.get({});
+    const nivel = dato && dato.levelOfControl; // variante según versión: controllable_by_this… / controlled_by_this… / …_other…
+    const ok = await _reglas_nuestras(dato);
+    if (!ok || (nivel && nivel.includes("other"))) {
+      // SEQUESTRO REAL: reaplicamos ours AHORA y aterrizamos el aviso en el popup
+      conflicto_txt = (nivel || "otra cosa") + " · " + JSON.stringify(dato && dato.value).slice(0, 160);
+      try {
+        await navegador.storage.local.set({ conflictoJumperNAT: conflicto_txt });
+      } catch (e0) { /* storage: nunca fatal */ }
+      console.warn("[jumpernet] SECUESTRO del proxy detectado — reafirmando:", conflicto_txt);
+      await aplicar();
+      pon_badge("\u00a1", "#ffb454", "JumperNAT: otra extension (¿FoxyProxy?) escribió el proxy después que esta\ny le quitó la ruta a tu circuito. JumperNAT la ha reafirmado —\npor consistencia, desáctvala o desactiva su opción proxy.");
+    }
+  } catch (e) { /* navegadores sin get detallado: nada */ }
+}
+
+async function crear_vigia() {
+  try {
+    await navegador.alarms.create("vigia-jumpernat", { periodInMinutes: 1 });
+  } catch (e0) { /* sin alarms (Firefox viejo): solo reaccion al cambio de storage */ }
+}
+
+try {
+  navegador.alarms.onAlarm.addListener((a) => { if (a && a.name === "vigia-jumpernat") vigiar(); });
+} catch (e0) { /* sin alarms: nada */ }
 
 /* ------------------------------------------------------- credenciales 407 */
 
@@ -190,7 +254,12 @@ function pon_badge(texto, color, titulo) {
 
 async function señal_estado() {
   try {
-    if (!config_ahora.activo) { pon_badge("", "#555", "JumperNAT: apagada"); return; }
+    if (!config_ahora.activo) {
+      pon_badge("", "#555", "JumperNAT: apagada");
+      conflicto_txt = null;
+      try { await navegador.storage.local.remove("conflictoJumperNAT"); } catch (e0) { /* nada */ }
+      return;
+    }
     pon_badge("…", "#8a6", "JumperNAT: comprobando el proxy…");
     const r = await fetch(`https://api.ipify.org?cachebust=${Date.now()}`, { cache: "no-store" });
     const ip = (await r.text()).trim().slice(0, 64);
@@ -214,4 +283,5 @@ navegador.storage.onChanged.addListener((cambios, area) => {
 });
 
 navegador.runtime.onInstalled.addListener(cargar_y_aplicar);
-cargar_y_aplicar();
+navegador.runtime.onStartup?.addListener?.(() => cargar_y_aplicar());
+cargar_y_aplicar().then(() => vigiar());

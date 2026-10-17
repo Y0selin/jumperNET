@@ -84,6 +84,7 @@ services:
       DOMINIO: ${DOMINIO}
     volumes:
       - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./descargas:/srv/bajares:ro
       - ./data/caddy:/data
       - ./data/caddy-config:/config
     depends_on:

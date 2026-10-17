@@ -78,12 +78,35 @@ async function comprobarRed() {
 }
 
 async function cargar() {
-  const { configJumperNAT } = await navegador.storage.local.get(["configJumperNAT"]);
+  const { configJumperNAT, conflictoJumperNAT } = await navegador.storage.local.get(["configJumperNAT", "conflictoJumperNAT"]);
   const config = configJumperNAT || {};
   $("usuario").value = config.usuario || "";
   $("clave").value = config.clave || "";
+  pintaConflicto(conflictoJumperNAT || null);
   refrescarEstado();
 }
+
+/* banner del SECUESTRO del proxy: si otra extension (¿FoxyProxy?) escribió
+ * chrome.proxy.settings después que esta, el tráfico sale directo y en el
+ * popup se ve «mi IP real» con la red encendida. El vigía del fondo re-afirma
+ * la ours cada minuto; aquí te decimos EL QUIÉN con el detalle del ajuste. */
+function pintaConflicto(txt) {
+  const caja = $("conflicto");
+  if (!txt) { caja.className = "conflicto mono oculto"; caja.textContent = ""; return; }
+  caja.className = "conflicto mono";
+  caja.innerHTML = null;
+  caja.append(
+    "\u26a0 Otra extensi\u00f3n proxy est\u00e1 pisando el ajuste del navegador (\u00bFTienes FoxyProxy?). ",
+    Object.assign(document.createElement("b"), { textContent: "Desinst\u00e1lala" }),
+    " (chrome://extensions) o ponla con opci\u00f3n \u00abde proxy desactivada\u00bb. JumperNAT re-afirma la suya cada minuto.",
+  );
+}
+
+try {
+  navegador.storage.onChanged.addListener((cambios, area) => {
+    if (area === "local" && cambios.conflictoJumperNAT) pintaConflicto(cambios.conflictoJumperNAT.newValue || null);
+  });
+} catch { /* navegadores sin onChanged en el popup: la carga inicial vale */ }
 
 async function refrescarEstado() {
   const { configJumperNAT } = await navegador.storage.local.get(["configJumperNAT"]);

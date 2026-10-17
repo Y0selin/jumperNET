@@ -1,0 +1,36 @@
+{
+  "name": "jumpernat-navegador",
+  "productName": "JumperNAT Browser",
+  "version": "1.0.0",
+  "description": "Navegador JumperNAT: Chromium con TODO el trafico por tu circuito de 3 saltos, como Tor Browser pero con tu red",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "paq": "electron-builder --dir",
+    "paq-win": "electron-builder --win portable nsis --x64",
+    "paq-linux": "electron-builder --linux AppImage --x64"
+  },
+  "devDependencies": {
+    "electron": "^37.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "org.jumpernat.navegador",
+    "productName": "JumperNAT Browser",
+    "directories": { "output": "salida", "buildResources": "recursos" },
+    "files": ["main.js", "ventana/**/*", "recursos/**/*", "package.json", "!recursos/hace_iconos.py"],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }, { "target": "portable", "arch": ["x64"] }],
+      "icon": "recursos/jumpernat.ico",
+      "signAndEditExecutable": false,
+      "forceCodeSigning": false
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "icon": "recursos/jumpernat.png",
+      "category": "Network"
+    },
+    "nsis": { "oneClick": true, "perMachine": false, "deleteAppDataOnUninstall": false },
+    "appImage": { "artifactName": "JumperNAT-${version}.AppImage" }
+  }
+}
