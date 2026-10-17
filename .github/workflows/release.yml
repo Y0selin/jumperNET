@@ -11,62 +11,45 @@ jobs:
   publicar:
     runs-on: ubuntu-latest
     steps:
-      - name: Marcar version
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
-
       - name: Descargar artefactos oficiales del servidor
         run: |
-          set -e
           base="https://jumpernet.duckdns.org/bajares"
-          curl -fL --retry 3 -o "JumperNET-${VERSION}.AppImage" "$base/JumperNET-1.0.0.AppImage"
-          curl -fL --retry 3 -o "jumpernet-navegador-windows-${VERSION}.zip" "$base/jumpernet-navegador-windows.zip"
-          curl -fL --retry 3 -o "LEEME-navegador.txt" "$base/LEEME-navegador.txt"
+          curl -fL --retry 3 -o JumperNET-1.0.0.AppImage "$base/JumperNET-1.0.0.AppImage"
+          curl -fL --retry 3 -o jumpernet-navegador-windows-1.0.0.zip "$base/jumpernet-navegador-windows.zip"
+          curl -fL --retry 3 -o LEEME-navegador.txt "$base/LEEME-navegador.txt"
+          curl -fL --retry 3 -o notas.md "https://jumpernet.duckdns.org/bajares/notas-release.md"
+          ls -la
 
-      - name: Crear release con notas y subir activos
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ env.VERSION }}
+      - name: Crear release (si no existe)
         run: |
-          set -e
-          notes="$(cat <<'EOF'
-          # JumperNET v1.0.0 — navegador con tu circuito integrado
+          set -o pipefail
+          {
+            if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+              echo "la release $GITHUB_REF_NAME ya existe — solo subo activos"
+            else
+              gh release create "$GITHUB_REF_NAME" \
+                --verify-tag \
+                --title "JumperNET $GITHUB_REF_NAME — navegador con circuito de 3 saltos" \
+                --notes-file notas.md
+            fi
+          } 2>&1 | tee -a gh.log
 
-          Todos los archivos de esta release son la **misma descarga que ofrece el
-          panel web** (seccion Descargas): son el mismo binario, publicados aqui
-          como segunda via para que no dependas de un solo servidor.
+      - name: Subir activos (3 archivos)
+        run: |
+          set -o pipefail
+          gh release upload "$GITHUB_REF_NAME" \
+            JumperNET-1.0.0.AppImage \
+            jumpernet-navegador-windows-1.0.0.zip \
+            LEEME-navegador.txt \
+            --clobber 2>&1 | tee -a gh.log
 
-          ## Archivos de esta release
+      - name: Mostrar release resultante
+        run: gh release view "$GITHUB_REF_NAME" --json assets,url 2>&1 | tee -a gh.log
 
-          ### jumpernet-navegador-windows-${VERSION}.zip (~128 MB)
-          JumperNET Browser para Windows (portatil). El navegador ya viene
-          conectado: lo abres, escribes email y contrasena (los de la web),
-          pulsa «Conectar» y TODO el trafico sale por tu circuito de 3 saltos
-          con la IP del nodo de salida. Buscador por defecto DuckDuckGo (como
-          Tor Browser); boton «Nuevo circuito» para rotar los saltos.
-          Instalacion: descomprime donde quieras (p. ej. C:\JumperNET) y ejecuta
-          «JumperNET Browser.exe». SmartScreen dirara «aplicacion sin firmar»:
-          «Mas informacion» → «Ejecutar de todas formas».
-
-          ### JumperNET-${VERSION}.AppImage (~110 MB)
-          JumperNET Browser para Linux, mismo navegador. Instalacion:
-          `chmod +x JumperNET-1.0.0.AppImage && ./JumperNET-1.0.0.AppImage`
-          (en algunas distros hace falta `sudo apt install libfuse2`).
-
-          ### LEEME-navegador.txt
-          Instrucciones de uso e instalacion de ambos paquetes + detalles
-          tecnicos (particion de sesion persist:jn, donde guarda la cuenta,
-          como responde el 407 del proxy).
-
-          ## Extension (ruta ligera)
-
-          Si prefieres usar tu Chrome/Firefox de siempre, el panel tambien
-          ofrece la extension (visible en la seccion Descargas del panel): es
-          la ruta ligera, con el proxy HTTP + auth 407 automatica.
-          EOF
-          )"
-          gh release create "${GITHUB_REF_NAME}" \
-            "JumperNET-${VERSION}.AppImage" \
-            "jumpernet-navegador-windows-${VERSION}.zip" \
-            "LEEME-navegador.txt" \
-            --title "JumperNET ${VERSION} — navegador + circuito de 3 saltos" \
-            --notes "$(echo "$notes" | sed 's/^          //')"
+      - name: Guardar diagnostico con la salida de gh
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostico-release
+          path: gh.log
+          if-no-files-found: ignore
