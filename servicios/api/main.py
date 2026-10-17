@@ -492,15 +492,20 @@ def editar_me(prefs: Preferencias, token: str | None = Header(default=None, alia
         return t.strip().replace("<", "").replace(">", "")[:maximo]
 
     datos = {}
+    borrar = set()
     if prefs.alias is not None:
         alias = limpiar(prefs.alias, 24)
         if alias:
             datos["alias"] = alias
+        else:
+            borrar.add("alias")     # cadena vacía = eliminar el campo
     if prefs.lema is not None:
         lema = limpiar(prefs.lema, 80)
         if lema:
             datos["lema"] = lema
-    if not datos:
+        else:
+            borrar.add("lema")
+    if not datos and not borrar:
         raise HTTPException(status_code=400, detail="no hay nada que guardar")
 
     f = c.execute("SELECT * FROM usuarios WHERE id=?", (u["id"],)).fetchone()
@@ -509,6 +514,8 @@ def editar_me(prefs: Preferencias, token: str | None = Header(default=None, alia
     except Exception:
         pref = {}
     pref.update(datos)
+    for k in borrar:
+        pref.pop(k, None)
     c.execute("UPDATE usuarios SET pref=? WHERE id=?", (json.dumps(pref, ensure_ascii=False), u["id"]))
     c.commit()
     return fila_a_dict(c.execute("SELECT * FROM usuarios WHERE id=?", (u["id"],)).fetchone())
