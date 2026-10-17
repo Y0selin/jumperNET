@@ -29,6 +29,7 @@ export async function api(metodo, ruta, cuerpo, autorizado = true) {
 
 export async function nodos() { return (await api("GET", "/nodos", null, false)).datos; }
 export async function me() { return (await api("GET", "/me")).datos; }
+export async function editarMe(prefs) { return (await api("PATCH", "/me", prefs)).datos; }
 export async function conectar() { return (await api("POST", "/connect")).datos; }
 export async function rotar() { return (await api("POST", "/rotate")).datos; }
 export async function desconectar_() { return (await api("POST", "/disconnect")).datos; }

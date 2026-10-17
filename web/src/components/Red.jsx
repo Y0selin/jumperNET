@@ -50,27 +50,7 @@ function Parada({ nombre, sub, tipo, pulso }) {
       <span className="mono">{sub}</span>
     </div>
   );
-}
-
-/* ── bloque de código con botón de copiar ── */
-function Copiabloque({ rotulo, texto, nota }) {
-  const [copiado, setCopiado] = useState(false);
-  return (
-    <div className="copiabloque">
-      <header>
-        <span className="rotulo"><span className="punto" style={{ background: "var(--acento-1)" }} />{rotulo}</span>
-        <button className="btn" style={{ padding: "4px 10px", fontSize: 11 }}
-          onClick={() => { navigator.clipboard.writeText(texto); setCopiado(true); setTimeout(() => setCopiado(false), 1500); }}>
-          {copiado ? "✓ copiado" : "⧉ copiar"}
-        </button>
-      </header>
-      <pre>{texto}</pre>
-      {nota && <div className="nota" style={{ padding: "8px 14px 12px", fontSize: 11.5 }}>{nota}</div>}
-    </div>
-  );
-}
-
-/* ── marcadores propios del mapa (divIcon: sin imágenes → sin 404) ── */
+}/* ── marcadores propios del mapa (divIcon: sin imágenes → sin 404) ── */
 function marca(clase) {
   return L.divIcon({
     className: "marca-envoltorio",
@@ -247,8 +227,6 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
   const activo = !!yo?.activo;
   const saltos = yo?.circuito?.length ? yo.circuito : ["nodo·", "nodo·", "nodo·"];
   const ipExit = yo?.ip_salida || ipSalida;
-  const comando = `curl --socks5-hostname jumpernet.duckdns.org:1080 \\\n     --proxy-user '${yo?.email}:TU_CLAVE' https://api.ipify.org`;
-  const comandoAlt = `curl --socks5-hostname "${yo?.email?.replace("@", "%40")}:TU_CLAVE@jumpernet.duckdns.org:1080" https://api.ipify.org`;
 
   return (
     <div className="apa" style={{ display: "grid", gap: 14 }}>
@@ -449,32 +427,6 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
         </div>
       </div>
 
-      {/* ── cómo usarlo (comandos correctos) ── */}
-      <Revela className="tarjeta">
-        <h2 className="seccion">Usa tu circuito</h2>
-        <p className="nota" style={{ marginBottom: 12 }}>
-          Puerto <b>1080</b> · tus mismas credenciales de la web · solo destinos <b>80/443</b> ·
-          cifrado por capas hasta el nodo de salida. Sustituye <b>TU_CLAVE</b> por tu contraseña.
-        </p>
-
-        <div style={{ display: "grid", gap: 12 }}>
-          <Copiabloque rotulo="terminal · recomendado" texto={comando}
-            nota="Se usa --proxy-user para que el @ de tu email no se confunda con el separador de credenciales (ese detalle rompía el comando anterior)." />
-          <Copiabloque rotulo="terminal · alternativa en una línea" texto={comandoAlt}
-            nota="Variante con la arroba codificada como %40, útil para pegar en scripts." />
-          <div className="copiabloque">
-            <header><span className="rotulo"><span className="punto" style={{ background: "var(--acento-2)" }} />navegador</span></header>
-            <pre>{`host      jumpernet.duckdns.org
-puerto    1080   (SOCKS5)
-usuario   ${yo?.email || "tu@correo"}
-clave     la de esta web`}</pre>
-            <div className="nota" style={{ padding: "8px 14px 12px", fontSize: 11.5 }}>
-              Configúralo en los ajustes de proxy del sistema o del navegador. Con el circuito activo,
-              cualquier web te verá con la IP de salida.
-            </div>
-          </div>
-        </div>
-      </Revela>
     </div>
   );
 }

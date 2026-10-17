@@ -98,6 +98,12 @@ def conex():
             bloqueado_hasta REAL NOT NULL DEFAULT 0
         )"""
     )
+    # preferencias del usuario (alias, lema…): JSON. Migración idempotente para
+    # bases creadas antes — si la columna ya existe no pasa nada.
+    try:
+        c.execute("ALTER TABLE usuarios ADD COLUMN pref TEXT NOT NULL DEFAULT '{}'")
+    except sqlite3.OperationalError:
+        pass  # ya existe
     return c
 
 
@@ -236,9 +242,16 @@ def ip_salida_efectiva(f) -> str | None:
 
 def fila_a_dict(f) -> dict:
     activo = bool(f["activo"])
+    try:
+        pref = json.loads(f["pref"] or "{}")
+    except Exception:
+        pref = {}
     return {
         "id": f["id"],
         "email": f["email"],
+        "alias": pref.get("alias") or None,
+        "lema": pref.get("lema") or None,
+        "alta": f["fecha_registro"],
         "ip_real": f["ip_real"],
         "ip_salida": ip_salida_efectiva(f) if activo else None,
         "nodo_exit": (json.loads(f["circuito"])[-1] if f["circuito"] else None),
@@ -459,6 +472,46 @@ def me(
         c.commit()
         u["ip_real"] = nueva_ip
     return fila_a_dict(u)
+
+
+class Preferencias(BaseModel):
+    alias: str | None = None
+    lema: str | None = None
+
+
+@app.patch("/me")
+def editar_me(prefs: Preferencias, token: str | None = Header(default=None, alias="Authorization")):
+    """Edita lo editable de tu cuenta: alias visible y lema.
+
+    Se guarda como JSON en la columna pref. Nada de esto afecta al circuito ni
+    a las credenciales SOCKS5 (que siguen siendo email + contrasena)."""
+    u = _auth(token)
+    c = conex()
+
+    def limpiar(t, maximo):
+        return t.strip().replace("<", "").replace(">", "")[:maximo]
+
+    datos = {}
+    if prefs.alias is not None:
+        alias = limpiar(prefs.alias, 24)
+        if alias:
+            datos["alias"] = alias
+    if prefs.lema is not None:
+        lema = limpiar(prefs.lema, 80)
+        if lema:
+            datos["lema"] = lema
+    if not datos:
+        raise HTTPException(status_code=400, detail="no hay nada que guardar")
+
+    f = c.execute("SELECT * FROM usuarios WHERE id=?", (u["id"],)).fetchone()
+    try:
+        pref = json.loads(f["pref"] or "{}")
+    except Exception:
+        pref = {}
+    pref.update(datos)
+    c.execute("UPDATE usuarios SET pref=? WHERE id=?", (json.dumps(pref, ensure_ascii=False), u["id"]))
+    c.commit()
+    return fila_a_dict(c.execute("SELECT * FROM usuarios WHERE id=?", (u["id"],)).fetchone())
 
 
 @app.post("/connect")

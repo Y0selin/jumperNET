@@ -237,6 +237,32 @@ export default function Landing({ irAuth }) {
         </div>
       </Revela>
 
+      {/* ───────────── preguntas rápidas ───────────── */}
+      <Revela>
+        <div className="cab-seccion">
+          <div className="cubo-ico">❔</div>
+          <div>
+            <span className="migas">las doubts típicas, respondidas en 20 segundos</span>
+            <h1>Preguntas rápidas</h1>
+            <p className="sub">Lo que todo el mundo pregunta antes de entrar.</p>
+          </div>
+        </div>
+        <div style={{ display: "grid", gap: 10 }}>
+          {[
+            ["¿La IP cambia de verdad?", "Sí — y no tienes que creérnoslo: el panel lanza una comprobación real por tu circuito y te enseña la IP que vio el destino. Si el destino responde con una IP distinta a la tuya, el circuito está haciendo su trabajo."],
+            ["¿El navegador ya viene conectado?", "El JumperNET Browser (Windows/Linux) abre directamente el buscador DuckDuckGo por tu circuito tras entrar con tu cuenta: sin extensiones, sin configuración. Sin sesión, no deja navegar nada — primero se pasa por el vacen de conexión."],
+            ["¿Cuánto lento va?", "La latencia EXTRA añade la de 3 saltos + cifrado (~40-120 ms extra normalmente). Para navegar y buscar va bien; para juegos competitivos no lo recomendamos."],
+            ["¿Qué guarda el sistema de mí?", "Email, estado de tu circuito y cuándo cambió. Nada más. No hay histórico de webs ni de destinos. Puedes exportar tu ficha completa desde Cuenta y borrar la cuenta de golpe."],
+            ["¿Los nodos son tuyos o de terceros?", "De laboratorio: contenedores Docker en el servidor del proyecto. Puedes montar tu propio nodo con el repo (peer n personal) y añadirlo con NODO peer token."],
+          ].map(([q, r]) => (
+            <details key={q} className="tarjeta" style={{ padding: "14px 18px", cursor: "pointer" }}>
+              <summary style={{ fontWeight: 600, fontSize: 14.5 }}>{q}</summary>
+              <p className="nota" style={{ marginTop: 8, fontSize: 13.5, lineHeight: 1.65, cursor: "default" }}>{r}</p>
+            </details>
+          ))}
+        </div>
+      </Revela>
+
       {/* ───────────── CTA ───────────── */}
       <Revela className="tarjeta destacada brillo" style={{ textAlign: "center", padding: 34 }}>
         <span className="etiqueta-viva" style={{ justifyContent: "center" }}>listo en 20 segundos</span>

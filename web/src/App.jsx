@@ -19,7 +19,6 @@ const NAV_SESION = [
   { grupo: "tu cuenta", items: [
     { id: "descargas", texto: "Descargas", ico: "⬇" },
     { id: "cuenta", texto: "Cuenta", ico: "☻" },
-    { id: "info", texto: "Documentación", ico: "▤" },
     { id: "ajustes", texto: "Diseñador", ico: "✦" },
   ] },
 ];
@@ -28,8 +27,7 @@ const PROMPT = {
   red: "status --red",
   nodos: "ls -la nodos/",
   descargas: "ls -la descargas/",
-  cuenta: "whoami",
-  info: "man jumpernet",
+  cuenta: "whoami --editar",
   ajustes: "theme --editar",
   inicio: "cat bienvenida.md",
   auth: "./acceder",
@@ -108,7 +106,7 @@ export default function App() {
                 <span className="ico">⬇</span><span>Descargas</span>
               </button>
               <a className="lateral-btn link-externa" href={DOCS_URL} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
-                <span className="ico">📚</span><span>Documentación</span><span style={{ marginLeft: "auto", opacity: .6, fontSize: 10 }}>↗</span>
+                <span className="ico">▤</span><span>Documentación</span><span style={{ marginLeft: "auto", opacity: .6, fontSize: 10 }}>↗</span>
               </a>
             </div>
 
@@ -143,7 +141,7 @@ export default function App() {
           <header className={`barra-sup ${pegada ? "pegada" : ""}`}>
             <button className="hamburguesa" onClick={() => setLateral(true)} aria-label="Abrir menú">☰</button>
             <span className="prompt">
-              <b>{yo?.email?.split("@")[0] || "invitado"}</b>@jumpernat:<i>~/{tab}</i>$ {PROMPT[tab]}
+              <b>{(yo?.alias || yo?.email?.split("@")[0] || "invitado")}</b>@jumpernat:<i>~/{tab}</i>$ {PROMPT[tab]}
             </span>
             <span style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
               {enSesion && (
@@ -198,7 +196,7 @@ export default function App() {
             )}
 
             {tab === "cuenta" && enSesion && (
-              <Cuenta yo={yo} aviso={aviso} alSalir={salir} irRed={() => ir("red")} />
+              <Cuenta yo={yo} aviso={aviso} alSalir={salir} irRed={() => ir("red")} alRecargar={setYo} />
             )}
 
             {tab === "ajustes" && enSesion && (

@@ -1,21 +1,25 @@
 import { useEffect, useState } from "react";
-import { me, api, decodificaJwt, getToken } from "../lib/api.js";
+import { me, api, editarMe, decodificaJwt, getToken } from "../lib/api.js";
 import { Stat, AnilloJwt, Hecho } from "./Piezas.jsx";
 import Revela from "./Revela.jsx";
 
 /* Cuenta: la ficha completa del usuario — quién eres, qué red tienes,
    qué garantías hay y la zona de peligro (borrado en dos pasos). */
-export default function Cuenta({ yo: yoInicial, aviso, alSalir, irRed }) {
+export default function Cuenta({ yo: yoInicial, aviso, alSalir, irRed, alRecargar }) {
   const [yo, setYo] = useState(yoInicial || null);
   const [cargando, setCar] = useState(!yoInicial);
   const [confirmando, setConf] = useState(false);
   const [borrando, setBorrando] = useState(false);
+  const [editando, setEdit] = useState(false);
+  const [alias, setAlias] = useState("");
+  const [lema, setLema] = useState("");
+  const [guardando, setGuard] = useState(false);
 
   const jwt = decodificaJwt(getToken() || "");
 
   useEffect(() => {
     let vivo = true;
-    me().then((d) => { if (vivo) setYo(d); })
+    me().then((d) => { if (vivo) { setYo(d); setAlias(d.alias || ""); setLema(d.lema || ""); } })
       .catch((e) => aviso(e.message, "error"))
       .finally(() => vivo && setCar(false));
     return () => { vivo = false; };
@@ -28,11 +32,44 @@ export default function Cuenta({ yo: yoInicial, aviso, alSalir, irRed }) {
     finally { setBorrando(false); }
   }
 
+  async function guardarPref() {
+    setGuard(true);
+    try {
+      const d = await editarMe({ alias: alias || null, lema: lema || null });
+      setYo(d); alRecargar?.(d); setEdit(false);
+      aviso("perfil actualizado ✓", "ok");
+    } catch (e) { aviso(e.message, "error"); }
+    finally { setGuard(false); }
+  }
+
+  function copiar(texto, que) {
+    navigator.clipboard.writeText(texto).then(() => aviso(`${que} copiado al portapapeles ✓`, "ok"),
+      () => aviso("no se pudo copiar", "error"));
+  }
+
+  function exportarFicha() {
+    const ficha = {
+      exportado: new Date().toISOString(),
+      nota: "Esto es TODO lo que el sistema guarda de ti. Nada de qué webs visitas ni con qué codecs, ni de tus destinos.",
+      cuenta: { email: yo?.email, id: yo?.id, alias: yo?.alias, lema: yo?.lema, alta: yo?.alta ? new Date(yo.alta * 1000).toISOString() : null },
+      red: { estado: yo?.activo ? "ACTIVA" : "APAGADA", circuito: yo?.circuito, nodo_exit: yo?.nodo_exit, tu_ip: yo?.ip_real, ip_salida: yo?.ip_salida, ultimo_cambio: yo?.ultimo_cambio ? new Date(yo.ultimo_cambio * 1000).toISOString() : null },
+      proxy: { host: "jumpernet.duckdns.org", puerto_socks5: 1080, puertos_salida: "80/443", credenciales: "las de esta web (argon2id)" },
+    };
+    const blob = new Blob([JSON.stringify(ficha, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `jumpernet-ficha-${(yo?.email || "cuenta").split("@")[0]}.json`;
+    a.click(); URL.revokeObjectURL(a.href);
+    aviso("ficha exportada ✓", "ok");
+  }
+
   if (cargando && !yo) return <div className="tarjeta apa"><h2 className="seccion">cargando tu cuenta…</h2><span className="spin" /></div>;
 
   const activo = !!yo?.activo;
-  const inicial = (yo?.email || "?").trim().charAt(0).toUpperCase();
-  const creada = jwt?.cuerpo?.iat ? new Date(jwt.cuerpo.iat * 1000) : null;
+  const nombreVisible = yo?.alias || (yo?.email || "?").split("@")[0];
+  const inicial = nombreVisible.trim().charAt(0).toUpperCase();
+  const alta = yo?.alta ? new Date(yo.alta * 1000) : (jwt?.cuerpo?.iat ? new Date(jwt.cuerpo.iat * 1000) : null);
+  const dias = alta ? Math.max(1, Math.floor((Date.now() - alta.getTime()) / 86400000)) : null;
 
   return (
     <div className="apa" style={{ display: "grid", gap: 16 }}>
@@ -46,12 +83,34 @@ export default function Cuenta({ yo: yoInicial, aviso, alSalir, irRed }) {
       {/* ── identidad + métricas ── */}
       <div className="tarjeta apa brillo">
         <div className="identidad">
-          <div className="avatar flota">{inicial}</div>
+          <div className="avatar flota" style={{ fontSize: 20 }}>{inicial}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 17, wordBreak: "break-all" }}>{yo?.email}</div>
-            <div className="nota mono" style={{ fontSize: 11.5 }}>
-              id interno {yo?.id} · {creada ? `alta ${creada.toLocaleDateString()} ${creada.toLocaleTimeString()}` : "sesión activa"}
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontWeight: 700, fontSize: 18 }}>{nombreVisible}</span>
+              {yo?.lema && <span className="nota" style={{ fontSize: 12.5, fontStyle: "italic" }}>«{yo.lema}»</span>}
+              {!editando && (
+                <button className="btn" style={{ padding: "3px 10px", fontSize: 11 }} onClick={() => setEdit(true)} title="Editar tu perfil">✎ editar</button>
+              )}
             </div>
+            <div className="nota mono" style={{ fontSize: 11.5 }}>
+              {yo?.email} · id interno {yo?.id}
+              {dias ? ` · ${dias} día${dias > 1 ? "s" : ""} en la red` : ""}
+            </div>
+            {editando && (
+              <div style={{ display: "grid", gap: 8, marginTop: 10, maxWidth: 520 }}>
+                <input className="campo" placeholder="alias visible (máx. 24 caracteres)" value={alias} maxLength={24}
+                  onChange={(e) => setAlias(e.target.value)} />
+                <input className="campo" placeholder="lema / estado personal (máx. 80)" value={lema} maxLength={80}
+                  onChange={(e) => setLema(e.target.value)} />
+                <div className="fila-btn">
+                  <button className="btn primario" onClick={guardarPref} disabled={guardando}>
+                    {guardando ? <span className="spin" /> : "✓ Guardar perfil"}
+                  </button>
+                  <button className="btn" onClick={() => { setEdit(false); setAlias(yo?.alias || ""); setLema(yo?.lema || ""); }}>Cancelar</button>
+                  <span className="nota" style={{ fontSize: 11 }}>se guarda en el servidor y se ve en el panel · no afecta a tu conexión</span>
+                </div>
+              </div>
+            )}
           </div>
           <span className={`chip ${activo ? "vivo" : "muerto"} mono`}>{activo ? "RED ACTIVA" : "RED APAGADA"}</span>
         </div>
@@ -63,10 +122,20 @@ export default function Cuenta({ yo: yoInicial, aviso, alSalir, irRed }) {
           <Stat etq="IP de salida" val={<span style={{ fontSize: 13.5 }}>{activo ? yo?.ip_salida : "—"}</span>} pie={activo ? "la que ve internet" : "sin uso"} tono="aviso" />
         </div>
 
+        <div className="tira-stats" style={{ marginTop: 16 }}>
+          <Stat etq="días en la red" val={dias ? `${dias}` : "—"} pie="desde tu alta" tono="info" />
+          <Stat etq="máximo de saltos" val="3" pie="elegidos al azar para ti" tono="ok" />
+          <Stat etq="credenciales" val="SOCKS5" pie="email + clave argon2" tono="aviso" />
+          <Stat etq="datos guardados" val="mínimos" pie="email + estado de red" tono="ok" />
+        </div>
+
         <div className="fila-btn" style={{ marginTop: 16 }}>
           <button className="btn primario" onClick={irRed}>◀ Volver al panel de red</button>
           <button className="btn" onClick={() => { setCar(true); me().then(setYo).catch((e) => aviso(e.message, "error")).finally(() => setCar(false)); }} disabled={cargando}>
             {cargando ? <span className="spin" /> : "⟳ Refrescar datos"}
+          </button>
+          <button className="btn" onClick={exportarFicha} title="Descarga un JSON con TODO lo que el sistema guarda de ti">
+            ⬇ Exportar mi ficha (JSON)
           </button>
         </div>
       </div>
@@ -88,6 +157,27 @@ export default function Cuenta({ yo: yoInicial, aviso, alSalir, irRed }) {
           <div className="dato"><span className="etq">último cambio</span><span className="val">{yo?.ultimo_cambio ? new Date(yo.ultimo_cambio * 1000).toLocaleString() : "—"}</span></div>
           <div className="dato"><span className="etq">proxy</span><span className="val">jumpernet.duckdns.org:1080</span></div>
           <div className="dato"><span className="etq">salida permitida</span><span className="val">solo 80/443 · IPs privadas bloqueadas</span></div>
+
+          <h2 className="seccion" style={{ marginTop: 18 }}>Credenciales rápidas</h2>
+          <p className="nota" style={{ fontSize: 12, margin: "4px 0 10px" }}>
+              Cópialas donde las necesites (navegador, terminal, apps de proxy). Son las mismas de la web.
+          </p>
+          <div style={{ display: "grid", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <span className="chip mono">SOCKS5 · 1080</span>
+              <button className="btn" style={{ padding: "4px 12px", fontSize: 11.5 }} onClick={() => copiar("jumpernet.duckdns.org", "host")}>⧉ copiar host</button>
+              <button className="btn" style={{ padding: "4px 12px", fontSize: 11.5 }} onClick={() => copiar(String(yo?.email || ""), "usuario")}>⧉ copiar usuario</button>
+            </div>
+            <div className="dato" style={{ marginTop: 4 }}>
+              <span className="etq">host:puerto</span><span className="val mono">jumpernet.duckdns.org:1080</span>
+            </div>
+            <div className="dato">
+              <span className="etq">usuario</span><span className="val mono">{yo?.email}</span>
+            </div>
+            <div className="dato">
+              <span className="etq">clave</span><span className="val">la de esta web · no se enseña aquí nunca</span>
+            </div>
+          </div>
         </Revela>
 
         <div style={{ display: "grid", gap: 14, alignContent: "start" }}>
