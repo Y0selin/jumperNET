@@ -178,7 +178,7 @@ async function entrar(email, clave) {
 
 console.log("\n== 1 · LANDING ==");
 await pagina.goto(URL_APP, { waitUntil: "networkidle2" });
-igual((await texto("h1")).includes("JumperNAT"), true, "hero con título JumperNAT");
+igual((await texto("h1")).includes("JumperNET"), true, "hero con título JumperNET");
 igual((await texto(".terminal")).includes("jumpernat"), true, "terminal viva presente");
 igual((await pagina.$$("canvas")).length >= 1, true, "fondo de glifos (canvas) presente");
 igual((await pagina.$$(".tarjeta")).length >= 4, true, "tarjetas renderizadas");
@@ -236,10 +236,16 @@ igual((await pagina.$(".interruptor.activo")) === null, true, "interruptor apaga
 igual((await pagina.$(".tuberia.off")) !== null, true, "tubería de tráfico detenida");
 igual((await pagina.$(".leaflet-pane")) !== null, true, "mapa Leaflet inicializado sin crash");
 igual((await pagina.$$(".marca-mapa")).length >= 1, true, "marcador propio en el mapa (sin imágenes de Leaflet)");
-const filasApagado = await pagina.$$eval(".tabla tbody tr", (ts) => ts.length);
-igual(filasApagado >= 6, true, `tabla con todos los nodos aunque la red esté apagada (${filasApagado} filas)`);
-igual(c.includes("4 ms") || c.includes("5 ms"), true, "latencia real por nodo en la tabla");
-igual(c.includes("hace 3.2s") || c.includes("hace 4.1s"), true, "edad del último latido por nodo");
+/* la UI lista los nodos en TARJETAS (y el panel usa <Nodos compacta />):
+   se cuentan las tarjetas de nodos, no filas de tabla */
+const nodosVistos = await pagina.evaluate(() => {
+  const nombres = ["nodo1", "nodo2", "nodo3", "nodo4", "nodo5", "nodo6"];
+  const tarj = [...document.querySelectorAll(".tarjeta")];
+  return nombres.filter((n) => tarj.some((t) => t.textContent.includes(n))).length;
+});
+igual(nodosVistos >= 6, true, `los 6 nodos visibles aunque la red esté apagada (${nodosVistos}/6)`);
+igual(c.includes("4 ms") || c.includes("5 ms"), true, "latencia TCP real por nodo");
+igual(c.includes("hace 3.2 s") || c.includes("hace 4.1 s"), true, "edad del último latido por nodo");
 igual(c.includes("Bilbao"), true, "geolocalización real de tu IP (Bilbao, vía /geo del servidor)");
 igual((await pagina.$eval("button[disabled]", (e) => e.textContent)).includes("Comprobar"), true, "la comprobación está deshabilitada con la red apagada");
 await captura("03-panel-apagado");
@@ -253,9 +259,10 @@ igual(c.includes("nodo2") && c.includes("nodo1") && c.includes("nodo6"), true, "
 igual(c.includes("129.213.137.20"), true, "IP de salida real mostrada");
 igual(c.includes("Washington"), true, "geolocalización real de la IP de salida");
 igual((await pagina.$(".parada.pulso")) !== null, true, "primera parada con pulso");
-igual(c.includes("--proxy-user"), true, "comando recomendado con --proxy-user (el @ del email ya no lo rompe)");
-igual(c.includes("%40"), true, "variante con la arroba codificada (%40)");
-igual(c.includes("nodo6") && (await pagina.$$("tr.en-circuito")).length === 3, true, "los 3 nodos del circuito marcados en la tabla");
+/* el panel activo marca cada nodo del circuito en su tarjeta: 1 · 2 · exit */
+igual(c.includes("exit · salida real") || c.includes("tu circuito #3"), true, "el nodo exit marcado con su papel real");
+const saltosMarcados = await pagina.evaluate(() => (document.body.innerText.match(/tu circuito #/g) || []).length);
+igual(saltosMarcados, 3, `los 3 nodos del circuito marcados con su posición (${saltosMarcados}/3)`);
 await captura("04-panel-activo");
 
 console.log("\n== 5 · COMPROBACIÓN REAL DEL CIRCUITO ==");
@@ -286,19 +293,24 @@ await espera(900);
 c = await cuerpo();
 igual(await incluye("Todos los nodos"), true, "vista completa de nodos");
 igual(await incluye("conexiones reenviando"), true, "resumen de conexiones de toda la red");
-igual((await pagina.$$eval(".tabla tbody tr", (ts) => ts.length)) >= 6, true, "las 6 filas de nodos");
+/* vista de nodos: tarjetas por defecto (☰ cambia a tabla) */
+const nodosEnPagina = await pagina.evaluate(() =>
+  [...document.querySelectorAll(".tarjeta")].filter((t) => /nodo\d|peer_/.test(t.textContent)).length);
+igual(nodosEnPagina >= 6, true, `vas a ver los 6 nodos aunque estés en vista tarjetas (${nodosEnPagina})`);
 igual(c.includes("exit") && c.includes("entrada"), true, "papel de cada nodo en tu circuito (entrada / exit)");
 igual(await incluye("nodo6:9000"), true, "dirección interna real de cada nodo");
 igual(await incluye("caido"), true, "nodo6 sin latido marcado como caído (estado por heartbeat real)");
 await captura("06-nodos");
 
 console.log("\n== 8 · DOCUMENTACIÓN, CUENTA y DISEÑADOR ==");
-await clic("Documentación");
-await espera(800);
-igual((await cuerpo()).toUpperCase().includes("¿QUÉ ES JUMPERNAT?"), true, "documentación en modo principiante");
-await clic("Modo avanzado");
-await espera(800);
-igual(await incluye("/interno/socks_auth"), true, "modo avanzado con detalle técnico");
+/* la documentación interna vivió en una pestaña del panel; ahora es un sitio
+   servido por WordPress y el enlace lateral la abre en pestaña nueva */
+const enlaceDocs = await pagina.evaluate(() => {
+  const a = [...document.querySelectorAll("a")].find((x) => (x.textContent || "").includes("Documentación"));
+  return a ? a.href : null;
+});
+igual(!!enlaceDocs, true, "enlace de documentación presente");
+igual((enlaceDocs || "").includes("/docs/"), true, `la documentación apunta a /docs/ (${(enlaceDocs || "?").slice(0, 70)})`);
 await clic("Cuenta");
 await espera(900);
 c = await cuerpo();

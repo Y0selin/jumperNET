@@ -1,0 +1,184 @@
+/* ============================================================
+   elevacion.css — capa de pulido visual (rediseño 2026-10).
+   · NO reemplaza variables: solo las usa. El Diseñador de Ajustes
+   sigue mandando en colores, radios y velocidad (--vel-anim).
+   · Borde dinámico en tarjetas, spotlight al cursor, sidebar con
+   acento vivo, botones con barrido de brillo, FAQ animada y
+   transición de vista al cambiar de pestaña.
+   ============================================================ */
+
+/* ── borde que gira en la tarjeta destacada (leve y discreto) ── */
+@property --angulo-borde { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+
+.tarjeta {
+  transition: border-color .25s ease, box-shadow .3s ease, transform .28s cubic-bezier(.2,.8,.25,1);
+}
+.tarjeta.brillo { overflow: hidden; }
+.tarjeta.brillo::after { /* barrido de brillo sobre el cristal */
+  content: "";
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(115deg, transparent 34%, rgb(from var(--acento-1) r g b / .1) 48%, transparent 62%);
+  transform: translateX(-130%);
+}
+.tarjeta.brillo:hover::after { animation: brillo-pasa calc(1.1 * var(--veld)) ease; }
+
+/* spotlight al cursor: App escribe --mx / --my en cada .tarjeta */
+.tarjeta::before {
+  content: "";
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(340px circle at var(--mx, 50%) var(--my, 50%),
+    rgb(from var(--acento-1) r g b / .07), transparent 65%);
+  transition: opacity .35s ease;
+}
+.tarjeta:hover::before { opacity: 1; }
+
+/* ── sidebar: acento de identidad ── */
+.lateral { border-right: none; }
+.lateral::before {
+  content: ""; position: absolute; top: 0; bottom: 0; right: 0; width: 1px;
+  background: linear-gradient(180deg,
+    rgb(from var(--acento-1) r g b / .55),
+    rgb(from var(--acento-2) r g b / .28) 45%,
+    rgb(from var(--acento-1) r g b / 0));
+  pointer-events: none;
+}
+.lateral-btn.activa {
+  background: linear-gradient(90deg, rgb(from var(--acento-1) r g b / .14), rgb(from var(--acento-1) r g b / .04));
+  border-color: rgb(from var(--acento-1) r g b / .4);
+  box-shadow: inset 2px 0 0 var(--acento-1), 0 0 calc(14px * var(--glow)) rgb(from var(--acento-1) r g b / .12);
+}
+.lateral-btn { border-radius: var(--radio-2); }
+.lateral-titulo::after {
+  content: ""; flex: 1; height: 1px; margin-left: 8px;
+  background: linear-gradient(90deg, rgb(from var(--acento-1) r g b / .35), transparent);
+}
+
+/* ── filas de navegación: número de página ── */
+.cab-seccion h1 { position: relative; }
+.cab-seccion { animation: llega-tarjeta calc(.5 * var(--veld)) cubic-bezier(.2,.85,.3,1) both; }
+
+/* ── botones con oficio ── */
+.btn { position: relative; overflow: hidden; }
+.btn::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / .18) 50%, transparent 65%);
+  transform: translateX(-120%);
+}
+.btn:not(:disabled):hover::after { animation: brillo-pasa calc(.8 * var(--veld)) ease; }
+.btn.primario {
+  background: linear-gradient(135deg, rgb(from var(--acento-1) r g b / .22), rgb(from var(--acento-2) r g b / .16));
+  border-color: rgb(from var(--acento-1) r g b / .6);
+  box-shadow: 0 0 calc(18px * var(--glow)) rgb(from var(--acento-1) r g b / .18);
+}
+.btn.primario:hover {
+  background: linear-gradient(135deg, rgb(from var(--acento-1) r g b / .3), rgb(from var(--acento-2) r g b / .22));
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px -6px rgb(from var(--acento-1) r g b / .35);
+}
+
+/* ── campos con respiro ── */
+.campo { border-radius: 10px; }
+.campo:hover:not(:focus) { border-color: rgb(from var(--acento-1) r g b / .35); }
+
+/* ── interruptor: imán visible ── */
+.interruptor { box-shadow: inset 0 2px 8px rgb(0 0 0 / .5); }
+.interruptor.activo { box-shadow: 0 0 calc(20px * var(--glow)) rgb(from var(--acento-1) r g b / .28), inset 0 2px 10px rgb(0 0 0 / .4); }
+
+/* ── stats: valor con degradado ── */
+.stat .val {
+  background: linear-gradient(100deg, var(--texto), rgb(from var(--acento-1) r g b / .95));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.stat.off .val, .stat.bad .val, .stat.aviso .val, .stat.info .val {
+  background: none; color: var(--texto);
+}
+.stat.bad .val { color: #ff9088; }
+.stat.aviso .val { color: var(--acento-3); }
+.stat.info .val { color: var(--acento-2); }
+.stat.off .val { color: var(--texto-suave); }
+
+/* ── FAQ (details) con chevrón vivo ── */
+details.tarjeta { overflow: hidden; }
+details.tarjeta summary {
+  list-style: none;
+  display: flex; align-items: center; gap: 12px;
+  font-weight: 600; font-size: 14.5px; cursor: pointer;
+  transition: color .2s ease;
+}
+details.tarjeta summary::-webkit-details-marker { display: none; }
+details.tarjeta summary::before {
+  content: "▸"; font-family: var(--fuente-mono); color: var(--acento-1);
+  transition: transform .25s cubic-bezier(.2,.8,.25,1);
+  transform: rotate(0deg); flex: none;
+}
+details.tarjeta[open] summary::before { transform: rotate(90deg); }
+details.tarjeta summary:hover { color: var(--acento-1); }
+details.tarjeta[open] {
+  border-color: rgb(from var(--acento-1) r g b / .4);
+  box-shadow: 0 0 0 1px rgb(from var(--acento-1) r g b / .15), 0 14px 34px -16px rgb(0 0 0 / .7);
+}
+details.tarjeta .contenido-faq {
+  animation: entrar calc(.3 * var(--veld)) ease both;
+}
+
+/* ── transición al cambiar de pestaña (vista-viva) ── */
+.vista { animation: vista-entra calc(.38 * var(--veld)) cubic-bezier(.2,.8,.25,1) both; }
+@keyframes vista-entra {
+  from { opacity: 0; transform: translateY(14px) scale(.996); filter: saturate(.85); }
+  to   { opacity: 1; transform: none; filter: saturate(1); }
+}
+
+/* ── toasts de cristal ── */
+.toast-viva {
+  border-radius: 12px; font-size: 13px; font-family: var(--fuente-mono);
+  padding: 11px 15px;
+  backdrop-filter: blur(14px) saturate(1.3);
+  box-shadow: 0 14px 38px rgb(0 0 0 / .55), 0 0 0 1px var(--borde);
+  animation: toast-entra calc(.32 * var(--veld)) cubic-bezier(.2,.9,.3,1.2) both;
+  display: flex; gap: 9px; align-items: center;
+}
+.toast-viva.ok { background: rgb(from var(--acento-1) r g b / .13); border: 1px solid rgb(from var(--acento-1) r g b / .45); color: var(--acento-1); }
+.toast-viva.error { background: rgb(226 82 74 / .13); border: 1px solid rgb(226 82 74 / .45); color: #ffa39b; }
+@keyframes toast-entra {
+  from { opacity: 0; transform: translateY(14px) scale(.95); }
+  to   { opacity: 1; transform: none; }
+}
+.toast-viva.vase { animation: salir-toast calc(.28 * var(--veld)) ease both; }
+@keyframes salir-toast { to { opacity: 0; transform: translateY(8px) scale(.96); } }
+
+/* ── tabla: líneas vivas ── */
+.tabla tbody tr { transition: background .18s ease, box-shadow .18s ease; }
+.tabla tbody tr:hover { background: rgb(255 255 255 / .045); box-shadow: inset 3px 0 0 rgb(from var(--acento-1) r g b / .55); }
+.tabla tbody tr.en-circuito:hover { background: rgb(from var(--acento-1) r g b / .1); }
+
+/* ── hero: halo respirando tras el título ── */
+.hero { position: relative; }
+.hero::before {
+  content: "";
+  position: absolute; left: 50%; top: -30%; transform: translateX(-50%);
+  width: min(760px, 92vw); height: 320px; pointer-events: none;
+  background: radial-gradient(closest-side, rgb(from var(--acento-1) r g b / .13), transparent 70%);
+  animation: hero-respira calc(5.5 * var(--veld)) ease-in-out infinite;
+  z-index: -1;
+}
+@keyframes hero-respira {
+  0%, 100% { opacity: .55; transform: translateX(-50%) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.06); }
+}
+
+/* ── paradas del circuito: pulso rico al hover ── */
+.parada { transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+.parada:hover { transform: translateY(-2px); }
+
+/* ── tarjetas de descarga: brillo ya existente, mejoro topbar ── */
+.tarjeta-descarga:hover .ico-descarga { transform: scale(1.06); }
+.ico-descarga { transition: transform .25s cubic-bezier(.2,.8,.25,1); }
+
+/* ── chips activos más nítidos ── */
+.chip.vivo { box-shadow: 0 0 calc(10px * var(--glow)) rgb(from var(--acento-1) r g b / .2); }
+
+/* ── scroll: rebibe las migas en móvil ── */
+@media (max-width: 1000px) {
+  .lateral.abierto { border-right: 1px solid var(--borde); }
+}

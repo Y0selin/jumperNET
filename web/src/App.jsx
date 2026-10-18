@@ -51,6 +51,18 @@ export default function App() {
     window.addEventListener("scroll", alScroll, { passive: true });
     return () => window.removeEventListener("scroll", alScroll);
   }, []);
+  // spotlight en tarjetas: cada tarjeta ilumina alrededor del cursor
+  useEffect(() => {
+    const alMover = (e) => {
+      const t = e.target && e.target.closest ? e.target.closest(".tarjeta") : null;
+      if (!t) return;
+      const r = t.getBoundingClientRect();
+      t.style.setProperty("--mx", `${e.clientX - r.left}px`);
+      t.style.setProperty("--my", `${e.clientY - r.top}px`);
+    };
+    window.addEventListener("pointermove", alMover, { passive: true });
+    return () => window.removeEventListener("pointermove", alMover);
+  }, []);
 
   function aviso(texto, tipo = "ok") {
     const id = Date.now() + Math.random();
@@ -159,6 +171,7 @@ export default function App() {
           </header>
 
           <main className="contenido">
+            <div className="vista" key={tab}>
             {tab === "inicio" && <Landing irAuth={irAuth} enSesion={enSesion} />}
 
             {tab === "descargas" && (
@@ -232,6 +245,7 @@ export default function App() {
               <br />
               <span style={{ opacity: .7 }}>proyecto educativo · la red solo se activa cuando tú lo decides</span>
             </footer>
+            </div>
           </main>
         </div>
       </div>
@@ -239,9 +253,8 @@ export default function App() {
       {/* avisos */}
       <div style={{ position: "fixed", bottom: 18, right: 18, display: "grid", gap: 8, zIndex: 90, maxWidth: "min(340px, 88vw)" }}>
         {toasts.map((t) => (
-          <div key={t.id} className={`apa ${t.tipo === "error" ? "mensaje-error" : "mensaje-ok"}`}
-            style={{ minWidth: 220, marginTop: 0, boxShadow: "0 14px 34px rgb(0 0 0 / .55)", backdropFilter: "blur(8px)" }}>
-            {t.tipo === "error" ? "⚠ " : "✓ "}{t.texto}
+          <div key={t.id} className={`toast-viva ${t.tipo === "error" ? "error" : "ok"}`}>
+            <span aria-hidden>{t.tipo === "error" ? "⚠" : "✓"}</span>{t.texto}
           </div>
         ))}
       </div>
