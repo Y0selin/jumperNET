@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { nodos } from "../lib/api.js";
+import { nodos, miNodo } from "../lib/api.js";
 import { Stat } from "./Piezas.jsx";
 
 /* Nodos: la foto completa de la red — todos los saltos registrados, su estado
@@ -13,6 +13,8 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
   const [visto, setVisto] = useState(null);
   const [vista, setVista] = useState("tarjetas");   // tarjetas | tabla
   const [orden, setOrden] = useState("nombre");     // nombre | latencia | conexiones
+  const [bloque, setBloque] = useState("todos");    // todos | vivos | circuito | peer | infra
+  const [busca, setBusca] = useState("");
 
   /* Privacidad de la vista: un usuario NORMAL solo ve los nodos DE SU CIRCUITO
      (dónde pega el tráfico). Moderadores y administradores ven la red completa.
@@ -25,6 +27,9 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
       const d = await nodos();
       setLista(d);
       setVisto(new Date());
+      // latido del equipo del usuario: cada refresco de esta vista mantiene
+      // vivo tu nodo personal (peer_u<id>) mientras pestaña abierta
+      if (yo?.id) { try { await miNodo(); } catch { /* best-effort */ } }
     } catch (e) { if (!silencioso) aviso(e.message, "error"); }
     finally { setCargando(false); }
   }
@@ -44,18 +49,22 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
     return i === 0 ? "entrada" : i === circuito.length - 1 ? "exit" : "relé ciego";
   };
 
-  const ordenada = useMemo(() => {
+  const visibles = useMemo(() => {
     let copia = [...lista];
-    if (!esGestion) {
-      if (!filtroCircuito.length) return [];
-      copia = copia.filter((n) => filtroCircuito.includes(n.nombre));
-    }
+    if (bloque === "vivos") copia = copia.filter((n) => n.estado === "vivo");
+    else if (bloque === "desconectados") copia = copia.filter((n) => n.estado !== "vivo");
+    else if (bloque === "circuito") copia = copia.filter((n) => papel(n.nombre) != null);
+    else if (bloque === "peer") copia = copia.filter((n) => (n.tipo || "infra") === "usuario");
+    else if (bloque === "infra") copia = copia.filter((n) => (n.tipo || "infra") === "infra");
+    const q = busca.trim().toLowerCase();
+    if (q) copia = copia.filter((n) =>
+      (n.nombre || "").toLowerCase().includes(q) || (n.alias || "").toLowerCase().includes(q) || (n.direccion || "").toLowerCase().includes(q));
     if (orden === "latencia") copia.sort((a, b) => (a.ms ?? 9999) - (b.ms ?? 9999));
     else if (orden === "conexiones") copia.sort((a, b) => (b.conexiones || 0) - (a.conexiones || 0));
     else copia.sort((a, b) => String(a.nombre).localeCompare(String(b.nombre)));
     // los de tu circuito SIEMPRE delante
     return copia.sort((a, b) => Number(papel(b.nombre) != null) - Number(papel(a.nombre) != null));
-  }, [lista, orden, circuito.join(), esGestion, filtroCircuito.join()]);
+  }, [lista, orden, bloque, busca, circuito.join(), esGestion]);
 
   const resumen = useMemo(() => {
     const vivos = lista.filter((n) => n.estado === "vivo");
@@ -93,6 +102,22 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
           </span>
           <span style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             {!compacta && (
+              <input className="campo" style={{ width: "auto", minWidth: 150, padding: "6px 10px", fontSize: 12 }}
+                placeholder="buscar nodo, alias o dirección…" value={busca}
+                onChange={(e) => setBusca(e.target.value)} aria-label="Buscar nodos" />
+            )}
+            {!compacta && (
+              <select className="campo" style={{ width: "auto", padding: "6px 10px", fontSize: 12 }}
+                value={bloque} onChange={(e) => setBloque(e.target.value)} aria-label="Filtrar nodos">
+                <option value="todos">todos los nodos</option>
+                <option value="vivos">solo conectados</option>
+                <option value="desconectados">solo desconectados</option>
+                <option value="circuito">de mi circuito</option>
+                <option value="peer">equipos de usuarios</option>
+                <option value="infra">infraestructura</option>
+              </select>
+            )}
+            {!compacta && (
               <select className="campo" style={{ width: "auto", padding: "6px 10px", fontSize: 12 }}
                 value={orden} onChange={(e) => setOrden(e.target.value)} aria-label="Orden de nodos">
                 <option value="nombre">↕ nombre</option>
@@ -118,15 +143,16 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
         </div>
 
         {vista !== "tabla" || compacta ? (
-          <TarjetasNodos lista={ordenada} yo={yo} papel={papel} />
+          <TarjetasNodos lista={visibles} yo={yo} papel={papel} cargando={cargando} />
         ) : (
-          <TablaNodos lista={ordenada} papel={papel} cargando={cargando} />
+          <TablaNodos lista={visibles} papel={papel} cargando={cargando} />
         )}
 
         <p className="nota" style={{ marginTop: 12, fontSize: 12 }}>
-          {esGestion
-            ? "Ves TODA la red: latencia TCP connect real medida por el servidor, conexiones reenviando y estado por latido."
-            : "Ves solo los nodos de tu circuito — dónde pega el tráfico tu cuenta. Los moderadores y el admin ven la red completa."}
+          Lista DINÁMICA de la red: los nodos entran al conectarse (heartbeat) y quedan
+          registrados para siempre; si dejan de latir se muestran como <b>desconectados</b>.
+          Los equipos de usuarios (marcados «personal») saltan por tu circuito solo si su
+          dueño tiene su servicio peer encendido. Latencia TCP connect real medida por el servidor.
         </p>
       </div>
     </div>
@@ -141,13 +167,14 @@ function saludLat(m) {
   return { etiqueta: `${m} ms · lento`, color: "#ffb454", ancho: Math.max(8, 100 - m) };
 }
 
-function TarjetasNodos({ lista, yo, papel }) {
+function TarjetasNodos({ lista, yo, papel, cargando }) {
   const activo = !!yo?.activo;
   const esGestion = yo?.rol === "admin" || yo?.rol === "moderador";
   return (
     <div style={{ display: "grid", gap: 12 }}>
       {lista.map((n) => {
         const p = papel(n.nombre);
+        const pos = circuitoPos(yo, n.nombre);
         const vivo = n.estado === "vivo";
         const sal = saludLat(n.ms);
         const hbd = n.ultimo_hb != null ? Math.min(100, Math.max(0, 100 - (n.ultimo_hb / 40) * 100)) : 0;
@@ -165,12 +192,21 @@ function TarjetasNodos({ lista, yo, papel }) {
                 animation: vivo && p ? "jn-pulso 1.6s ease-in-out infinite" : undefined,
               }} />
               <b className="mono" style={{ fontSize: 14.5 }}>{n.nombre}</b>
-              {n.nombre?.startsWith("peer_") && <span className="chip acento" style={{ fontSize: 10 }}>personal</span>}
-              {p && <span className={`chip ${p === "exit" ? "vivo" : "acento"}`}>{activo ? `${p} · tu circuito #${circuitoPos(yo, n.nombre) + 1}` : p}</span>}
+              {(n.tipo || "infra") === "usuario" || n.nombre?.startsWith("peer_") ? (
+                <span className="chip acento" style={{ fontSize: 10 }}>personal{!n.hoppable && " · sin servicio peer"}</span>
+              ) : null}
+              {n.alias && <span className="nota" style={{ fontSize: 11.5 }}>“{n.alias}”</span>}
+              {p && <span className={`chip ${p === "exit" ? "vivo" : "acento"}`}>{activo ? `${p} · tu circuito #${pos + 1}` : p}</span>}
               <span className={`chip mono ${vivo ? "vivo" : "muerto"}`} style={{ marginLeft: "auto", fontSize: 10.5 }}>{n.estado.toUpperCase()}</span>
             </div>
 
             <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
+              {/* el estado CONECTADO/DESCONECTADO en vivo (cada 8 s) */}
+              {n.ultimo_hb != null && (
+                <div className="mono nota" style={{ fontSize: 11 }}>
+                  {vivo ? "● conectado en vivo" : "○ desconectado"} · hace {n.ultimo_hb ?? "—"} s
+                </div>
+              )}
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5 }} className="mono">
                   <span className="nota">latencia TCP connect</span>
@@ -199,9 +235,11 @@ function TarjetasNodos({ lista, yo, papel }) {
       })}
       {!lista.length && (
         <div className="tarjeta nota" style={{ margin: 0 }}>
-          {!esGestion && !yo?.activo
-            ? "activa la red para ver los nodos de tu circuito"
-            : !lista.length ? "no hay nodos registrados todavía" : ""}
+          {cargando ? "cargando nodos…"
+            : bloque === "vivos" ? "no hay nodos conectados en este momento"
+            : bloque === "desconectados" ? "ningún nodo desconectado ahora: todos están en pie"
+            : bloque === "busca" ? "nadie casa con la búsqueda"
+            : "no hay nodos registrados todavía"}
         </div>
       )}
     </div>

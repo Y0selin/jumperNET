@@ -48,6 +48,13 @@ export async function borrar(me_) { return api("DELETE", "/me"); }
 /** IP pública con la que sale el servidor (la que ve internet por el circuito) */
 export async function salida() { return (await api("GET", "/salida")).datos; }
 
+/** Latido del EQUIPO del usuario: su nodo personal entra y se mantiene vivo
+    en «ver todos los nodos» mientras la sesión esté abierta. direccion (host:puerto
+    de su servicio peer) hace su equipo SALTABLE por el circuito. */
+export async function miNodo(direccion = null, conexiones = 0) {
+  return (await api("POST", "/nodos/usuario", direccion ? { direccion, conexiones } : {})).datos;
+}
+
 /** Comprobación REAL del circuito: pide al destino que IP ve al salir por él */
 export async function comprobar(password) { return (await api("POST", "/comprobar", { password })).datos; }
 

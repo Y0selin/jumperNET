@@ -24,12 +24,14 @@ const MOCK_PAGINA = /* js */ `
   const b64u = (o) => btoa(JSON.stringify(o)).replace(/=+$/, "").replace(/\\+/g, "-").replace(/\\//g, "_");
   const jwt = () => { const a = Math.floor(Date.now() / 1000); return b64u({ alg: "HS256", typ: "JWT" }) + "." + b64u({ sub: "7", email: S.email, iat: a, exp: a + 7200 }) + ".firma-simulada"; };
   const NODOS = [
-    { nombre: "nodo1", direccion: "nodo1:9000", estado: "vivo", conexiones: 1, ultimo_hb: 3.2, ms: 4 },
-    { nombre: "nodo2", direccion: "nodo2:9000", estado: "vivo", conexiones: 2, ultimo_hb: 4.1, ms: 5 },
-    { nombre: "nodo3", direccion: "nodo3:9000", estado: "vivo", conexiones: 0, ultimo_hb: 6.0, ms: 3 },
-    { nombre: "nodo4", direccion: "nodo4:9000", estado: "vivo", conexiones: 0, ultimo_hb: 8.4, ms: 7 },
-    { nombre: "nodo5", direccion: "nodo5:9000", estado: "vivo", conexiones: 0, ultimo_hb: 2.2, ms: 6 },
-    { nombre: "nodo6", direccion: "nodo6:9000", estado: "caido", conexiones: 0, ultimo_hb: 62.0, ms: null },
+    { nombre: "nodo1", direccion: "nodo1:9000", estado: "vivo", conexiones: 1, ultimo_hb: 3.2, ms: 4, tipo: "infra", dueno: null, alias: null, hoppable: true },
+    { nombre: "nodo2", direccion: "nodo2:9000", estado: "vivo", conexiones: 2, ultimo_hb: 4.1, ms: 5, tipo: "infra", dueno: null, alias: null, hoppable: true },
+    { nombre: "nodo3", direccion: "nodo3:9000", estado: "vivo", conexiones: 0, ultimo_hb: 6.0, ms: 3, tipo: "infra", dueno: null, alias: null, hoppable: true },
+    { nombre: "nodo4", direccion: "nodo4:9000", estado: "vivo", conexiones: 0, ultimo_hb: 8.4, ms: 7, tipo: "infra", dueno: null, alias: null, hoppable: true },
+    { nombre: "nodo5", direccion: "nodo5:9000", estado: "vivo", conexiones: 0, ultimo_hb: 2.2, ms: 6, tipo: "infra", dueno: null, alias: null, hoppable: true },
+    { nombre: "nodo6", direccion: "nodo6:9000", estado: "caido", conexiones: 0, ultimo_hb: 62.0, ms: null, tipo: "infra", dueno: null, alias: null, hoppable: true },
+    // nodo personal DINÁMICO del usuario e2e (id 7): entra por su latido
+    { nombre: "peer_u7", direccion: "83.34.12.7:0", estado: "vivo", conexiones: 0, ultimo_hb: 1.5, ms: null, tipo: "usuario", dueno: 7, alias: "Mi portátil", hoppable: false },
   ];
   const GEO = {
     [IP_REAL]: { ok: true, lat: 43.2630, lon: -2.9350, ciudad: "Bilbao", region: "País Vasco", pais: "España", org: "Euskaltel", fuente: "ipwho.is" },
@@ -66,6 +68,11 @@ const MOCK_PAGINA = /* js */ `
       if (ruta === "/rotate") { S.circuito = ["nodo3", "nodo5", "nodo4"]; S.ultimoCambio = Date.now() / 1000; return res({ ok: true }); }
       if (ruta === "/disconnect") { S.activo = false; S.circuito = []; return res({ ok: true }); }
       if (ruta === "/nodos") return res(NODOS);
+      if (ruta === "/nodos/usuario") { S.latidos = (S.latidos || 0) + 1; const f = NODOS.find((n) => n.nombre === "peer_u7"); return res(f); }
+      if (ruta === "/nodosvivos") {
+        const v = NODOS.filter((n) => n.estado === "vivo").length;
+        return res({ total: v + (S.activo ? 1 : 0), infra: v, equipos: S.activo ? 1 : 0, nodos_usuario: 1, cuando: Date.now() / 1000 });
+      }
       if (ruta === "/salida") return res({ ip_salida: IP_SALIDA, nodo_exit: S.circuito.slice(-1)[0] || null, activo: S.activo });
       if (ruta === "/geo") {
         const ip = u.searchParams.get("ip") || IP_REAL;
@@ -247,6 +254,13 @@ const nodosVistos = await pagina.evaluate(() => {
   return nombres.filter((n) => tarj.some((t) => t.textContent.includes(n))).length;
 });
 igual(nodosVistos >= 6, true, `los 6 nodos visibles aunque la red esté apagada (${nodosVistos}/6)`);
+/* nodos DINÁMICOS: el equipo del usuario (peer_u7) aparece en la lista con su alias,
+   el tablón en vivo está pintado con su latido, y el contador de nodos vive */
+igual(c.includes("peer_u7"), true, "tu equipo (peer_u7) aparece en la lista de nodos");
+igual(c.includes("Mi portátil"), true, "el nodo personal enseña el alias de su dueño");
+igual(c.includes("LIVE") && await incluye("latencia media de tus saltos"), true, "tablón en vivo presente (LIVE + datos medidos)");
+igual(c.includes("nodos_usuario") || c.includes("nodos de usuarios"), true, "contador con desglose de nodos de usuarios");
+igual(await pagina.evaluate(() => window.__mock.latidos >= 1), true, "tu equipo emite su latido (/nodos/usuario)");
 igual(c.includes("4 ms") || c.includes("5 ms"), true, "latencia TCP real por nodo");
 igual(c.includes("hace 3.2 s") || c.includes("hace 4.1 s"), true, "edad del último latido por nodo");
 igual(c.includes("Bilbao"), true, "geolocalización real de tu IP (Bilbao, vía /geo del servidor)");
@@ -262,6 +276,8 @@ await pagina.waitForFunction(() => document.body.innerText.includes("RED ACTIVA"
 await espera(900);
 c = await cuerpo();
 igual(c.includes("nodo2") && c.includes("nodo1") && c.includes("nodo6"), true, "circuito nodo2 → nodo1 → nodo6 visible");
+igual(c.includes("circuito encendido · desde"), true, "tablón en vivo marca el tiempo de circuito encendido");
+igual(c.includes("salida (exit)"), true, "tablón en vivo etiqueta la salida del circuito");
 igual(c.includes("129.213.137.20"), true, "IP de salida real mostrada");
 igual(c.includes("Washington"), true, "geolocalización real de la IP de salida");
 igual((await pagina.$(".parada.pulso")) !== null, true, "primera parada con pulso");

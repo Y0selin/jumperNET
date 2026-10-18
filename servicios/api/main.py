@@ -117,6 +117,26 @@ def conex():
         c.execute("ALTER TABLE usuarios ADD COLUMN pref TEXT NOT NULL DEFAULT '{}'")
     except sqlite3.OperationalError:
         pass  # ya existe
+    # tipo de nodo: 'infra' (contenedores docker) o 'usuario' (equipo personal
+    # registrado por su dueño al conectarse — Fase nodos dinámicos). El registro
+    # PERSISTE para siempre: la fila no se borra nunca, solo cambia de estado
+    # vivo/caido según lleguen heartbeats.
+    try:
+        c.execute("ALTER TABLE nodos ADD COLUMN conexiones INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # ya existe
+    try:
+        c.execute("ALTER TABLE nodos ADD COLUMN tipo TEXT NOT NULL DEFAULT 'infra'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        c.execute("ALTER TABLE nodos ADD COLUMN dueno INTEGER")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        c.execute("ALTER TABLE nodos ADD COLUMN alias TEXT")
+    except sqlite3.OperationalError:
+        pass
     # rol: usuario | moderador | admin · plan: free | pro | empresarial
     try:
         c.execute("ALTER TABLE usuarios ADD COLUMN rol TEXT NOT NULL DEFAULT 'usuario'")
@@ -213,6 +233,14 @@ def _auth(token_hdr: str | None) -> dict:
     if f is None:
         raise HTTPException(status_code=401, detail="usuario inexistente")
     return dict(f)
+
+
+def _alias_de(u: dict) -> str | None:
+    """Alias visible del usuario: vive en el JSON pref."""
+    try:
+        return (json.loads(u["pref"] or "{}") or {}).get("alias") or None
+    except Exception:
+        return None
 
 
 # ---------------------------------------------------------------- red externa
@@ -317,6 +345,64 @@ def fila_a_dict(f) -> dict:
 # amigos cuando quieres que su equipo sea un saltificio de la red.
 PEER_TOKEN = os.environ.get("PEER_TOKEN", "")
 
+
+def _hoppable(direccion: str) -> bool:
+    """Direcciones con puerto real (1..65535) son saltables. El registro de un
+    equipo cliente sin servicio peer abierto va con :0 y NUNCA se elige como
+    salto (se ve en la lista, pero el circuito no lo usa)."""
+    try:
+        _, puerto = direccion.rsplit(":", 1)
+        return 0 < int(puerto) <= 65535 and not direccion.endswith(":0")
+    except Exception:
+        return False
+
+
+def registrar_nodo_usuario(uid: int, alias_u: str | None, direccion: str | None, conexiones: int = 0) -> dict:
+    """Upsert del nodo personal de un usuario (Fase nodos dinámicos).
+
+    · nombre determinista: peer_u<id> (el mismo usuario SIEMPRE mapea a la
+      misma fila: la primera vez que se conecta se crea y de ahí en adelante
+      solo cambia de estado vivo/caído — nunca desaparece de la lista).
+    · direccion: la que anuncia su cliente (host:puerto de su servicio peer)
+      o la IP real observada con puerto 0 (registro sin servicio: se ve en la
+      lista pero no salta — _hoppable lo excluye).
+    · estado: SIEMPRE 'vivo' en el registro, como un heartbeat. Si el equipo
+      deja de latir, refrescar_estados() lo marca caído y /nodos lo muestra
+      como desconectado en tiempo real.
+    """
+    c = conex()
+    nombre = f"peer_u{uid}"
+    dir_final = (direccion or "").strip()
+    if not dir_final:
+        fila_u = c.execute("SELECT ip_real, pref FROM usuarios WHERE id=?", (uid,)).fetchone()
+        base_ip = (fila_u["ip_real"] if fila_u else None) or "0.0.0.0"
+        dir_final = f"{base_ip}:0"
+    if not _hoppable(dir_final):
+        dir_final = None   # dirección no saltable: se conserva la previa si ya existía
+    previa = c.execute("SELECT direccion, alias FROM nodos WHERE nombre=?", (nombre,)).fetchone()
+    if dir_final is None:
+        dir_final = previa["direccion"] if previa else f"peer_u{uid}:0"
+    alias_final = alias_u or (previa["alias"] if previa else None)
+    c.execute(
+        """INSERT INTO nodos(nombre, direccion, ultimo_heartbeat, estado, conexiones, tipo, dueno, alias)
+           VALUES(?,?,?,'vivo',?, 'usuario', ?, ?)
+           ON CONFLICT(nombre) DO UPDATE SET
+             direccion=excluded.direccion,
+             ultimo_heartbeat=excluded.ultimo_heartbeat,
+             estado='vivo',
+             conexiones=excluded.conexiones,
+             dueno=excluded.dueno,
+             alias=excluded.alias""",
+        (nombre, dir_final, time.time(), max(0, conexiones), uid, alias_final),
+    )
+    c.commit()
+    f = c.execute("SELECT * FROM nodos WHERE nombre=?", (nombre,)).fetchone()
+    return {
+        "nombre": f["nombre"], "direccion": f["direccion"], "estado": f["estado"],
+        "tipo": f["tipo"], "dueno": f["dueno"], "alias": f["alias"],
+        "conexiones": f["conexiones"], "hoppable": _hoppable(f["direccion"]),
+    }
+
 class Heartbeat(BaseModel):
     nombre: str
     direccion: str
@@ -363,6 +449,16 @@ def heartbeat(hb: Heartbeat, x_interno: str | None = Header(default=None)):
 _ms_nodos: dict[str, tuple[float, int | None]] = {}
 
 
+class NodoUsuario(BaseModel):
+    """Latido del equipo de un usuario: registra/actualiza su nodo personal.
+    direccion (opcional): host:puerto de su servicio peer — si se anuncia con
+    puerto real, el backend puede usar el equipo como SALTO del circuito.
+    Sin ella, el nodo aparece en la lista pero no es saltable (:0)."""
+    direccion: str | None = None
+    alias: str | None = None
+    conexiones: int = 0
+
+
 def medir_ms(direccion: str) -> int | None:
     """Milisegundos de un TCP connect al nodo (None si no responde)."""
     ahora = time.time()
@@ -381,15 +477,36 @@ def medir_ms(direccion: str) -> int | None:
     return ms
 
 
+@app.post("/nodos/usuario")
+def nodos_usuario(
+    nu: NodoUsuario,
+    request: Request,
+    token: str | None = Header(default=None, alias="Authorization"),
+):
+    """Latido del equipo DEL usuario autenticado (nodo dinámico personal).
+    Lo llama la web en cada refresco mientras el usuario tiene la sesión:
+    así su equipo aparece/sube como NODO en «ver todos los nodos» desde la
+    PRIMERA conexión y, si se desconecta o cierra la web, refrescar_estados()
+    lo deja como «caído» a los pocos segundos.
+    Si anuncia su servicio peer (direccion host:puerto), el backend también
+    acepta su equipo como SALTO del circuito automáticamente."""
+    u = _auth(token)
+    if not limitar(f"nodo_u:{u['id']}", 60, 60):
+        raise HTTPException(status_code=429, detail="demasiados latidos; espera un minuto")
+    refrescar_estados()
+    direccion = nu.direccion or (lambda ip: f"{ip}:0" if ip else None)(ip_real(request))
+    return registrar_nodo_usuario(u["id"], (nu.alias or _alias_de(u)), direccion, nu.conexiones)
+
+
 @app.get("/nodos")
 def lista_nodos():
     refrescar_estados()
     c = conex()
-    columnas = "nombre, direccion, estado, ultimo_heartbeat"
+    columnas = "nombre, direccion, estado, ultimo_heartbeat, conexiones, tipo, dueno, alias"
     try:
-        filas = c.execute(f"SELECT {columnas}, conexiones FROM nodos ORDER BY nombre").fetchall()
-    except sqlite3.OperationalError:
         filas = c.execute(f"SELECT {columnas} FROM nodos ORDER BY nombre").fetchall()
+    except sqlite3.OperationalError:
+        filas = c.execute("SELECT nombre, direccion, estado, ultimo_heartbeat FROM nodos ORDER BY nombre").fetchall()
     ahora = time.time()
     # latencias en paralelo para no encadenar 6 timeouts
     medidas: dict[str, int | None] = {}
@@ -410,18 +527,33 @@ def lista_nodos():
             "conexiones": d.get("conexiones", 0),
             "ultimo_hb": round(ahora - d["ultimo_heartbeat"], 1),
             "ms": medidas.get(d["direccion"], medir_ms(d["direccion"])),
+            # nodo dinámico: tipo infra/usuario, alias/dueno y si el backend lo
+            # puede usar como salto (tu equipo sin servicio peer = no saltable)
+            "tipo": d.get("tipo", "infra"),
+            "alias": d.get("alias"),
+            "dueno": d.get("dueno"),
+            "hoppable": _hoppable(d["direccion"]),
         })
     return salida
 
 
-def elegir_circuito(n_saltos: int = N_SALTOS) -> dict:
+def elegir_circuito(n_saltos: int = N_SALTOS, excluir: set[str] | None = None) -> dict:
     """Elige n_saltos nodos vivos y distintos al azar. HTTP 503 si no hay suficientes.
     n_saltos por defecto 3; con plan pro se puede pedir hasta 7. Se incluyen los
-    equipos personales (peer_*) que hay en la red como saltos reales."""
+    equipos personales de usuarios que anuncian servicio (peer_*) como saltos
+    reales; `excluir` quita nodos del sorteo (p. ej., el propio equipo del
+    usuario para SU circuito)."""
     refrescar_estados()
     c = conex()
     filas = c.execute("SELECT nombre, direccion FROM nodos WHERE estado='vivo'").fetchall()
-    vivos = {f["nombre"]: f["direccion"] for f in filas}
+    # TODOS los nodos vivos son saltables (infra + equipos de usuarios que
+    # anuncian su servicio peer). Los registros sin puerto real (:0) o sin
+    # servicio no entran: no se puede conectar a ellos.
+    vivos = {f["nombre"]: f["direccion"] for f in filas if _hoppable(f["direccion"])}
+    # un circuito no salta por el propio equipo del usuario (su nodo personal
+    # se excluye de SU circuito, aunque siga siendo saltable para los demás)
+    if excluir:
+        vivos = {n: d for n, d in vivos.items() if n not in excluir}
     if len(vivos) < n_saltos:
         raise HTTPException(status_code=503, detail=f"no hay suficientes nodos vivos ({len(vivos)})")
     saltos = random.sample(list(vivos), n_saltos)
@@ -614,7 +746,14 @@ def connect(
             raise HTTPException(status_code=422, detail="tu plan no puede elegir saltos (3 fijos); el plan pro permite elegir 3..7")
         if pedidos > plan["saltos_max"]:
             raise HTTPException(status_code=422, detail=f"tu plan permite hasta {plan['saltos_max']} saltos")
-    circ = elegir_circuito(pedidos)
+    # nodo dinámico: el equipo del usuario queda en la lista de nodos desde su
+    # PRIMERA conexión (persistente), AUNQUE la elección falla por falta de nodos.
+    # Sin anuncio de servicio peer va con :0 → visible pero no saltable.
+    try:
+        registrar_nodo_usuario(u["id"], _alias_de(u), None, 0)
+    except Exception:
+        pass  # el registro del peer no debe romper jamás la conexión
+    circ = elegir_circuito(pedidos, excluir={f"peer_u{u['id']}"})
     c.execute(
         "UPDATE usuarios SET circuito=?, ip_salida=?, activo=1, ip_real=?, ultimo_cambio=? WHERE id=?",
         # ip_salida guarda la IP PUBLICA de salida (la que ve internet por el
@@ -900,10 +1039,15 @@ def nodosvivos(token: str | None = Header(default=None, alias="Authorization")):
     c = conex()
     infra = c.execute("SELECT COUNT(*) AS n FROM nodos WHERE estado='vivo'").fetchone()["n"]
     equipos = c.execute("SELECT COUNT(*) AS n FROM usuarios WHERE activo=1").fetchone()["n"]
+    # peers de usuarios: nodos de tipo 'usuario' que están vivos ahora mismo
+    usuarios_nodo = c.execute(
+        "SELECT COUNT(*) AS n FROM nodos WHERE estado='vivo' AND tipo='usuario'"
+    ).fetchone()["n"]
     return {
         "total": infra + equipos,
         "infra": infra,
         "equipos": equipos,
+        "nodos_usuario": usuarios_nodo,
         "cuando": time.time(),
     }
 

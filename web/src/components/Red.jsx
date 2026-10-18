@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { me, conectar, rotar, desconectar_, geoApi, salida, comprobar, nodosVivos } from "../lib/api.js";
+import { me, conectar, rotar, desconectar_, geoApi, salida, comprobar, nodosVivos, nodos as nodosApi, miNodo } from "../lib/api.js";
 import { Stat, Tuberia, AnilloJwt, Hecho } from "./Piezas.jsx";
 import Nodos from "./Nodos.jsx";
 import Revela from "./Revela.jsx";
@@ -109,8 +109,107 @@ function ContadorVivos({ yo }) {
       <span className="punto-vivo" />
       <b className="mono" style={{ fontSize: 15.5 }}>≈ {vivo ? vivo.total : "…"} nodos activos ahora</b>
       <span className="nota mono" style={{ fontSize: 11.5 }}>
-        {vivo ? <> (infra {vivo.infra} + equipos de usuarios conectados {vivo.equipos})</> : "midiendo…"} · en vivo, 10 s
+        {vivo ? <> (infra {vivo.infra} + equipos de usuarios conectados {vivo.equipos}{vivo.nodos_usuario ? ` · nodos de usuarios ${vivo.nodos_usuario}` : ""})</> : "midiendo…"} · en vivo, 10 s
       </span>
+    </div>
+  );
+}
+
+/* ─═════════ TABLÓN EN VIVO: tu conexión, salto a salto, con datos reales ══════════
+   Se refresca solo cada 4 s mientras está a la vista. Todo lo que enseña es
+   MEDIDO por el servidor (latencia TCP connect por nodo, latidos, contadores):
+   nada de cifras decorativas. Además, mientras la pestaña está abierta, envía
+   el latido de tu equipo (POST /nodos/usuario) para que tu nodo personal
+   aparezca y se mantenga vivo en «ver todos los nodos». */
+function TablonVivo({ yo, aviso }) {
+  const [v, setV] = useState(null);           // {yo, listaNodos, vivos}
+  const [fallo, setFallo] = useState(null);   // último error del polling
+  useEffect(() => {
+    let vida = true;
+    async function lata() {
+      try {
+        const [meD, lista, vivos] = await Promise.all([me(), nodosApi().catch(() => []), nodosVivos().catch(() => null)]);
+        if (!vida) return;
+        setV({ yo: meD, lista, vivos });
+        setFallo(null);
+        try { await miNodo(); } catch { /* el latido de tu equipo es best-effort */ }
+      } catch (e) { if (vida) setFallo(e.message); }
+    }
+    lata();
+    const id = setInterval(lata, 4000);
+    const noSiOculta = () => document.hidden || lata();
+    document.addEventListener("visibilitychange", noSiOculta);
+    return () => { vida = false; clearInterval(id); document.removeEventListener("visibilitychange", noSiOculta); };
+  }, []);
+
+  const activo = !!yo?.activo;
+  const saltos = yo?.circuito || [];
+  const porNombre = new Map((v?.lista || []).map((n) => [n.nombre, n]));
+  const msSaltos = saltos.map((n) => porNombre.get(n)?.ms ?? null).filter((x) => x != null);
+  const msMedio = msSaltos.length ? Math.round(msSaltos.reduce((a, b) => a + b, 0) / msSaltos.length) : null;
+  const pivote = v?.vivos?.cuando || Date.now() / 1000;
+  const encendidoDesde = yo?.ultimo_cambio ? Math.max(0, Math.round(pivote - yo.ultimo_cambio)) : null;
+  const encenditoLegible = encendidoDesde != null
+    ? `${Math.floor(encendidoDesde / 60)} min ${encendidoDesde % 60}s`
+    : "—";
+  const connsRed = (v?.lista || []).reduce((s, n) => s + (n.conexiones || 0), 0);
+
+  return (
+    <div className="tarjeta apa-1" aria-label="Tu conexión en tiempo real">
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+        <h2 className="seccion" style={{ marginBottom: 0 }}>Tu conexión — en vivo</h2>
+        {fallo
+          ? <span className="chip muerto mono" style={{ fontSize: 10.5 }}>API: {fallo.slice(0, 40)}</span>
+          : <span className="etiqueta-viva">● LIVE · cada 4 s</span>}
+        <span className="nota mono" style={{ marginLeft: "auto", fontSize: 11.5 }}>
+          {activo ? "circuito encendido · desde " + encenditoLegible : "circuito apagado · los datos de red siguen en vivo"}
+        </span>
+      </div>
+
+      {/* cadena de saltos con su latencia real */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10 }}>
+        {saltos.length ? saltos.map((nombre, i) => {
+          const nodo = porNombre.get(nombre);
+          const vivoN = nodo ? nodo.estado === "vivo" : null;
+          const ms = nodo?.ms;
+          const cls = ms == null ? "" : ms < 40 ? "vivo" : ms < 80 ? "aviso" : "muerto";
+          const role = i === saltos.length - 1 ? "salida (exit)" : i === 0 ? "entrada" : `relé ciego ${i + 1}`;
+          return (
+            <div key={nombre + i} className="tarjeta" style={{ margin: 0, padding: "12px 14px", borderColor: "rgb(from var(--acento-1) r g b / .4)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span className="punto vivo" style={{ width: 9, height: 9 }} />
+                <b className="mono" style={{ fontSize: 13.5 }}>{nombre}</b>
+                {nodo?.tipo === "usuario" && <span className="chip acento" style={{ fontSize: 9.5 }}>equipo de usuario</span>}
+              </div>
+              <div className="mono nota" style={{ fontSize: 11, marginTop: 6 }}>{i + 1} · {role}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                <span className={`chip mono ${cls}`} style={{ fontSize: 11 }}>{ms != null ? `${ms} ms` : "sin medida"}</span>
+                {vivoN === false && <span className="chip muerto mono" style={{ fontSize: 9.5 }}>desconectado</span>}
+              </div>
+              <div className="mono nota" style={{ fontSize: 10.5, marginTop: 6 }}>↔ {nodo?.direccion || "—"}</div>
+              <div className="mono nota" style={{ fontSize: 10.5 }}>⛓ {nodo?.conexiones ?? 0} conexiones</div>
+            </div>
+          );
+        }) : (
+          <div className="tarjeta nota" style={{ margin: 0 }}>activa la red y aquí verás cada salto con su latencia real</div>
+        )}
+      </div>
+
+      {/* tira de datos vivos */}
+      <div className="tira-stats" style={{ marginTop: 12 }}>
+        <Stat etq="nodos en la red" val={v?.vivos ? v.vivos.total : "…"} pie={v?.vivos ? `infra ${v.vivos.infra} + equipos ${v.vivos.equipos}${v.vivos.nodos_usuario ? ` + usuarios ${v.vivos.nodos_usuario}` : ""}` : "midiendo…"} tono="info" />
+        <Stat etq="saltos activos" val={activo ? saltos.length : 0} pie={activo ? `plan ${yo?.plan || "free"}` : "red fuera"} tono={activo ? "ok" : "off"} />
+        <Stat etq="latencia media de tus saltos" val={msMedio != null ? msMedio + " ms" : "—"} pie="TCP connect real" tono="aviso" />
+        <Stat etq="IP que ve internet" val={<span style={{ fontSize: 12.5 }}>{activo ? (yo?.ip_salida || "midiendo…") : "—"}</span>} pie={activo ? "del nodo de salida" : "sin circuito"} tono="ok" />
+        <Stat etq="conexiones reenviando" val={connsRed} pie="en todos los nodos ahora" tono="info" />
+        <Stat etq="tu Equipo como nodo" val={"peer_u" + (yo?.id ?? "?")} pie="vivo mientras esta pestaña esté abierta" tono="ok" />
+      </div>
+      <p className="nota" style={{ marginTop: 10, fontSize: 11.5 }}>
+        Mientras esta pestaña esté abierta tu equipo emite su latido: podrás verlo como nodo
+        <span className="mono"> peer_u{yo?.id}</span> en «ver todos los nodos», vivo ahora y
+        como <b>desconectado</b> si cierras la sesión. Si tu equipo corre un servicio peer
+        (dirección host:puerto), el backend lo usa además como SALTO real del circuito.
+      </p>
     </div>
   );
 }
@@ -331,6 +430,9 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
 
       {/* ── contador real de nodos (en vivo) ── */}
       <ContadorVivos yo={yo} />
+
+      {/* ── tablón en vivo: salto a salto, latencia real, latido de tu equipo ── */}
+      <TablonVivo yo={yo} aviso={aviso} />
 
       {/* ── selector de nº de saltos (pro elige, free lo ve bloqueado) ── */}
       <SelectorSaltos yo={yo} saltosSel={saltosSel} setSel={setSel} ocupado={ocupado} />
