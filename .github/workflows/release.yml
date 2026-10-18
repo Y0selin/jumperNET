@@ -13,13 +13,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Descargar artefactos oficiales del servidor
+      - name: Descargar artefactos oficiales del servidor (builds v2)
         run: |
           base="https://jumpernet.duckdns.org/bajares"
           curl -fL --retry 3 -o JumperNET-1.0.0.AppImage "$base/JumperNET-1.0.0.AppImage"
-          curl -fL --retry 3 -o jumpernet-navegador-windows-1.0.0.zip "$base/jumpernet-navegador-windows.zip"
+          curl -fL --retry 3 -o jumpernet-navegador-windows-2.0.0.zip "$base/jumpernet-navegador-windows.zip"
+          curl -fL --retry 3 -o jumpernet-navegador-portable.exe "$base/jumpernet-navegador-portable.exe"
+          curl -fL --retry 3 -o "JumperNET-Browser-Setup-1.0.0.exe" "$base/JumperNET%20Browser%20Setup%201.0.0.exe"
           curl -fL --retry 3 -o LEEME-navegador.txt "$base/LEEME-navegador.txt"
-          curl -fL --retry 3 -o notas.md "https://jumpernet.duckdns.org/bajares/notas-release.md"
+          curl -fL --retry 3 -o notas.md "$base/notas-release.md"
           ls -la
 
       - name: Crear release (si no existe)
@@ -31,17 +33,19 @@ jobs:
             else
               gh release create "$GITHUB_REF_NAME" \
                 --verify-tag \
-                --title "JumperNET $GITHUB_REF_NAME — navegador con circuito de 3 saltos" \
+                --title "JumperNET Browser v2 — navegador con circuito de 3 saltos" \
                 --notes-file notas.md
             fi
           } 2>&1 | tee -a gh.log
 
-      - name: Subir activos (3 archivos)
+      - name: Subir activos (5 archivos)
         run: |
           set -o pipefail
           gh release upload "$GITHUB_REF_NAME" \
             JumperNET-1.0.0.AppImage \
-            jumpernet-navegador-windows-1.0.0.zip \
+            jumpernet-navegador-windows-2.0.0.zip \
+            jumpernet-navegador-portable.exe \
+            "JumperNET-Browser-Setup-1.0.0.exe" \
             LEEME-navegador.txt \
             --clobber 2>&1 | tee -a gh.log
 
