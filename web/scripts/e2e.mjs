@@ -57,7 +57,10 @@ const MOCK_PAGINA = /* js */ `
         if (!S.token) return res({ detail: "token" }, 401);
         return res({ id: 7, email: S.email, ip_real: IP_REAL, ip_salida: S.activo ? IP_SALIDA : null,
                      nodo_exit: S.circuito.length ? S.circuito[S.circuito.length - 1] : null,
-                     circuito: S.circuito, activo: S.activo, ultimo_cambio: S.ultimoCambio || null });
+                     circuito: S.circuito, activo: S.activo, ultimo_cambio: S.ultimoCambio || null,
+                     // panel nuevo: rol y plano con límites (solo el moderador ve TODOS los nodos)
+                     rol: "moderador", plan: "pro", saltos_min: 3, saltos_max: 7,
+                     puede_elegir_saltos: true, refresco_cada_h: 10 });
       }
       if (ruta === "/connect") { S.activo = true; S.circuito = ["nodo2", "nodo1", "nodo6"]; S.ultimoCambio = Date.now() / 1000; return res({ ok: true }); }
       if (ruta === "/rotate") { S.circuito = ["nodo3", "nodo5", "nodo4"]; S.ultimoCambio = Date.now() / 1000; return res({ ok: true }); }
@@ -247,7 +250,10 @@ igual(nodosVistos >= 6, true, `los 6 nodos visibles aunque la red esté apagada 
 igual(c.includes("4 ms") || c.includes("5 ms"), true, "latencia TCP real por nodo");
 igual(c.includes("hace 3.2 s") || c.includes("hace 4.1 s"), true, "edad del último latido por nodo");
 igual(c.includes("Bilbao"), true, "geolocalización real de tu IP (Bilbao, vía /geo del servidor)");
-igual((await pagina.$eval("button[disabled]", (e) => e.textContent)).includes("Comprobar"), true, "la comprobación está deshabilitada con la red apagada");
+igual(await pagina.evaluate(() =>
+  [...document.querySelectorAll("button[disabled]")].some((b) => (b.textContent || "").includes("Comprobar"))), true, "la comprobación está deshabilitada con la red apagada");
+/* selector de nº de saltos (nuevo, plan pro): las 5 opciones visibles */
+igual(await pagina.evaluate(() => [...document.querySelectorAll("button")].some((b) => (b.textContent || "").includes("7 saltos"))), true, "selector de saltos con la opción 7");
 await captura("03-panel-apagado");
 
 console.log("\n== 4 · ACTIVAR RED + verificación real de la IP ==");

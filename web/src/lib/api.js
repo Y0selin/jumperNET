@@ -30,9 +30,17 @@ export async function api(metodo, ruta, cuerpo, autorizado = true) {
 export async function nodos() { return (await api("GET", "/nodos", null, false)).datos; }
 export async function me() { return (await api("GET", "/me")).datos; }
 export async function editarMe(prefs) { return (await api("PATCH", "/me", prefs)).datos; }
-export async function conectar() { return (await api("POST", "/connect")).datos; }
-export async function rotar() { return (await api("POST", "/rotate")).datos; }
-export async function desconectar_() { return (await api("POST", "/disconnect")).datos; }
+export async function conectar(saltos = null) { return (await api("POST", "/connect", saltos ? { saltos } : {})).datos; }
+export async function rotar() { return (await api("POST", "/rotate", {})).datos; }
+export async function desconectar_() { return (await api("POST", "/disconnect", {})).datos; }
+export async function nodosVivos() { return (await api("GET", "/nodosvivos")).datos; }
+
+/* ── panel admin / moderador ── */
+export async function adminUsuarios() { return (await api("GET", "/admin/usuarios")).datos; }
+export async function adminEditar(id, cambios) { return (await api("PATCH", `/admin/usuarios/${id}`, cambios)).datos; }
+export async function adminBorrar(id) { return (await api("DELETE", `/admin/usuarios/${id}`)).datos; }
+export async function adminDashboard() { return (await api("GET", "/admin/dashboard")).datos; }
+export async function adminBorrarNodo(nombre) { return (await api("DELETE", `/admin/nodos/${encodeURIComponent(nombre)}`)).datos; }
 export async function registrar(email, pass) { return (await api("POST", "/register", { email, password: pass }, false)).datos; }
 export async function login(email, pass) { return (await api("POST", "/login", { email, password: pass }, false)).datos; }
 export async function borrar(me_) { return api("DELETE", "/me"); }

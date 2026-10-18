@@ -14,6 +14,35 @@ export default function Cuenta({ yo: yoInicial, aviso, alSalir, irRed, alRecarga
   const [alias, setAlias] = useState("");
   const [lema, setLema] = useState("");
   const [guardando, setGuard] = useState(false);
+  const [subiendoFoto, setSub] = useState(false);
+
+  /* foto de perfil: el usuario elige una imagen pequeña; se manda como dataURL */
+  function elegirFoto(ev) {
+    const f = ev.target.files?.[0];
+    if (!f) return;
+    if (!/^image\/(png|jpe?g|webp)$/.test(f.type)) { aviso("solo png/jpeg/webp", "error"); return; }
+    if (f.size > 140_000) { aviso("la imagen pesa demasiado (máximo ~140 KB)", "error"); return; }
+    const lector = new FileReader();
+    lector.onload = async () => {
+      setSub(true);
+      try {
+        const d = await editarMe({ foto: lector.result });
+        setYo(d); alRecargar?.(d); aviso("foto de perfil actualizada ✓", "ok");
+      } catch (e) { aviso(e.message, "error"); }
+      finally { setSub(false); }
+    };
+    lector.readAsDataURL(f);
+  }
+
+  async function quitarFoto() {
+    setSub(true);
+    try {
+      const d = await editarMe({ foto: "" });
+      setYo(d); alRecargar?.(d); aviso("foto quitada", "ok");
+    } catch (e) { aviso(e.message, "error"); }
+    finally { setSub(false); }
+  }
+
 
   const jwt = decodificaJwt(getToken() || "");
 
@@ -83,7 +112,16 @@ export default function Cuenta({ yo: yoInicial, aviso, alSalir, irRed, alRecarga
       {/* ── identidad + métricas ── */}
       <div className="tarjeta apa brillo">
         <div className="identidad">
-          <div className="avatar flota" style={{ fontSize: 20 }}>{inicial}</div>
+          <div style={{ position: "relative", width: 62, height: 62, flex: "none" }}>
+            {yo?.foto
+              ? <img src={yo.foto} alt="tu foto" style={{ width: 62, height: 62, borderRadius: 16, objectFit: "cover", border: "1px solid var(--borde)" }} />
+              : <div className="avatar flota" style={{ fontSize: 20 }}>{inicial}</div>}
+            <label className="btn" title={subiendoFoto ? "subiendo…" : "cambiar tu foto de perfil"}
+              style={{ position: "absolute", bottom: -6, right: -8, padding: "2px 7px", fontSize: 11, borderRadius: 99, cursor: "pointer", background: "var(--bg-1)" }}>
+              {subiendoFoto ? <span className="spin" /> : "📷"}
+              <input type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }} onChange={elegirFoto} />
+            </label>
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
               <span style={{ fontWeight: 700, fontSize: 18 }}>{nombreVisible}</span>
@@ -112,19 +150,28 @@ export default function Cuenta({ yo: yoInicial, aviso, alSalir, irRed, alRecarga
               </div>
             )}
           </div>
-          <span className={`chip ${activo ? "vivo" : "muerto"} mono`}>{activo ? "RED ACTIVA" : "RED APAGADA"}</span>
+          <div style={{ display: "grid", gap: 6, justifyItems: "end" }}>
+            <span className={`chip ${activo ? "vivo" : "muerto"} mono`}>{activo ? "RED ACTIVA" : "RED APAGADA"}</span>
+            <span className={`chip ${yo?.plan === "pro" ? "acento" : ""} mono`} style={{ fontSize: 10.5 }}
+              title={yo?.plan === "pro" ? "ha el número de saltos (3…7) y refresca cada 10 h" : "3 saltos fijos · refresco 1 vez al día"}>
+              {yo?.plan === "pro" ? "⚡ plan pro" : yo?.plan === "empresarial" ? "🏛 empresarial" : "🌱 plan free"}
+            </span>
+            {yo?.foto && !subiendoFoto && (
+              <button className="btn" style={{ padding: "2px 8px", fontSize: 10 }} onClick={quitarFoto} title="Quitar tu foto de perfil">✕ foto</button>
+            )}
+          </div>
         </div>
 
         <div className="tira-stats" style={{ marginTop: 16 }}>
           <Stat etq="estado de red" val={activo ? "ACTIVA" : "APAGADA"} pie={activo ? "tráfico en 3 saltos" : "sin circuito abierto"} tono={activo ? "ok" : "off"} />
-          <Stat etq="saltos" val={`${yo?.circuito?.length || 0} / 3`} pie="nodos aleatorios" tono="ok" />
+          <Stat etq="saltos" val={`${yo?.circuito?.length || 0} / ${yo?.saltos_max || 3}`} pie={`plan ${yo?.plan || "free"}`} tono="ok" />
           <Stat etq="tu IP pública" val={<span style={{ fontSize: 13.5 }}>{yo?.ip_real || "—"}</span>} pie="la que ve el servidor" tono="info" />
           <Stat etq="IP de salida" val={<span style={{ fontSize: 13.5 }}>{activo ? yo?.ip_salida : "—"}</span>} pie={activo ? "la que ve internet" : "sin uso"} tono="aviso" />
         </div>
 
         <div className="tira-stats" style={{ marginTop: 16 }}>
           <Stat etq="días en la red" val={dias ? `${dias}` : "—"} pie="desde tu alta" tono="info" />
-          <Stat etq="máximo de saltos" val="3" pie="elegidos al azar para ti" tono="ok" />
+          <Stat etq="máximo de saltos" val={yo?.saltos_max || 3} pie={yo?.puede_elegir_saltos ? "puedes elegir 3…" + (yo?.saltos_max || 7) : "fijos (plan free)"} tono="ok" />
           <Stat etq="credenciales" val="SOCKS5" pie="email + clave argon2" tono="aviso" />
           <Stat etq="datos guardados" val="mínimos" pie="email + estado de red" tono="ok" />
         </div>
@@ -149,7 +196,7 @@ export default function Cuenta({ yo: yoInicial, aviso, alSalir, irRed, alRecarga
           <div className="dato"><span className="etq">contraseña</span><span className="val">guardada como argon2id (nunca en claro)</span></div>
           <div className="dato"><span className="etq">usuario SOCKS5</span><span className="val">{yo?.email}</span></div>
           <div className="dato"><span className="etq">contraseña SOCKS5</span><span className="val">la misma que usas para entrar</span></div>
-          <div className="dato"><span className="etq">límite por cuenta</span><span className="val">1 circuito · 3 saltos</span></div>
+          <div className="dato"><span className="etq">tu plan</span><span className="val">{yo?.plan || "free"} · hasta {yo?.saltos_max || 3} saltos</span></div>
 
           <h2 className="seccion" style={{ marginTop: 18 }}>Tu red ahora mismo</h2>
           <div className="dato"><span className="etq">estado</span><span className="val mono">{activo ? "ACTIVA · cifrado por capas" : "APAGADA"}</span></div>

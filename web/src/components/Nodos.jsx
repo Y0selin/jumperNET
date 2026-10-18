@@ -14,6 +14,12 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
   const [vista, setVista] = useState("tarjetas");   // tarjetas | tabla
   const [orden, setOrden] = useState("nombre");     // nombre | latencia | conexiones
 
+  /* Privacidad de la vista: un usuario NORMAL solo ve los nodos DE SU CIRCUITO
+     (dónde pega el tráfico). Moderadores y administradores ven la red completa.
+     Si la red está apagada, un usuario normal no ve lujo: solo un aviso limpio. */
+  const esGestion = yo?.rol === "admin" || yo?.rol === "moderador";
+  const filtroCircuito = yo?.circuito || [];
+
   async function trae(silencioso = true) {
     try {
       const d = await nodos();
@@ -39,13 +45,17 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
   };
 
   const ordenada = useMemo(() => {
-    const copia = [...lista];
+    let copia = [...lista];
+    if (!esGestion) {
+      if (!filtroCircuito.length) return [];
+      copia = copia.filter((n) => filtroCircuito.includes(n.nombre));
+    }
     if (orden === "latencia") copia.sort((a, b) => (a.ms ?? 9999) - (b.ms ?? 9999));
     else if (orden === "conexiones") copia.sort((a, b) => (b.conexiones || 0) - (a.conexiones || 0));
     else copia.sort((a, b) => String(a.nombre).localeCompare(String(b.nombre)));
     // los de tu circuito SIEMPRE delante
     return copia.sort((a, b) => Number(papel(b.nombre) != null) - Number(papel(a.nombre) != null));
-  }, [lista, orden, circuito.join()]);
+  }, [lista, orden, circuito.join(), esGestion, filtroCircuito.join()]);
 
   const resumen = useMemo(() => {
     const vivos = lista.filter((n) => n.estado === "vivo");
@@ -64,16 +74,20 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
     <div style={{ display: "grid", gap: 14 }}>
       {!compacta && (
         <div className="tira-stats">
-          <Stat etq="nodos vivos" val={`${resumen.vivos} / ${resumen.total}`} pie="según heartbeat" tono={resumen.vivos === resumen.total ? "ok" : "aviso"} />
-          <Stat etq="en tu circuito" val={`${resumen.enCircuito} / 3`} pie={yo?.activo ? "tráfico activo" : "red apagada"} tono={yo?.activo ? "ok" : "off"} />
-          <Stat etq="conexiones reenviando" val={resumen.conexiones} pie="suma de todos los nodos" tono="info" />
+          {esGestion ? (
+            <Stat etq="nodos vivos" val={`${resumen.vivos} / ${resumen.total}`} pie="según heartbeat" tono={resumen.vivos === resumen.total ? "ok" : "aviso"} />
+          ) : (
+            <Stat etq="nodos de tu circuito" val={resumen.enCircuito} pie="dónde viaja tu tráfico" tono={yo?.activo ? "ok" : "off"} />
+          )}
+          <Stat etq="en tu circuito" val={`${resumen.enCircuito} / ${yo?.saltos_max || 3}`} pie={yo?.activo ? "tráfico activo" : "red apagada"} tono={yo?.activo ? "ok" : "off"} />
+          <Stat etq="conexiones reenviando" val={resumen.conexiones} pie={esGestion ? "suma de todos los nodos" : "de tus nodos"} tono="info" />
           <Stat etq="latencia media" val={resumen.msMedio != null ? `${resumen.msMedio} ms` : "—"} pie="TCP connect real" tono="aviso" />
         </div>
       )}
 
       <div className="tarjeta">
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
-          <h2 className="seccion" style={{ marginBottom: 0 }}>Todos los nodos</h2>
+          <h2 className="seccion" style={{ marginBottom: 0 }}>{esGestion ? "Todos los nodos" : "Tus nodos"}</h2>
           <span className="nota mono" style={{ fontSize: 11 }}>
             {visto ? `actualizado ${visto.toLocaleTimeString()}` : "cargando…"}
           </span>
@@ -110,9 +124,9 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
         )}
 
         <p className="nota" style={{ marginTop: 12, fontSize: 12 }}>
-          La latencia es un <b>TCP connect real</b> desde la API al puerto interno de cada nodo (medida por el servidor, no estimada).
-          «Conexiones» son los circuitos que cada nodo está reenviando en este instante según su último latido.
-          Los nodos de tu circuito aparecen primero, marcados con su papel.
+          {esGestion
+            ? "Ves TODA la red: latencia TCP connect real medida por el servidor, conexiones reenviando y estado por latido."
+            : "Ves solo los nodos de tu circuito — dónde pega el tráfico tu cuenta. Los moderadores y el admin ven la red completa."}
         </p>
       </div>
     </div>
@@ -129,6 +143,7 @@ function saludLat(m) {
 
 function TarjetasNodos({ lista, yo, papel }) {
   const activo = !!yo?.activo;
+  const esGestion = yo?.rol === "admin" || yo?.rol === "moderador";
   return (
     <div style={{ display: "grid", gap: 12 }}>
       {lista.map((n) => {
@@ -183,7 +198,11 @@ function TarjetasNodos({ lista, yo, papel }) {
         );
       })}
       {!lista.length && (
-        <div className="tarjeta nota" style={{ margin: 0 }}>no hay nodos registrados todavía</div>
+        <div className="tarjeta nota" style={{ margin: 0 }}>
+          {!esGestion && !yo?.activo
+            ? "activa la red para ver los nodos de tu circuito"
+            : !lista.length ? "no hay nodos registrados todavía" : ""}
+        </div>
       )}
     </div>
   );

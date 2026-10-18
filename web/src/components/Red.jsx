@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { me, conectar, rotar, desconectar_, geoApi, salida, comprobar } from "../lib/api.js";
+import { me, conectar, rotar, desconectar_, geoApi, salida, comprobar, nodosVivos } from "../lib/api.js";
 import { Stat, Tuberia, AnilloJwt, Hecho } from "./Piezas.jsx";
 import Nodos from "./Nodos.jsx";
 import Revela from "./Revela.jsx";
@@ -37,6 +37,80 @@ function Interruptor({ activo, ocupado, alCambiar }) {
       <div style={{ maxWidth: 620, margin: "18px auto 0" }}>
         <Tuberia activo={activo} saltos={["nodo₁", "nodo₂", "nodo₃"]} paquetes={5} compacta />
       </div>
+    </div>
+  );
+}
+
+/* ── selector de nº de saltos (solo plan pro; free lo ve bloqueado) ── */
+function SelectorSaltos({ yo, saltosSel, setSel, ocupado }) {
+  const puede = !!yo?.puede_elegir_saltos;
+  const max = yo?.saltos_max || 3;
+  return (
+    <div className="tarjeta" style={{ padding: "16px 20px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+        <h2 className="seccion" style={{ marginBottom: 0 }}>¿Cuántos saltos quieres?</h2>
+        <span className={`chip mono ${puede ? "acento" : ""}`} style={{ fontSize: 10.5 }}>
+          plan {yo?.plan || "free"} · {puede ? `elige 3…${max}` : "3 fijos"}
+        </span>
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {[3, 4, 5, 6, 7].map((n) => {
+          const bloqueado = !puede || (n === 4 && max < 4);
+          const prohibido = n > max;
+          const sel = saltosSel === n;
+          return (
+            <button key={n}
+              className={`btn ${sel ? "primario" : ""}`}
+              style={{
+                minWidth: 74, opacity: prohibido || bloqueado ? .45 : 1,
+                cursor: prohibido || bloqueado ? "not-allowed" : "pointer",
+                position: "relative",
+              }}
+              disabled={ocupado || prohibido || bloqueado}
+              onClick={() => setSel(n)}
+              title={prohibido
+                ? `tu plan permite hasta ${max}`
+                : bloqueado ? "elegir nº de saltos es del plan Pro" : `conectar con ${n} saltos`}>
+              {n} saltos
+              {n === 3 && <span style={{ position: "absolute", top: -8, right: -4, fontSize: 10 }}>🔒</span>}
+            </button>
+          );
+        })}
+      </div>
+      {!puede ? (
+        <p className="nota" style={{ marginTop: 8, fontSize: 12 }}>
+          🔒 Con el plan <b>Free</b> la conexión usa siempre 3 saltos fijos.
+          Con el plan <b>Pro</b> eliges cuántos quieres, de 3 a 7 — y refrescas el circuito cada 10 h en vez de 1 vez al día.
+        </p>
+      ) : (
+        <p className="nota" style={{ marginTop: 8, fontSize: 12 }}>
+          El nº de saltos se aplica la PRÓXIMA vez que conectes (o al girar el circuito).
+          Más saltos = más relés entre tú y la salida: más privacidad, algo más de latencia.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ── contador real de nodos de la red (infra + equipos conectados) ── */
+function ContadorVivos({ yo }) {
+  const [vivo, setVivo] = useState(null);
+  useEffect(() => {
+    let vivo = true;
+    async function llena() {
+      try { const d = await nodosVivos(); if (vivo) setVivo(d); } catch { /* silencio */ }
+    }
+    llena();
+    const t = setInterval(llena, 10000);
+    return () => { vivo = false; clearInterval(t); };
+  }, [yo?.activo]);
+  return (
+    <div className="tarjeta tarjeta" style={{ padding: "12px 18px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+      <span className="punto-vivo" />
+      <b className="mono" style={{ fontSize: 15.5 }}>≈ {vivo ? vivo.total : "…"} nodos activos ahora</b>
+      <span className="nota mono" style={{ fontSize: 11.5 }}>
+        {vivo ? <> (infra {vivo.infra} + equipos de usuarios conectados {vivo.equipos})</> : "midiendo…"} · en vivo, 10 s
+      </span>
     </div>
   );
 }
@@ -123,6 +197,7 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
   const [probando, setProbando] = useState(false);
   const [ipSalida, setIpSalida] = useState(null);
   const [avisaExt, setAvisaExt] = useState(false);
+  const [saltosSel, setSel] = useState(3);   // nº deseado de saltos (plan pro)
   const divMapa = useRef(null);
   const mapa = useRef(null);
   const capa = useRef(null);
@@ -249,15 +324,23 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
       {/* ── métricas rápidas ── */}
       <div className="tira-stats">
         <Stat etq="estado" val={activo ? "ACTIVA" : "APAGADA"} pie={activo ? "circuito en pie" : "sin tráfico"} tono={activo ? "ok" : "off"} />
-        <Stat etq="saltos" val={`${yo?.circuito?.length || 0} / 3`} pie="nodos aleatorios" tono="ok" />
+        <Stat etq="saltos" val={`${yo?.circuito?.length || 0} / ${yo?.saltos_max || 3}`} pie={`plan ${yo?.plan || "free"}`} tono="ok" />
         <Stat etq="IP que ve internet" val={<span style={{ fontSize: 13 }}>{activo ? (ipExit || "midiendo…") : "—"}</span>} pie={activo ? "la del nodo de salida" : "usa la tuya"} tono="aviso" />
         <Stat etq="tu IP" val={<span style={{ fontSize: 13 }}>{yo?.ip_real || "—"}</span>} pie="la que ve el servidor" tono="info" />
       </div>
 
+      {/* ── contador real de nodos (en vivo) ── */}
+      <ContadorVivos yo={yo} />
+
+      {/* ── selector de nº de saltos (pro elige, free lo ve bloqueado) ── */}
+      <SelectorSaltos yo={yo} saltosSel={saltosSel} setSel={setSel} ocupado={ocupado} />
+
       {/* ── interruptor ── */}
       <Interruptor
         activo={activo} ocupado={ocupado}
-        alCambiar={() => accion(activo ? desconectar_ : conectar, activo ? "red desactivada" : "red activada ✓ — tu tráfico ya viaja por 3 saltos")}
+        alCambiar={() => accion(activo ? () => desconectar_() : () => conectar(saltosSel),
+          activo ? "red desactivada" : `red activada ✓ — ${saltosSel} saltos`)}
+        saltos={saltosSel}
       />
 
       {/* ── aviso de instalar la extensión (solo tras encender) ── */}

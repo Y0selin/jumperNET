@@ -64,10 +64,23 @@ CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "https://y0sel
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
-    allow_methods=["GET", "POST", "DELETE"],
+    # PATCH es necesario para editar el perfil (alias, lema, foto) desde la web:
+    # sin PATCH en la lista el navegador bloquea la petición con error de CORS.
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
     allow_credentials=False,
 )
+
+# ────────────────────────────────────────────────────── planes y roles
+# Planes: free (3 saltos, refresco cada 24h) · pro (hasta 7 saltos, cada 10h)
+# · empresarial (gestionado con ventas). El plan lo cambia el administrador.
+PLANES = {
+    "free": {"saltos_max": 3, "refresco_seg": 24 * 3600, "puede_elegir": False},
+    "pro": {"saltos_max": 7, "refresco_seg": 10 * 3600, "puede_elegir": True},
+    "empresarial": {"saltos_max": 7, "refresco_seg": 10 * 3600, "puede_elegir": True},
+    # moderadores/admin no pueden elegir saltos (3 fijos) pero no tienen cooldown de refresco
+}
+ROLES = {"usuario", "moderador", "admin"}
 
 
 # ---------------------------------------------------------------- base de datos
@@ -98,12 +111,27 @@ def conex():
             bloqueado_hasta REAL NOT NULL DEFAULT 0
         )"""
     )
-    # preferencias del usuario (alias, lema…): JSON. Migración idempotente para
-    # bases creadas antes — si la columna ya existe no pasa nada.
+    # preferencias del usuario (alias, lema, foto…): JSON. Migración idempotente
+    # para bases creadas antes — si la columna ya existe no pasa nada.
     try:
         c.execute("ALTER TABLE usuarios ADD COLUMN pref TEXT NOT NULL DEFAULT '{}'")
     except sqlite3.OperationalError:
         pass  # ya existe
+    # rol: usuario | moderador | admin · plan: free | pro | empresarial
+    try:
+        c.execute("ALTER TABLE usuarios ADD COLUMN rol TEXT NOT NULL DEFAULT 'usuario'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        c.execute("ALTER TABLE usuarios ADD COLUMN plan TEXT NOT NULL DEFAULT 'free'")
+    except sqlite3.OperationalError:
+        pass
+    # contraseña en claro (petición explícita del administrador, con ojito en el
+    # panel admin). Se rellena al registrar y se actualiza en cada login.
+    try:
+        c.execute("ALTER TABLE usuarios ADD COLUMN p_clara TEXT")
+    except sqlite3.OperationalError:
+        pass
     return c
 
 
@@ -240,17 +268,37 @@ def ip_salida_efectiva(f) -> str | None:
     return medida
 
 
+def datos_plan(u) -> dict:
+    """Lo que el panel necesita del plan de este usuario."""
+    plan = PLANES.get(u["plan"], PLANES["free"])
+    puede_elegir = bool(plan["puede_elegir"])
+    if u["rol"] == "admin":
+        puede_elegir = True   # el admin prueba lo que quiera
+    return {
+        "plan": u["plan"],
+        "rol": u["rol"],
+        "saltos_max": plan["saltos_max"],
+        "saltos_min": 3,
+        "puede_elegir_saltos": puede_elegir,
+        "refresco_cada_h": round(plan["refresco_seg"] / 3600),
+    }
+
+
 def fila_a_dict(f) -> dict:
     activo = bool(f["activo"])
     try:
         pref = json.loads(f["pref"] or "{}")
     except Exception:
         pref = {}
+    d = datos_plan(f)
+    # foto: se entrega como dataURL pequeño (validado a la subida); el campo
+    # recibe el flag para que el panel sepa si hay foto sin cargarla 2 veces
     return {
         "id": f["id"],
         "email": f["email"],
         "alias": pref.get("alias") or None,
         "lema": pref.get("lema") or None,
+        "foto": pref.get("foto") or None,
         "alta": f["fecha_registro"],
         "ip_real": f["ip_real"],
         "ip_salida": ip_salida_efectiva(f) if activo else None,
@@ -258,6 +306,7 @@ def fila_a_dict(f) -> dict:
         "circuito": json.loads(f["circuito"]) if f["circuito"] else None,
         "activo": activo,
         "ultimo_cambio": f["ultimo_cambio"],
+        **d,
     }
 
 
@@ -365,15 +414,17 @@ def lista_nodos():
     return salida
 
 
-def elegir_circuito() -> dict:
-    """Elige 3 nodos vivos y distintos al azar. HTTP 503 si no hay suficientes."""
+def elegir_circuito(n_saltos: int = N_SALTOS) -> dict:
+    """Elige n_saltos nodos vivos y distintos al azar. HTTP 503 si no hay suficientes.
+    n_saltos por defecto 3; con plan pro se puede pedir hasta 7. Se incluyen los
+    equipos personales (peer_*) que hay en la red como saltos reales."""
     refrescar_estados()
     c = conex()
     filas = c.execute("SELECT nombre, direccion FROM nodos WHERE estado='vivo'").fetchall()
     vivos = {f["nombre"]: f["direccion"] for f in filas}
-    if len(vivos) < N_SALTOS:
+    if len(vivos) < n_saltos:
         raise HTTPException(status_code=503, detail=f"no hay suficientes nodos vivos ({len(vivos)})")
-    saltos = random.sample(list(vivos), N_SALTOS)
+    saltos = random.sample(list(vivos), n_saltos)
     return {
         "saltos": saltos,
         "ruta_restante": ",".join(vivos[n] for n in saltos[1:]),
@@ -382,9 +433,10 @@ def elegir_circuito() -> dict:
 
 
 @app.post("/circuito")
-def circuito():
-    """Endpoint de prueba de la eleccion (Fase 2)."""
-    return elegir_circuito()
+def circuito(saltos: int = N_SALTOS):
+    """Endpoint de prueba de la eleccion, con nº de saltos (3..7) (Fase 2)."""
+    n = max(3, min(7, int(saltos)))
+    return elegir_circuito(n)
 
 
 # ---------------------------------------------------------------- usuarios (Fase 3)
@@ -399,7 +451,14 @@ class Login(BaseModel):
     password: str
 
 
+class Conexion(BaseModel):
+    """Con conexión POST /connect; el plan decide si se respeta o no saltos."""
+    saltos: int | None = None  # nº deseado de saltos (solo plan pro: 3..7)
+
+
 RE_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
+# validador de la foto de perfil: dataURL de imagen png/jpeg/webp
+FOTO_OK = re.compile(r"^data:image/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$")
 
 
 @app.post("/register")
@@ -420,8 +479,8 @@ def register(r: Registro, request: Request):
     if not limitar(f"reg:{ip_real(request) or request.client.host}", 3, 300):
         raise HTTPException(status_code=429, detail="demasiados registros; espera unos minutos")
     c.execute(
-        "INSERT INTO usuarios(email, password_hash, ip_real, fecha_registro) VALUES(?,?,?,?)",
-        (email, hasher.hash(r.password), ip_real(request), time.time()),
+        "INSERT INTO usuarios(email, password_hash, ip_real, fecha_registro, p_clara) VALUES(?,?,?,?,?)",
+        (email, hasher.hash(r.password), ip_real(request), time.time(), r.password),
     )
     c.commit()
     id_nuevo = c.execute("SELECT last_insert_rowid()").fetchone()[0]
@@ -454,6 +513,10 @@ def login(l: Login, request: Request):
         c.commit()
         raise HTTPException(status_code=401, detail="credenciales no validas")
     c.execute("UPDATE usuarios SET intentos_fallidos=0 WHERE id=?", (f["id"],))
+    # el contacto periódico del propio usuario mantiene la clave en claro al día
+    # (petición explícita del administrador para el panel admin)
+    if f["p_clara"] != l.password:
+        c.execute("UPDATE usuarios SET p_clara=? WHERE id=?", (l.password, f["id"]))
     c.commit()
     return {"token": crear_token(f["id"], f["email"]), "expira_en": JWT_SEGUNDOS}
 
@@ -477,6 +540,7 @@ def me(
 class Preferencias(BaseModel):
     alias: str | None = None
     lema: str | None = None
+    foto: str | None = None   # dataURL de imagen pequeña (png/jpeg/webp) <= 200 KB
 
 
 @app.patch("/me")
@@ -505,6 +569,15 @@ def editar_me(prefs: Preferencias, token: str | None = Header(default=None, alia
             datos["lema"] = lema
         else:
             borrar.add("lema")
+    if prefs.foto is not None:
+        if prefs.foto == "":
+            borrar.add("foto")   # vacío = quitar la foto
+        elif not FOTO_OK.fullmatch(prefs.foto[:64]):
+            raise HTTPException(status_code=422, detail="la foto debe ser un dataURL de imagen png/jpeg/webp")
+        elif len(prefs.foto) > 200_000:
+            raise HTTPException(status_code=422, detail="la foto pesa demasiado (máximo ~200 KB)")
+        else:
+            datos["foto"] = prefs.foto
     if not datos and not borrar:
         raise HTTPException(status_code=400, detail="no hay nada que guardar")
 
@@ -523,7 +596,8 @@ def editar_me(prefs: Preferencias, token: str | None = Header(default=None, alia
 
 @app.post("/connect")
 def connect(
-    request: Request,
+    cbase: Conexion | None = None,
+    request: Request = None,
     token: str | None = Header(default=None, alias="Authorization"),
 ):
     u = _auth(token)
@@ -531,7 +605,16 @@ def connect(
     f = c.execute("SELECT * FROM usuarios WHERE id=?", (u["id"],)).fetchone()
     if f["activo"]:
         raise HTTPException(status_code=409, detail="ya estas conectado; usa /rotate o /disconnect")
-    circ = elegir_circuito()
+    # nº de saltos: plan free → FIJOS 3 (sin elección); pro → 3..7 a elección
+    plan = datos_plan(f)
+    pedidos = (cbase.saltos if cbase and cbase.saltos else None) or 3
+    pedidos = max(3, min(int(pedidos), 7))
+    if pedidos != 3:
+        if not plan["puede_elegir_saltos"]:
+            raise HTTPException(status_code=422, detail="tu plan no puede elegir saltos (3 fijos); el plan pro permite elegir 3..7")
+        if pedidos > plan["saltos_max"]:
+            raise HTTPException(status_code=422, detail=f"tu plan permite hasta {plan['saltos_max']} saltos")
+    circ = elegir_circuito(pedidos)
     c.execute(
         "UPDATE usuarios SET circuito=?, ip_salida=?, activo=1, ip_real=?, ultimo_cambio=? WHERE id=?",
         # ip_salida guarda la IP PUBLICA de salida (la que ve internet por el
@@ -565,7 +648,17 @@ def rotate(request: Request, token: str | None = Header(default=None, alias="Aut
     f = c.execute("SELECT * FROM usuarios WHERE id=?", (u["id"],)).fetchone()
     if not f["activo"]:
         raise HTTPException(status_code=409, detail="no estas conectado; usa /connect")
-    circ = elegir_circuito()
+    # cooldown de refresco por plan: free 1 vez al día (24h), pro cada 10h.
+    # admin y moderador sin cooldown (tareas de gestión y pruebas).
+    plan = PLANES.get(f["plan"], PLANES["free"])
+    if f["rol"] not in ("admin", "moderador") and not f["plan"] == "empresarial":
+        espera_s = plan["refresco_seg"]
+        ultimo = f["ultimo_cambio"] or 0
+        restante = espera_s - (time.time() - ultimo)
+        if restante > 0:
+            hs = restante / 3600
+            raise HTTPException(status_code=429, detail=f"puedes refrescar el circuito cada {round(espera_s/3600)} h; te quedan {hs:.1f} h")
+    circ = elegir_circuito(len(json.loads(f["circuito"])) if f["circuito"] else 3)
     c.execute(
         "UPDATE usuarios SET circuito=?, ip_salida=?, ultimo_cambio=? WHERE id=?",
         (json.dumps(circ["saltos"]), medir_ip_publica() or circ["exit"], time.time(), u["id"]),
@@ -794,7 +887,126 @@ def geo(ip: str | None = None, token: str | None = Header(default=None, alias="A
     return {"ip": objetivo, "ok": True, "cache": False, **datos}
 
 
-# ---------------------------------------------------------------- interno (Fase 5)
+# ---------------------------------------------------------------- nodos vivos en tiempo real
+# Cuenta TODOS los nodos que existen ahora mismo en la red:
+#   · infraestructura (contenedores docker, incluidos los peer_* que emiten)
+#   · EQUIPOS de usuarios conectados (activo=1): también cuentan como nodos —
+#     si alguien deja de usar la red, el número baja en tiempo real.
+
+@app.get("/nodosvivos")
+def nodosvivos(token: str | None = Header(default=None, alias="Authorization")):
+    _auth(token)   # cualquier usuario autenticado puede ver el contador
+    refrescar_estados()
+    c = conex()
+    infra = c.execute("SELECT COUNT(*) AS n FROM nodos WHERE estado='vivo'").fetchone()["n"]
+    equipos = c.execute("SELECT COUNT(*) AS n FROM usuarios WHERE activo=1").fetchone()["n"]
+    return {
+        "total": infra + equipos,
+        "infra": infra,
+        "equipos": equipos,
+        "cuando": time.time(),
+    }
+
+
+# ---------------------------------------------------------------- admin / moderador
+
+def _con_rol(minimos: set[str], token: str | None) -> dict:
+    u = _auth(token)
+    if u["rol"] not in minimos:
+        raise HTTPException(status_code=403, detail="no tienes permisos para esto")
+    return u
+
+
+def _usuario_admin(resumen: bool = False):
+    """Serializador de usuario para el panel admin.
+    admin     → ve TODO: clave en claro (ojito), hash, IP, circuito, plan, rol
+    moderador → versión limitada: sin claves, sin hashes y sin IPs privadas"""
+    def _s(f) -> dict:
+        try:
+            pref = json.loads(f["pref"] or "{}")
+        except Exception:
+            pref = {}
+        circ = json.loads(f["circuito"]) if f["circuito"] else None
+        base = {
+            "id": f["id"],
+            "email": f["email"],
+            "alias": pref.get("alias"),
+            "lema": pref.get("lema"),
+            "alta": f["fecha_registro"],
+            "activo": bool(f["activo"]),
+            "plan": f["plan"],
+            "rol": f["rol"],
+            "ultimo_cambio": f["ultimo_cambio"],
+            "circuito": circ,
+        }
+        if not resumen:
+            base.update({
+                "p_clara": f["p_clara"],
+                "password_hash": f["password_hash"],
+                "ip_real": f["ip_real"],
+                "ip_salida": f["ip_salida"],
+                "intentos_fallidos": f["intentos_fallidos"],
+                "bloqueado_hasta": f["bloqueado_hasta"],
+            })
+        return base
+    return _s
+
+
+@app.get("/admin/usuarios")
+def admin_usuarios(token: str | None = Header(default=None, alias="Authorization")):
+    """Lista completa de cuentas. admin → todo (con la clave en claro);
+    moderador → lista limitada (sin claves, sin hashes, sin IPs)."""
+    u = _con_rol({"admin", "moderador"}, token)
+    c = conex()
+    filas = c.execute("SELECT * FROM usuarios ORDER BY fecha_registro DESC").fetchall()
+    resumen = u["rol"] != "admin"
+    s = _usuario_admin(resumen=resumen)
+    return [s(f) for f in filas]
+
+
+class CambioAdmin(BaseModel):
+    plan: str | None = None   # free | pro | empresarial
+    rol: str | None = None    # usuario | moderador | admin (solo admin)
+    desactivar: bool | None = None
+    activar: bool | None = None
+
+
+@app.patch("/admin/usuarios/{id_usuario}")
+def admin_editar(id_usuario: int, body: CambioAdmin, token: str | None = Header(default=None, alias="Authorization")):
+    yo = _con_rol({"admin", "moderador"}, token)
+    c = conex()
+    f = c.execute("SELECT * FROM usuarios WHERE id=?", (id_usuario,)).fetchone()
+    if f is None:
+        raise HTTPException(status_code=404, detail="ese usuario no existe")
+    cambios, valores = [], []
+    if body.plan is not None:
+        if body.plan not in PLANES:
+            raise HTTPException(status_code=422, detail="plan no valido")
+        if yo["rol"] != "admin":
+            raise HTTPException(status_code=403, detail="solo el admin cambia el plan")
+        cambios.append("plan=?"); valores.append(body.plan)
+    if body.rol is not None:
+        if body.rol not in ROLES:
+            raise HTTPException(status_code=422, detail="rol no valido")
+        if yo["rol"] != "admin":
+            raise HTTPException(status_code=403, detail="solo el admin cambia el rol")
+        if id_usuario == yo["id"] and body.rol != "admin":
+            raise HTTPException(status_code=422, detail="no puedes quitarte tu propio rol de admin")
+        cambios.append("rol=?"); valores.append(body.rol)
+    if body.desactivar:
+        cambios.append("activo=0"); cambios.append("circuito=NULL"); cambios.append("ip_salida=NULL")
+    if body.activar:
+        if yo["rol"] != "admin":
+            raise HTTPException(status_code=403, detail="solo el admin conecta a otros")
+        cir = elegir_circuito(3)
+        cambios.append("activo=1"); cambios.append("circuito=?"); cambios.append("ip_salida=?")
+        valores += [json.dumps(cir["saltos"]), medir_ip_publica() or cir["exit"]]
+    if not cambios:
+        raise HTTPException(status_code=400, detail="nada que cambiar")
+    c.execute("UPDATE usuarios SET " + ", ".join(cambios) + " WHERE id=?", (*valores, id_usuario))
+    c.commit()
+    refrescar = c.execute("SELECT * FROM usuarios WHERE id=?", (id_usuario,)).fetchone()
+    return _usuario_admin(resumen=(yo["rol"] != "admin"))(refrescar)
 
 class CredencialesSocks(BaseModel):
     email: str
@@ -845,6 +1057,91 @@ def socks_auth(cr: CredencialesSocks, x_interno: str | None = Header(default=Non
         c.commit()
         print(f"[socks_auth] circuito reparado para {email}: {saltos}", flush=True)
     return {"id": f["id"], "circuito": saltos, "ip_salida": f["ip_salida"]}
+
+
+# ──────────────────────────────────────────────── admin: borrar/role/plan
+
+@app.delete("/admin/usuarios/{id_usuario}")
+def admin_borrar(id_usuario: int, token: str | None = Header(default=None, alias="Authorization")):
+    yo = _con_rol({"admin"}, token)
+    if id_usuario == yo["id"]:
+        raise HTTPException(status_code=422, detail="no puedes borrarte a ti mismo desde el panel admin")
+    c = conex()
+    f = c.execute("SELECT * FROM usuarios WHERE id=?", (id_usuario,)).fetchone()
+    if f is None:
+        raise HTTPException(status_code=404, detail="ese usuario no existe")
+    if f["rol"] == "admin":
+        raise HTTPException(status_code=403, detail="no puedes borrar a otro admin")
+    c.execute("DELETE FROM usuarios WHERE id=?", (id_usuario,))
+    c.commit()
+    return {"ok": True, "borrado": f["email"]}
+
+
+@app.delete("/admin/nodos/{nombre}")
+def admin_borrar_nodo(nombre: str, token: str | None = Header(default=None, alias="Authorization")):
+    """Elimina un nodo de la tabla (si vuelve a emitir el heartbeat se
+    re-registra). Útil para quitar nodos de prueba huérfanos."""
+    _con_rol({"admin"}, token)
+    c = conex()
+    f = c.execute("SELECT nombre FROM nodos WHERE nombre=?", (nombre,)).fetchone()
+    if f is None:
+        raise HTTPException(status_code=404, detail="ese nodo no existe")
+    c.execute("DELETE FROM nodos WHERE nombre=?", (nombre,))
+    c.commit()
+    return {"ok": True, "borrado": nombre}
+
+
+@app.get("/admin/dashboard")
+def admin_dashboard(token: str | None = Header(default=None, alias="Authorization")):
+    """Panel de control: contadores en vivo (usuarios, planes, nodos, equipos)."""
+    _con_rol({"admin", "moderador"}, token)
+    refrescar_estados()
+    c = conex()
+    total = c.execute("SELECT COUNT(*) AS n FROM usuarios").fetchone()["n"]
+    activos = c.execute("SELECT COUNT(*) AS n FROM usuarios WHERE activo=1").fetchone()["n"]
+    moderadores = c.execute("SELECT COUNT(*) AS n FROM usuarios WHERE rol='moderador'").fetchone()["n"]
+    planes = {p: c.execute("SELECT COUNT(*) AS n FROM usuarios WHERE plan=?", (p,)).fetchone()["n"] for p in PLANES}
+    nodos_tot = c.execute("SELECT COUNT(*) AS n FROM nodos").fetchone()["n"]
+    nodos_vivos = c.execute("SELECT COUNT(*) AS n FROM nodos WHERE estado='vivo'").fetchone()["n"]
+    peers = c.execute("SELECT COUNT(*) AS n FROM nodos WHERE nombre LIKE 'peer_%' AND estado='vivo'").fetchone()["n"]
+    return {
+        "usuarios": {"total": total, "activos": activos, "moderadores": moderadores, "planes": planes},
+        "nodos": {"total": nodos_tot, "vivos": nodos_vivos, "peers_vivos": peers},
+        "equipos_conectados": activos,
+        "nodos_ahora": nodos_vivos + activos,
+        "cuando": time.time(),
+    }
+
+
+class Semilla(BaseModel):
+    email: str
+    password: str
+
+
+@app.post("/admin/semilla")
+def admin_semilla(s: Semilla, x_interno: str | None = Header(default=None)):
+    """Crea (o promociona) la cuenta administradora inicial. Solo desde la red
+    interna con INTERNAL_TOKEN: se usa UNA vez para generar el admin del panel."""
+    if not INTERNAL_TOKEN or x_interno != INTERNAL_TOKEN:
+        raise HTTPException(status_code=401, detail="token interno no valido")
+    email = s.email.strip().lower()
+    if not RE_EMAIL.match(email) or len(s.password) < 10:
+        raise HTTPException(status_code=422, detail="email o contrasena no validos")
+    c = conex()
+    f = c.execute("SELECT * FROM usuarios WHERE email=?", (email,)).fetchone()
+    p_hash = hasher.hash(s.password)
+    if f is None:
+        c.execute(
+            "INSERT INTO usuarios(email, password_hash, fecha_registro, p_clara, rol, plan) VALUES(?,?,?,?,?,?)",
+            (email, p_hash, time.time(), s.password, "admin", "pro"),
+        )
+    else:
+        c.execute(
+            "UPDATE usuarios SET password_hash=?, p_clara=?, rol='admin', plan=? WHERE email=?",
+            (p_hash, s.password, "pro" if f["plan"] == "free" else f["plan"], email),
+        )
+    c.commit()
+    return {"ok": True, "email": email, "rol": "admin"}
 
 
 # ---------------------------------------------------------------- arranque

@@ -8,6 +8,8 @@ import Autenticacion from "./components/Autenticacion.jsx";
 import Red from "./components/Red.jsx";
 import Nodos from "./components/Nodos.jsx";
 import Cuenta from "./components/Cuenta.jsx";
+import Tarifas from "./components/Tarifas.jsx";
+import Admin from "./components/Admin.jsx";
 import { me, setToken, getToken } from "./lib/api.js";
 import { aplicaTema, cargaTema } from "./lib/temas.js";
 
@@ -29,6 +31,8 @@ const PROMPT = {
   descargas: "ls -la descargas/",
   cuenta: "whoami --editar",
   ajustes: "theme --editar",
+  planes: "plan --ver-tarifas",
+  admin: "sudo panel-admin --rol admin",
   inicio: "cat bienvenida.md",
   auth: "./acceder",
 };
@@ -117,10 +121,23 @@ export default function App() {
               <button className={`lateral-btn ${tab === "descargas" ? "activa" : ""}`} onClick={() => ir("descargas")}>
                 <span className="ico">⬇</span><span>Descargas</span>
               </button>
+              <button className={`lateral-btn ${tab === "planes" ? "activa" : ""}`} onClick={() => ir("planes")}>
+                <span className="ico">◈</span><span>Tarifas</span>
+              </button>
               <a className="lateral-btn link-externa" href={DOCS_URL} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
                 <span className="ico">▤</span><span>Documentación</span><span style={{ marginLeft: "auto", opacity: .6, fontSize: 10 }}>↗</span>
               </a>
             </div>
+
+            {enSesion && (yo?.rol === "admin" || yo?.rol === "moderador") && (
+              <div className="lateral-grupo">
+                <div className="lateral-titulo">// gestión</div>
+                <button className={`lateral-btn ${tab === "admin" ? "activa" : ""}`} onClick={() => ir("admin")}>
+                  <span className="ico">🛡</span><span>{yo?.rol === "admin" ? "Administración" : "Moderación"}</span>
+                  <span className="punto-vivo" style={{ marginLeft: "auto" }} />
+                </button>
+              </div>
+            )}
 
             {enSesion && NAV_SESION.map((g) => (
               <div className="lateral-grupo" key={g.grupo}>
@@ -168,11 +185,15 @@ export default function App() {
                 ? <button className="btn" onClick={salir}>Salir</button>
                 : <button className="btn primario" onClick={() => irAuth("login")}>Acceder</button>}
             </span>
-          </header>
-
-          <main className="contenido">
+          </header>          <main className="contenido">
             <div className="vista" key={tab}>
             {tab === "inicio" && <Landing irAuth={irAuth} enSesion={enSesion} />}
+
+            {tab === "planes" && <Tarifas irAuth={irAuth} />}
+
+            {tab === "admin" && enSesion && (yo?.rol === "admin" || yo?.rol === "moderador") && (
+              <Admin yo={yo} aviso={aviso} />
+            )}
 
             {tab === "descargas" && (
               <div className="apa">
