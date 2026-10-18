@@ -17,6 +17,7 @@ Seguridad:
   - No se guarda historico de circuitos ni destinos: solo el estado actual
     del usuario (regla 4 del proyecto).
 """
+import ipaddress
 import json
 import os
 import random
@@ -44,6 +45,12 @@ JWT_SECRET = os.environ.get("JWT_SECRET", "")
 JWT_SEGUNDOS = int(os.environ.get("JWT_SEGUNDOS", "7200"))
 MAX_USUARIOS = int(os.environ.get("MAX_USUARIOS", "500"))
 UMBRAL_CAIDO = int(os.environ.get("UMBRAL_CAIDO_SEG", "35"))
+# Validación de vida de los nodos (Fase 9): sondeo TCP REAL
+# El heartbeat solo dice «el equipo está encendido»; el sondeo es el que
+# demuestra que se puede CONECTAR a su servicio de reenvío. Un nodo es
+# saltable solo si el sondeo TCP conectó en las últimas TTL_OK segundos.
+INTERVALO_VALIDAR = int(os.environ.get("INTERVALO_VALIDAR_SEG", "15"))
+TTL_OK = max(45.0, INTERVALO_VALIDAR * 4)
 # Proxy SOCKS5 de entrada, por la red interna (para comprobar el circuito de
 # extremo a extremo desde la propia API: https no, HTTP plano al puerto 80).
 SOCKS_ENTRADA = os.environ.get("SOCKS_ENTRADA", "entrada:1080")
@@ -137,6 +144,27 @@ def conex():
         c.execute("ALTER TABLE nodos ADD COLUMN alias TEXT")
     except sqlite3.OperationalError:
         pass
+    # validación REAL del nodo (Fase 9 - validación de vida):· lat_ms  -> la
+    # última medida de TCP connect del sondeo (NULL si nunca respondió)
+    # · ult_ok   -> timestamp de la última vez que SONDEO TCP conectó bien
+    # Con esto el circuito solo usa nodos a los que de verdad hemos podido
+    # conectar, y la web distingue «dice que está vivo» de «responde de
+    # verdad» (saltable). Migración idempotente.
+    try:
+        c.execute("ALTER TABLE nodos ADD COLUMN lat_ms INTEGER")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        c.execute("ALTER TABLE nodos ADD COLUMN ult_ok REAL")
+    except sqlite3.OperationalError:
+        pass
+    # modo de saltos preferido: 'todos' (infra + equipos de usuarios) o
+    # 'externos' (SOLO equipos de usuarios: prueba de que internet ve la IP
+    # del peer y no la del VPS). Lo elige el usuario en su panel.
+    try:
+        c.execute("ALTER TABLE usuarios ADD COLUMN modo TEXT NOT NULL DEFAULT 'todos'")
+    except sqlite3.OperationalError:
+        pass
     # rol: usuario | moderador | admin · plan: free | pro | empresarial
     try:
         c.execute("ALTER TABLE usuarios ADD COLUMN rol TEXT NOT NULL DEFAULT 'usuario'")
@@ -156,12 +184,30 @@ def conex():
 
 
 def refrescar_estados():
-    """Marca como caido todo nodo sin heartbeat reciente (estado derivado)."""
+    """Marca como caido todo nodo sin heartbeat reciente (estado derivado).
+
+    REGLA de vida definitiva (antes iba mal): un nodo está 'vivo' si
+    (a) su heartbeat es reciente (el equipo está encendido y dialoga) O
+    (b) el sondeo TCP al servicio conectó en las últimas TTL_OK seg.
+    Nadie más: un nodo sin latido reciente PERO sin sondeos recientes
+    cambia a caido. La respuesta del usuario con sondeo fresco se
+    actualiza en validar_nodos(), que SIEMPRE se ejecuta junto a esta.
+    """
     c = conex()
+    ahora = time.time()
+    # (a) liveness por heartbeat
     c.execute(
         "UPDATE nodos SET estado='caido' WHERE ultimo_heartbeat < ?",
-        (time.time() - UMBRAL_CAIDO,),
+        (ahora - UMBRAL_CAIDO,),
     )
+    # (b) excepto los que el sondeo TCP acaba de demostrar alcanzables
+    try:
+        c.execute(
+            "UPDATE nodos SET estado='vivo' WHERE ult_ok >= ?",
+            (ahora - TTL_OK,),
+        )
+    except sqlite3.OperationalError:
+        pass  # base vieja sin la columna ult_ok (se creará en conex())
     c.commit()
 
 
@@ -296,6 +342,35 @@ def ip_salida_efectiva(f) -> str | None:
     return medida
 
 
+def exit_ip_de(nombre_nodo: str | None) -> str | None:
+    """IP pública por la que sale internet cuando el EXIT es un nodo externo.
+
+    Si el exit es un peer (equipo de un usuario), la IP que ve internet es la
+    del exit (su casa), no la del VPS: usamos la parte de host de la dirección
+    anunciada SI es una IPv4 pública (el peer la detecta con api.ipify e la
+    registra con esa IP real). Para nodos de la infraestructura ("nodo1:9000",
+    nombres docker) devuelve None: entonces se usa medir_ip_publica() del
+    VPS, que es la IP por donde salen los contenedores.
+    """
+    if not nombre_nodo:
+        return None
+    try:
+        c = conex()
+        f = c.execute("SELECT direccion, tipo FROM nodos WHERE nombre=?", (nombre_nodo,)).fetchone()
+    except Exception:
+        return None
+    if f is None or not f["direccion"]:
+        return None
+    host = f["direccion"].rsplit(":", 1)[0]
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return None
+    if ip.version == 4 and not (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_reserved):
+        return str(ip)
+    return None
+
+
 def datos_plan(u) -> dict:
     """Lo que el panel necesita del plan de este usuario."""
     plan = PLANES.get(u["plan"], PLANES["free"])
@@ -333,6 +408,11 @@ def fila_a_dict(f) -> dict:
         "nodo_exit": (json.loads(f["circuito"])[-1] if f["circuito"] else None),
         "circuito": json.loads(f["circuito"]) if f["circuito"] else None,
         "activo": activo,
+        # Fase 9 — nodos externos: modo preferido de este usuario y la IP que
+        # ve internet por el nodo de salida ACTUAL (si el exit es un peer, es
+        # su IP de casa; si es infra, va con None y se enseña medir_ip_publica())
+        "modo": (f["modo"] if "modo" in f.keys() else "todos") or "todos",
+        "exit_ip": (exit_ip_de(json.loads(f["circuito"])[-1]) if f["circuito"] else None),
         "ultimo_cambio": f["ultimo_cambio"],
         **d,
     }
@@ -432,14 +512,20 @@ def heartbeat(hb: Heartbeat, x_interno: str | None = Header(default=None)):
     except sqlite3.OperationalError:
         pass  # ya existe
     c.execute(
-        """INSERT INTO nodos(nombre, direccion, ultimo_heartbeat, estado, conexiones)
-           VALUES(?,?,?,'vivo',?)
+        """INSERT INTO nodos(nombre, direccion, ultimo_heartbeat, estado, conexiones, tipo)
+           VALUES(?,?,?,'vivo',?,?)
            ON CONFLICT(nombre) DO UPDATE SET
              direccion=excluded.direccion,
              ultimo_heartbeat=excluded.ultimo_heartbeat,
              estado='vivo',
-             conexiones=excluded.conexiones""",
-        (hb.nombre, hb.direccion, time.time(), max(0, hb.conexiones)),
+             conexiones=excluded.conexiones,
+             tipo=excluded.tipo""",
+        (
+            hb.nombre, hb.direccion, time.time(), max(0, hb.conexiones),
+            # modo solo-externos (Fase 9): los peers se marcan tipo 'usuario'
+            # para que el circuito pueda separarlos de la infra docker del VPS
+            "usuario" if hb.nombre.startswith("peer_") else "infra",
+        ),
     )
     c.commit()
     return {"ok": True}
@@ -459,8 +545,10 @@ class NodoUsuario(BaseModel):
     conexiones: int = 0
 
 
-def medir_ms(direccion: str) -> int | None:
-    """Milisegundos de un TCP connect al nodo (None si no responde)."""
+def medir_ms(direccion: str, timeout: float = 0.8) -> int | None:
+    """Milisegundos de un TCP connect al nodo (None si no responde).
+    Cache corta (8 s) para no machacar a los peers con sondas si la web
+    pide la lista varias veces seguidas."""
     ahora = time.time()
     cache = _ms_nodos.get(direccion)
     if cache and ahora - cache[0] < 8:
@@ -469,12 +557,117 @@ def medir_ms(direccion: str) -> int | None:
     try:
         host, puerto = direccion.rsplit(":", 1)
         t0 = time.perf_counter()
-        with socket.create_connection((host, int(puerto)), timeout=0.8):
+        with socket.create_connection((host, int(puerto)), timeout=timeout):
             ms = round((time.perf_counter() - t0) * 1000)
     except Exception:
         ms = None
     _ms_nodos[direccion] = (ahora, ms)
     return ms
+
+
+def sondear_y_apuntar(nombre: str, direccion: str) -> int | None:
+    """Sondea un nodo y deja el resultado anotado en su fila (lat_ms/ult_ok).
+    Si conecta, el nodo queda demostrado alcanzable aunque su latido
+    hubiese fallado: la juntura del estado 'vivo' (refrescar_estados)."""
+    ms = medir_ms(direccion)
+    c = conex()
+    ahora = time.time()
+    if ms is not None:
+        c.execute(
+            "UPDATE nodos SET lat_ms=?, ult_ok=?, estado='vivo' WHERE nombre=?",
+            (ms, ahora, nombre),
+        )
+    else:
+        c.execute("UPDATE nodos SET lat_ms=NULL WHERE nombre=?", (nombre,))
+    c.commit()
+    return ms
+
+
+def validar_nodos() -> dict:
+    """Validación de vida con hechos, no con promesas.
+
+    Sondea todos los nodos con dirección saltable (TCP connect real,
+    concurrente) y anota en cada fila:
+      · lat_ms: última latencia medida (NULL si no conectó)
+      · ult_ok: última vez que el sondeo conectó
+    Es el JUEZ del estado: un heartbeat que dice «vivo» NO basta para ser
+    salto; hay que probar que el servicio responde. Este dato lo consultan
+    /nodos, elegir_circuito() y /nodosvivos.
+    ARREGLA el «vivo/caído va mal»: equipos que latían pero cuyo servicio
+    peer jamás respondía, y nodos infra que flaqueaban sin motivo real.
+    Devuelve un resumen (para tests y logs): {total, responden, sondeados}.
+    """
+    refrescar_estados()
+    c = conex()
+    try:
+        filas = c.execute("SELECT nombre, direccion FROM nodos").fetchall()
+    except sqlite3.OperationalError:
+        return {"total": 0, "responden": 0, "sondeados": 0}
+    hables = [
+        (f["nombre"], f["direccion"])
+        for f in filas
+        if f["direccion"] and _hoppable(f["direccion"])
+    ]
+    # sondeo concurrente: con N nodos, el coste es ~un timeout (0.8 s), no N*0.8
+    if hables:
+        medidas: dict[str, int | None] = {}
+        hilos = [
+            threading.Thread(target=lambda n, d: medidas.__setitem__(n, medir_ms(d)), args=(n, d))
+            for n, d in hables
+        ]
+        for t in hilos:
+            t.start()
+        for t in hilos:
+            t.join(timeout=2.5)
+        ahora = time.time()
+        for n, d in hables:
+            ms = medidas.get(n, medir_ms(d))
+            if ms is not None:
+                c.execute(
+                    "UPDATE nodos SET lat_ms=?, ult_ok=?, estado='vivo' WHERE nombre=?",
+                    (ms, ahora, n),
+                )
+            else:
+                c.execute("UPDATE nodos SET lat_ms=NULL WHERE nombre=?", (n,))
+        c.commit()
+    responden = 0
+    try:
+        responden = c.execute(
+            "SELECT COUNT(*) AS n FROM nodos WHERE ult_ok >= ?", (time.time() - TTL_OK,)
+        ).fetchone()["n"]
+    except sqlite3.OperationalError:
+        pass
+    return {"total": len(filas), "sondeados": len(hables), "responden": responden}
+
+
+# marcador del hilo de validación (informativo; el hilo es daemon y único)
+
+
+def _validador_periodico() -> None:
+    """Hilo de fondo (daemon): sondea la red cada INTERVALO_VALIDAR segundos
+    para que el estado de la lista y del circuito sea siempre reciente,
+    aunque nadie pida /nodos en ese momento."""
+    if os.environ.get("VALIDAR_NODOS_SEG", "15") == "0":
+        return  # desactivado (tests / entornos sin red)
+    while True:
+        try:
+            validar_nodos()
+        except Exception:
+            pass  # el validador nunca debe tirar la API
+        time.sleep(INTERVALO_VALIDAR)
+
+
+@app.on_event("startup")
+def arrancar_validador():
+    """Primera sondeada inmediata + hilo de fondo. Con VALIDAR_NODOS_SEG=0 el
+    hilo no se levanta (tests controlan la validación a mano)."""
+    if os.environ.get("VALIDAR_NODOS_SEG", "15") == "0":
+        return
+    try:
+        validar_nodos()
+    except Exception:
+        pass
+    threading.Thread(target=_validador_periodico, daemon=True).start()
 
 
 @app.post("/nodos/usuario")
@@ -502,73 +695,143 @@ def nodos_usuario(
 def lista_nodos():
     refrescar_estados()
     c = conex()
-    columnas = "nombre, direccion, estado, ultimo_heartbeat, conexiones, tipo, dueno, alias"
+    columnas = "nombre, direccion, estado, ultimo_heartbeat, conexiones, tipo, dueno, alias, lat_ms, ult_ok"
     try:
         filas = c.execute(f"SELECT {columnas} FROM nodos ORDER BY nombre").fetchall()
     except sqlite3.OperationalError:
-        filas = c.execute("SELECT nombre, direccion, estado, ultimo_heartbeat FROM nodos ORDER BY nombre").fetchall()
+        try:
+            filas = c.execute("SELECT nombre, direccion, estado, ultimo_heartbeat, lat_ms, ult_ok FROM nodos ORDER BY nombre").fetchall()
+        except sqlite3.OperationalError:
+            filas = c.execute("SELECT nombre, direccion, estado, ultimo_heartbeat FROM nodos ORDER BY nombre").fetchall()
     ahora = time.time()
-    # latencias en paralelo para no encadenar 6 timeouts
-    medidas: dict[str, int | None] = {}
+    # sondeo + registro en paralelo: además de devolver la latencia, cada
+    # sondeo deja ult_ok/lat_ms anotados (la validación de vida se alimenta
+    # de aquí Y del validador de fondo; doble vía = nunca se queda frío)
+    medidas: dict[str, tuple[str, int | None]] = {}
     hilos = []
     for f in filas:
-        t = threading.Thread(target=lambda d=f["direccion"]: medidas.__setitem__(d, medir_ms(d)))
-        t.start()
-        hilos.append(t)
+        d = f["direccion"]
+        if d and _hoppable(d):
+            t = threading.Thread(target=lambda n=f["nombre"], dr=d: medidas.__setitem__(dr, (n, sondear_y_apuntar(n, dr))))
+            t.start()
+            hilos.append(t)
     for t in hilos:
-        t.join(timeout=1.2)
+        t.join(timeout=2.5)
     salida = []
     for f in filas:
         d = dict(f)
+        sondeado = medidas.get(d["direccion"])
+        # VALIDACIÓN DE VIDA: la web recibe los niveles de verdad:
+        #  · estado    -> «vivo» si late O si el sondeo fresco conectó
+        #  · responde  -> el sondeo TCP conectó en las últimas TTL_OK seg.
+        #  · saltable  -> puerto real Y responde (el circuito lo puede usar)
+        sin_ok = (ahora - d["ult_ok"]) if d.get("ult_ok") else None
+        resp = sin_ok is not None and sin_ok < TTL_OK
         salida.append({
             "nombre": d["nombre"],
             "direccion": d["direccion"],
             "estado": d["estado"],
             "conexiones": d.get("conexiones", 0),
             "ultimo_hb": round(ahora - d["ultimo_heartbeat"], 1),
-            "ms": medidas.get(d["direccion"], medir_ms(d["direccion"])),
+            "ms": sondeado[1] if sondeado else d.get("lat_ms"),
             # nodo dinámico: tipo infra/usuario, alias/dueno y si el backend lo
             # puede usar como salto (tu equipo sin servicio peer = no saltable)
             "tipo": d.get("tipo", "infra"),
             "alias": d.get("alias"),
             "dueno": d.get("dueno"),
             "hoppable": _hoppable(d["direccion"]),
+            "responde": resp,
+            "sin_ok_s": None if sin_ok is None else round(sin_ok, 1),
+            "saltable": bool(_hoppable(d["direccion"]) and resp),
         })
     return salida
 
 
-def elegir_circuito(n_saltos: int = N_SALTOS, excluir: set[str] | None = None) -> dict:
-    """Elige n_saltos nodos vivos y distintos al azar. HTTP 503 si no hay suficientes.
-    n_saltos por defecto 3; con plan pro se puede pedir hasta 7. Se incluyen los
-    equipos personales de usuarios que anuncian servicio (peer_*) como saltos
-    reales; `excluir` quita nodos del sorteo (p. ej., el propio equipo del
-    usuario para SU circuito)."""
-    refrescar_estados()
+def elegir_circuito(
+    n_saltos: int = N_SALTOS,
+    excluir: set[str] | None = None,
+    solo_externos: bool = False,
+    flexible: bool = False,
+) -> dict:
+    """Elige n_saltos nodos VivOs y distintos al azar (HTTP 503 si no hay).
+
+    · Validación REAL: solo entran nodos que respondieron al sondeo TCP
+      dentro de TTL_OK (la gente no sortea servicios que no se pueden
+      conectar; este era el agujero de la «fila viva pero muerta»).
+    · solo_externos: SOLO equipos de usuarios (peer_u*) que anuncian su
+      servicio — los contenedores docker del VPS quedan FUERA. Sirve para
+      probar que el circuito sale de verdad por la IP pública de un nodo
+      externo y no por la del servidor. Con flexible=True se admite menos
+      saltos de los pedidos si hay pocos externos (mínimo 1); eso permite
+      probar el mecanismo aunque la red solo tenga un peer vivo.
+    · excluir: nombres fuera del sorteo (p. ej, el propio equipo del
+      usuario para SU circuito).
+    """
+    refrescar_estados()  # heartbeat reciente O sondeo fresco: nada de zombis
     c = conex()
-    filas = c.execute("SELECT nombre, direccion FROM nodos WHERE estado='vivo'").fetchall()
-    # TODOS los nodos vivos son saltables (infra + equipos de usuarios que
-    # anuncian su servicio peer). Los registros sin puerto real (:0) o sin
-    # servicio no entran: no se puede conectar a ellos.
-    vivos = {f["nombre"]: f["direccion"] for f in filas if _hoppable(f["direccion"])}
-    # un circuito no salta por el propio equipo del usuario (su nodo personal
-    # se excluye de SU circuito, aunque siga siendo saltable para los demás)
+    try:
+        filas = c.execute(
+            "SELECT nombre, direccion, tipo, ult_ok, lat_ms FROM nodos WHERE estado='vivo'"
+        ).fetchall()
+    except sqlite3.OperationalError:
+        raise HTTPException(status_code=503, detail="lista de nodos sin validar; reintenta")
+    ahora = time.time()
+    saltables = {}
+    no_responde = int(0)
+    for f in filas:
+        d = f["direccion"]
+        if not d or not _hoppable(d):
+            continue
+        ok_fresco = f["ult_ok"] is not None and (ahora - f["ult_ok"]) < TTL_OK
+        if not ok_fresco:
+            # no ha sondeado nunca o está fría: sondea AHORA antes de
+            # decidir (evita la 503 injusta porque el validador aún no
+            # pasó por ese nodo)
+            ms = medir_ms(d)
+            ok_fresco = ms is not None
+            if ms is not None:
+                c.execute(
+                    "UPDATE nodos SET lat_ms=?, ult_ok=?, estado='vivo' WHERE nombre=?",
+                    (ms, ahora, f["nombre"]),
+                )
+        if solo_externos and (f["tipo"] or "infra") != "usuario":
+            continue
+        if ok_fresco:
+            saltables[f["nombre"]] = d
+        else:
+            no_responde += 1
+    c.commit()
     if excluir:
-        vivos = {n: d for n, d in vivos.items() if n not in excluir}
-    if len(vivos) < n_saltos:
-        raise HTTPException(status_code=503, detail=f"no hay suficientes nodos vivos ({len(vivos)})")
-    saltos = random.sample(list(vivos), n_saltos)
+        saltables = {n: d for n, d in saltables.items() if n not in excluir}
+    n_pedidos = max(1, n_saltos)
+    pool = saltables
+    n = n_pedidos
+    if solo_externos and flexible:
+        # modo de pruebas: con menos externos de los pedidos, usa los que haya
+        n = max(1, min(n_pedidos, len(pool)))
+    if len(pool) < n:
+        detalle = f"no hay suficientes nodos ({len(pool)} saltables"
+        if solo_externos:
+            detalle += f" en modo solo-externos; {no_responde} vistos sin responder"
+        detalle += ")"
+        raise HTTPException(status_code=503, detail=detalle)
+    elegidos = random.sample(list(pool), n)
     return {
-        "saltos": saltos,
-        "ruta_restante": ",".join(vivos[n] for n in saltos[1:]),
-        "exit": saltos[-1],
+        "saltos": elegidos,
+        "ruta_restante": ",".join(pool[d] for d in elegidos[1:]),
+        "exit": elegidos[-1],
+        "solo_externos": bool(solo_externos),
+        "pool": len(pool),
     }
 
 
 @app.post("/circuito")
-def circuito(saltos: int = N_SALTOS):
-    """Endpoint de prueba de la eleccion, con nº de saltos (3..7) (Fase 2)."""
+def circuito(saltos: int = N_SALTOS, modo: str = "todos"):
+    """Endpoint de PRUEBA de la elección (Fase 2 + nodoos externos, Fase 9):
+    nº de saltos (3..7) y, con modo=externos, salta SOLO por equipos de
+    usuarios dejando fuera los contenedores docker del VPS."""
     n = max(3, min(7, int(saltos)))
-    return elegir_circuito(n)
+    return elegir_circuito(n, solo_externos=(modo == "externos"), flexible=True)
 
 
 # ---------------------------------------------------------------- usuarios (Fase 3)
@@ -584,8 +847,12 @@ class Login(BaseModel):
 
 
 class Conexion(BaseModel):
-    """Con conexión POST /connect; el plan decide si se respeta o no saltos."""
+    """Con conexión POST /connect; el plan decide si se respeta o no saltos.
+    modo: 'todos' (infraestructura + equipos de usuarios, por defecto) o
+    'externos' (SOLO equipos de usuarios, para probar que internet ve la
+    IP del peer externo y no la del VPS)."""
     saltos: int | None = None  # nº deseado de saltos (solo plan pro: 3..7)
+    modo: str | None = None    # 'todos' | 'externos' (Fase 9, nodos externos)
 
 
 RE_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$")
@@ -746,6 +1013,14 @@ def connect(
             raise HTTPException(status_code=422, detail="tu plan no puede elegir saltos (3 fijos); el plan pro permite elegir 3..7")
         if pedidos > plan["saltos_max"]:
             raise HTTPException(status_code=422, detail=f"tu plan permite hasta {plan['saltos_max']} saltos")
+    # MODO DE SALTOS (Fase 9): 'todos' = infraestructura + equipos de usuarios
+    # (comportamiento normal); 'externos' = SOLO equipos de usuarios vivos y
+    # validados por sondeo TCP, para probar con hechos que internet ve la IP
+    # pública del peer externo y NO la del VPS. Se guarda en la fila del
+    # usuario para que /rotate respete el mismo modo.
+    modo = (cbase.modo if cbase and cbase.modo else None) or "todos"
+    if modo not in ("todos", "externos"):
+        raise HTTPException(status_code=422, detail="modo debe ser 'todos' o 'externos'")
     # nodo dinámico: el equipo del usuario queda en la lista de nodos desde su
     # PRIMERA conexión (persistente), AUNQUE la elección falla por falta de nodos.
     # Sin anuncio de servicio peer va con :0 → visible pero no saltable.
@@ -753,13 +1028,20 @@ def connect(
         registrar_nodo_usuario(u["id"], _alias_de(u), None, 0)
     except Exception:
         pass  # el registro del peer no debe romper jamás la conexión
-    circ = elegir_circuito(pedidos, excluir={f"peer_u{u['id']}"})
+    circ = elegir_circuito(pedidos, excluir={f"peer_u{u['id']}"}, solo_externos=(modo == "externos"), flexible=True)
     c.execute(
-        "UPDATE usuarios SET circuito=?, ip_salida=?, activo=1, ip_real=?, ultimo_cambio=? WHERE id=?",
+        "UPDATE usuarios SET circuito=?, ip_salida=?, activo=1, ip_real=?, modo=?, ultimo_cambio=? WHERE id=?",
         # ip_salida guarda la IP PUBLICA de salida (la que ve internet por el
         # circuito), no el nombre del nodo: si no se puede medir, se guarda el
         # nombre y ip_salida_efectiva() lo corregira en la siguiente lectura.
-        (json.dumps(circ["saltos"]), medir_ip_publica() or circ["exit"], ip_real(request), time.time(), u["id"]),
+        # En modo externos, la salida es la IP anunciada del peer exit (si la
+        # anunciada es una IP pública, es ES la respuesta de «¿qué IP ve
+        # internet?» — el peer está en su casa, no en el VPS).
+        (
+            json.dumps(circ["saltos"]),
+            (exit_ip_de(circ["exit"]) or medir_ip_publica() or circ["exit"]) if modo == "externos" else (medir_ip_publica() or circ["exit"]),
+            ip_real(request), modo, time.time(), u["id"],
+        ),
     )
     c.commit()
     return fila_a_dict(c.execute("SELECT * FROM usuarios WHERE id=?", (u["id"],)).fetchone())
@@ -797,10 +1079,17 @@ def rotate(request: Request, token: str | None = Header(default=None, alias="Aut
         if restante > 0:
             hs = restante / 3600
             raise HTTPException(status_code=429, detail=f"puedes refrescar el circuito cada {round(espera_s/3600)} h; te quedan {hs:.1f} h")
-    circ = elegir_circuito(len(json.loads(f["circuito"])) if f["circuito"] else 3)
+    # respeta el MODO preferido del usuario (lo eligió al conectar)
+    modo_previo = (f["modo"] if "modo" in f.keys() else "todos") or "todos"
+    circ = elegir_circuito(
+        len(json.loads(f["circuito"])) if f["circuito"] else 3,
+        excluir={f"peer_u{u['id']}"},
+        solo_externos=(modo_previo == "externos"),
+        flexible=True,
+    )
     c.execute(
         "UPDATE usuarios SET circuito=?, ip_salida=?, ultimo_cambio=? WHERE id=?",
-        (json.dumps(circ["saltos"]), medir_ip_publica() or circ["exit"], time.time(), u["id"]),
+        (json.dumps(circ["saltos"]), (exit_ip_de(circ["exit"]) or medir_ip_publica() or circ["exit"]) if modo_previo == "externos" else (medir_ip_publica() or circ["exit"]), time.time(), u["id"]),
     )
     c.commit()
     return fila_a_dict(c.execute("SELECT * FROM usuarios WHERE id=?", (u["id"],)).fetchone())
@@ -1035,7 +1324,7 @@ def geo(ip: str | None = None, token: str | None = Header(default=None, alias="A
 @app.get("/nodosvivos")
 def nodosvivos(token: str | None = Header(default=None, alias="Authorization")):
     _auth(token)   # cualquier usuario autenticado puede ver el contador
-    refrescar_estados()
+    resumen = validar_nodos()   # sondea y corrige estados ANTES de contar
     c = conex()
     infra = c.execute("SELECT COUNT(*) AS n FROM nodos WHERE estado='vivo'").fetchone()["n"]
     equipos = c.execute("SELECT COUNT(*) AS n FROM usuarios WHERE activo=1").fetchone()["n"]
@@ -1043,11 +1332,23 @@ def nodosvivos(token: str | None = Header(default=None, alias="Authorization")):
     usuarios_nodo = c.execute(
         "SELECT COUNT(*) AS n FROM nodos WHERE estado='vivo' AND tipo='usuario'"
     ).fetchone()["n"]
+    # VALIDADOS: los que además respondieron al sondeo TCP (salibles de verdad)
+    ahora = time.time()
+    validados = int(c.execute(
+        "SELECT COUNT(*) AS n FROM nodos WHERE ult_ok >= ?", (ahora - TTL_OK,)
+    ).fetchone()["n"])
+    externos_saltables = int(c.execute(
+        "SELECT COUNT(*) AS n FROM nodos WHERE tipo='usuario' AND ult_ok >= ?",
+        (ahora - TTL_OK,),
+    ).fetchone()["n"])
     return {
         "total": infra + equipos,
         "infra": infra,
         "equipos": equipos,
         "nodos_usuario": usuarios_nodo,
+        "validados": validados,               # responden a la sonda TCP ahora
+        "externos_saltables": externos_saltables,  # equipos de usuario validados
+        "validador": resumen,
         "cuando": time.time(),
     }
 

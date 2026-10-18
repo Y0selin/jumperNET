@@ -30,7 +30,12 @@ export async function api(metodo, ruta, cuerpo, autorizado = true) {
 export async function nodos() { return (await api("GET", "/nodos", null, false)).datos; }
 export async function me() { return (await api("GET", "/me")).datos; }
 export async function editarMe(prefs) { return (await api("PATCH", "/me", prefs)).datos; }
-export async function conectar(saltos = null) { return (await api("POST", "/connect", saltos ? { saltos } : {})).datos; }
+export async function conectar(saltos = null, modo = null) {
+  const cuerpo = {};
+  if (saltos) cuerpo.saltos = saltos;
+  if (modo) cuerpo.modo = modo;          // "todos" | "externos"
+  return (await api("POST", "/connect", cuerpo)).datos;
+}
 export async function rotar() { return (await api("POST", "/rotate", {})).datos; }
 export async function desconectar_() { return (await api("POST", "/disconnect", {})).datos; }
 export async function nodosVivos() { return (await api("GET", "/nodosvivos")).datos; }

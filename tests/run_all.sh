@@ -1,5 +1,5 @@
 #!/bin/bash
-# Pruebas integrales de JumperNAT (Fase 7): ejecuta de forma encadenada las
+# Pruebas integrales de JumperNET (Fase 7): ejecuta de forma encadenada las
 # pruebas de todas las fases y saca un resumen con exit 0 solo si TODO pasa.
 # Uso:  bash tests/run_all.sh        (desde ~/jumpernat en el VPS; y
 #       bash tests/ip_publica_real.sh desde tu propia maquina: cambia la IP
@@ -319,6 +319,79 @@ print(f[0] if f else '')")
 
 paso 9.3 "auto-reparacion: circuito guardado con hop muerto sigue funcionando" \
   repara_circuito_muerto
+
+# -------------------------------------------------------------- nodos EXTERNOS (Fase 9 avanzada)
+# El modo de saltos 'externos': el circuito salta SOLO por equipos de usuarios
+# (peers tipo usuario), jamás por los contenedores docker del VPS. Con un peer
+# REAL corriendo (mismo programa nodo, registrado bajo PEER_TOKEN) se prueba
+# de extremo a extremo que la petición pasa por ahí.
+
+modo_externos_e2e() {
+  local PEER T RESP CIRC code i
+  PEER=$(sed -n 's/^PEER_TOKEN=//p' .env 2>/dev/null | tr -d "\"'")
+  if [ -z "$PEER" ]; then echo "PEER_TOKEN no esta en .env: saltando el modo externos"; return 0; fi
+
+  # (10.1) batería python: validación TCP, niveles saltable/responde y modo
+  docker compose run --rm -e PEER_TOKEN="$PEER" cliente-test fase9_externos.py || return 1
+
+  # (10.2) peer REAL (protocolo completo del nodo) registrado con token de peer
+  docker rm -f peer_ext1 >/dev/null 2>&1
+  docker compose run -d --name peer_ext1 -e INTERNAL_TOKEN="$PEER" -e NODO_NOMBRE=peer_ext1 nodo1 >/dev/null \
+    || { echo "no pude levantar peer_ext1"; return 1; }
+  sleep 3
+
+  # sesión del usuario de pruebas: NO restar saltos del pool de infra
+  T=$(curl -s -X POST 127.0.0.1:8000/login -H 'Content-Type: application/json' \
+    -d "{\"email\":\"$SOCKS_USER\",\"password\":\"$SOCKS_PASS\"}" | python3 -c 'import json,sys;print(json.load(sys.stdin)["token"])')
+  [ -n "$T" ] || { echo "login de $SOCKS_USER fallo"; docker rm -f peer_ext1 >/dev/null 2>&1; return 1; }
+
+  # conectar en modo SÓLO EXTERNOS (reintentos: el sondeo del peer necesita
+  # que su heartbeat ya esté subido)
+  CIRC=""
+  for i in 1 2 3 4 5 6 7 8; do
+    curl -s -o /dev/null -X POST -H "Authorization: Bearer $T" 127.0.0.1:8000/disconnect
+    RESP=$(curl -s -X POST -H "Authorization: Bearer $T" 127.0.0.1:8000/connect \
+      -H 'Content-Type: application/json' -d '{"modo":"externos"}')
+    CIRC=$(echo "$RESP" | python3 -c 'import json,sys
+d = None
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    pass
+print(",".join((d or {}).get("circuito") or []))' 2>/dev/null || true)
+    echo "$CIRC" | grep -q 'peer_ext1' && break
+    sleep 5
+  done
+  if ! echo "$CIRC" | grep -q 'peer_ext1'; then
+    echo "no salió un circuito externo con peer_ext1: $RESP"
+    docker rm -f peer_ext1 >/dev/null 2>&1
+    return 1
+  fi
+  echo "circuito SOLO EXTERNOS: $CIRC"
+  # cada nombre del circuito es peer_* (nada de nodoX de infra)
+  if echo "$CIRC" | grep -Eq '(^|,)nodo[0-9]'; then
+    echo "el circuito externo contiene CONTENEDORES de infra: no debería"; docker rm -f peer_ext1 >/dev/null 2>&1; return 1
+  fi
+
+  # (10.3) E2E REAL: la petición sale POR el peer externo (web-destino)
+  if curl -fsS --max-time 25 --socks5-hostname \
+      "$(python3 -c "print('$SOCKS_USER'.replace('@','%40'))"):$SOCKS_PASS@127.0.0.1:1080" \
+      http://web-destino/ | grep -q 'IP de origen'; then
+    echo "· petición atravesó el circuito SOLO EXTERNOS (web-destino visible)"
+  else
+    echo "la petición no atravesó el circuito externo"; docker rm -f peer_ext1 >/dev/null 2>&1; return 1
+  fi
+
+  # (10.4) restaurar la sesión con un circuito NORMAL y limpiar el peer
+  curl -s -o /dev/null -X POST -H "Authorization: Bearer $T" 127.0.0.1:8000/disconnect
+  curl -s -o /dev/null -X POST -H "Authorization: Bearer $T" 127.0.0.1:8000/connect
+  docker rm -f peer_ext1 >/dev/null 2>&1
+  echo "sesión restaurada con circuito normal y peer de prueba retirado"
+  return 0
+}
+
+paso 10.1 "modo SÓLO EXTERNOS: validación + circuito solo peers + e2e con peer_ext1" \
+  modo_externos_e2e
 
 # ---------------------------------------------------------------- resumen
 echo ""

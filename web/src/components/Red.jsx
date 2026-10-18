@@ -41,6 +41,56 @@ function Interruptor({ activo, ocupado, alCambiar }) {
   );
 }
 
+/* ── selector del MODO de saltos ──
+   · todos: infraestructura (docker del VPS) + equipos de usuarios
+   · externos: SOLO equipos de usuarios con servicio validado por sondeo TCP
+     — modo de PRUEBA para comprobar que internet ve la IP del peer externo */
+function SelectorModo({ modo, setModo, yo, activo }) {
+  const [viv, setViv] = useState(null);
+  useEffect(() => {
+    let vida = true;
+    async function sondea() {
+      try { const d = await nodosVivos(); if (vida) setViv(d); } catch { /* silencio */ }
+    }
+    sondea();
+    const t = setInterval(sondea, 10000);
+    return () => { vida = false; clearInterval(t); };
+  }, []);
+  const externos = viv?.externos_saltables ?? yo?.externos_saltables ?? null;
+  return (
+    <div className="tarjeta" style={{ padding: "16px 20px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+        <h2 className="seccion" style={{ marginBottom: 0 }}>¿Por dónde quieres saltar?</h2>
+        {yo?.activo && yo?.modo === "externos" ? (
+          <span className="chip acento" style={{ fontSize: 10.5 }}>tu circuito actual es SÓLO EXTERNO</span>
+        ) : null}
+        <span className="chip mono" style={{ fontSize: 10.5 }}>
+          {externos != null ? `${externos} equipo(s) externo(s) validados ahora` : "consultando externos…"}
+        </span>
+      </div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <button className={`btn ${modo === "todos" ? "primario" : ""}`} style={{ flex: "1 1 240px" }}
+          onClick={() => setModo("todos")} disabled={modo === "todos"}
+          title="Circuito normal: nodos del VPS + equipos de usuarios con su servicio encendido">
+          ⚡ Todos los nodos
+          <div className="nota mono" style={{ fontSize: 10.5, marginTop: 4 }}>infra del VPS + equipos de usuarios</div>
+        </button>
+        <button className={`btn ${modo === "externos" ? "primario" : ""}`} style={{ flex: "1 1 240px" }}
+          onClick={() => setModo("externos")} disabled={modo === "externos"}
+          title="Modo de PRUEBA: el circuito salta solo por equipos de usuarios — comprueba que internet ve la IP de su casa y no la del servidor">
+          🏠 Solo externos (prueba)
+          <div className="nota mono" style={{ fontSize: 10.5, marginTop: 4 }}>sale por la IP pública de un equipo externo</div>
+        </button>
+      </div>
+      <p className="nota" style={{ marginTop: 10, fontSize: 12 }}>
+        {modo === "externos"
+          ? "El circuito usará ÚNICAMENTE equipos de usuarios (peer_*) cuyo servicio respondió a la sonda TCP: nada de los contenedores del VPS. Ideal para verificar con «¿está funcionando de verdad?» que sales por OTRA IP. Si no hay externos validados suficientes la conexión lo dirá claramente."
+          : "Modo normal: mezcla los nodos de la red con los equipos de usuarios que se hayan unido como relés voluntarios (estilo TOR)."}
+      </p>
+    </div>
+  );
+}
+
 /* ── selector de nº de saltos (solo plan pro; free lo ve bloqueado) ── */
 function SelectorSaltos({ yo, saltosSel, setSel, ocupado }) {
   const puede = !!yo?.puede_elegir_saltos;
@@ -109,7 +159,7 @@ function ContadorVivos({ yo }) {
       <span className="punto-vivo" />
       <b className="mono" style={{ fontSize: 15.5 }}>≈ {vivo ? vivo.total : "…"} nodos activos ahora</b>
       <span className="nota mono" style={{ fontSize: 11.5 }}>
-        {vivo ? <> (infra {vivo.infra} + equipos de usuarios conectados {vivo.equipos}{vivo.nodos_usuario ? ` · nodos de usuarios ${vivo.nodos_usuario}` : ""})</> : "midiendo…"} · en vivo, 10 s
+        {vivo ? <> ({vivo.infra} infra + {vivo.equipos} equipos conectados{vivo.nodos_usuario ? ` · ${vivo.nodos_usuario} nodos de usuarios` : ""}{vivo.validados != null ? ` · ${vivo.validados} validados por sonda` : ""})</> : "midiendo…"} · en vivo, 10 s
       </span>
     </div>
   );
@@ -158,6 +208,9 @@ function TablonVivo({ yo, aviso }) {
     <div className="tarjeta apa-1" aria-label="Tu conexión en tiempo real">
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
         <h2 className="seccion" style={{ marginBottom: 0 }}>Tu conexión — en vivo</h2>
+        {yo?.modo === "externos" ? (
+          <span className="chip acento" style={{ fontSize: 10.5 }} title="tu circuito salta SOLO por equipos de usuarios externos">modo SÓLO EXTERNOS</span>
+        ) : null}
         {fallo
           ? <span className="chip muerto mono" style={{ fontSize: 10.5 }}>API: {fallo.slice(0, 40)}</span>
           : <span className="etiqueta-viva">● LIVE · cada 4 s</span>}
@@ -297,6 +350,7 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
   const [ipSalida, setIpSalida] = useState(null);
   const [avisaExt, setAvisaExt] = useState(false);
   const [saltosSel, setSel] = useState(3);   // nº deseado de saltos (plan pro)
+  const [modoSel, setModo] = useState("todos"); // "todos" | "externos"
   const divMapa = useRef(null);
   const mapa = useRef(null);
   const capa = useRef(null);
@@ -434,14 +488,17 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
       {/* ── tablón en vivo: salto a salto, latencia real, latido de tu equipo ── */}
       <TablonVivo yo={yo} aviso={aviso} />
 
+      {/* ── selector del MODO de saltos ── */}
+      <SelectorModo modo={modoSel} setModo={setModo} yo={yo} activo={activo} />
+
       {/* ── selector de nº de saltos (pro elige, free lo ve bloqueado) ── */}
       <SelectorSaltos yo={yo} saltosSel={saltosSel} setSel={setSel} ocupado={ocupado} />
 
       {/* ── interruptor ── */}
       <Interruptor
         activo={activo} ocupado={ocupado}
-        alCambiar={() => accion(activo ? () => desconectar_() : () => conectar(saltosSel),
-          activo ? "red desactivada" : `red activada ✓ — ${saltosSel} saltos`)}
+        alCambiar={() => accion(activo ? () => desconectar_() : () => conectar(saltosSel, modoSel),
+          activo ? "red desactivada" : `red activada ✓ — ${saltosSel} saltos (${modoSel})`)}
         saltos={saltosSel}
       />
 

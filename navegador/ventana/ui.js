@@ -26,6 +26,9 @@ function creaPestana(url = HOME) {
   view.style.display = "none";
   view.src = url;
   $("paginas").appendChild(view);
+  // el primer tamaño: clavamos el webview al contenedor DESDE EL PRINCIPIO
+  // (evita la pestaña cortada si la ventana cambia antes del primer frame)
+  requestAnimationFrame(reajustaWebviews);
 
   const p = { view, titulo: "Nueva pestaña" };
   pestanas.push(p);
@@ -55,6 +58,10 @@ function activaPestana(i) {
   ptab = i;
   pestanas.forEach((p, j) => { p.view.style.display = j === i ? "block" : "none"; });
   pintaPestanas();
+  // la pestaña recién activa puede venir con tamaño viejo del webview:
+  // fijarlo al contenedor ANTES de pintar la dirección (evita «cortada»)
+  setTimeout(reajustaWebviews, 30);
+  reajustaWebviews();
   const v = pestanas[i] && pestanas[i].view;
   if (v) pintaNav(v);
 }
@@ -190,6 +197,35 @@ async function activarProxy() {
   }
 }
 
+/* ═══════════════ FIX del recorte a mitad de pantalla (BUG visivo) ═════════
+   Los <webview> de Electron NO se redimensionan solos al cambiar el tamaño de
+   la ventana (bug conocido de Chromium): quedan clavados al tamaño del primer
+   render y el contenido se ve CORTADO (la mitad inferior blanca/vacía).
+   Solución: fijar su tamaño EXACTO en píxeles en cada resize del shell. */
+function reajustaWebviews() {
+  const caja = $("paginas");
+  if (!caja) return;
+  const ancho = Math.max(0, Math.floor(caja.clientWidth));
+  const alto = Math.max(0, Math.floor(caja.clientHeight));
+  pestanas.forEach((p) => {
+    const v = p.view;
+    if (!v) return;
+    if (v.clientWidth !== ancho || v.clientHeight !== alto) {
+      v.style.width = ancho + "px";
+      v.style.height = alto + "px";
+      // re-pegar el atributo fuerza a Chromium a rehacer el layout interno
+      try { v.setAttribute("style", v.getAttribute("style") || ""); } catch { /* nada */ }
+    }
+  });
+}
+/* OJO: SIN requestAnimationFrame. Cuando la ventana no está renderizando
+   (minimizada, oculta, fuera de foco en algunos motores) los callbacks de
+   rAF NO se ejecutan y el arreglo se durmió justo cuando hacía falta:
+   probado en real — con rAF el webview seguía cortado tras el resize.
+   Llamada directa + red de seguridad intervalada. */
+window.addEventListener("resize", reajustaWebviews);
+setInterval(reajustaWebviews, 1000);   // de-todos modos: cada segundo, barato
+
 /* ═══════════════════════════════════════════════════════════ arranque ══ */
 
 window.addEventListener("DOMContentLoaded", async () => {
@@ -233,6 +269,13 @@ window.addEventListener("DOMContentLoaded", async () => {
   try { window.__jn.estado = await window.jn.obtenerEstado(); } catch (e) { logDiag("estado inicial falló: " + e); }
   pintaChip(window.__jn.estado);
   pintaPanel(window.__jn.estado);
+
+  // reajustado inicial + observador del contenedor (por si cambia el layout
+  // del chrome — la omnibox envuelta a dos líneas reduce el área de páginas)
+  reajustaWebviews();
+  try {
+    new ResizeObserver(reajustaWebviews).observe($("paginas"));
+  } catch { /* sin ResizeObserver: queda el evento resize de la ventana */ }
 
   // si hay sesión guardada y activa, aviso discreto en el chip (ya navega por el proxy)
   logDiag("shell listo");

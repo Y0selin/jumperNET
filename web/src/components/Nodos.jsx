@@ -13,7 +13,7 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
   const [visto, setVisto] = useState(null);
   const [vista, setVista] = useState("tarjetas");   // tarjetas | tabla
   const [orden, setOrden] = useState("nombre");     // nombre | latencia | conexiones
-  const [bloque, setBloque] = useState("todos");    // todos | vivos | circuito | peer | infra
+  const [bloque, setBloque] = useState("todos");    // todos|vivos|circuito|peer|externos|infra
   const [busca, setBusca] = useState("");
 
   /* Privacidad de la vista: un usuario NORMAL solo ve los nodos DE SU CIRCUITO
@@ -55,6 +55,7 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
     else if (bloque === "desconectados") copia = copia.filter((n) => n.estado !== "vivo");
     else if (bloque === "circuito") copia = copia.filter((n) => papel(n.nombre) != null);
     else if (bloque === "peer") copia = copia.filter((n) => (n.tipo || "infra") === "usuario");
+    else if (bloque === "externos") copia = copia.filter((n) => (n.tipo || "infra") === "usuario" && n.saltable);
     else if (bloque === "infra") copia = copia.filter((n) => (n.tipo || "infra") === "infra");
     const q = busca.trim().toLowerCase();
     if (q) copia = copia.filter((n) =>
@@ -114,6 +115,7 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
                 <option value="desconectados">solo desconectados</option>
                 <option value="circuito">de mi circuito</option>
                 <option value="peer">equipos de usuarios</option>
+                <option value="externos">externos saltables (validados)</option>
                 <option value="infra">infraestructura</option>
               </select>
             )}
@@ -193,8 +195,17 @@ function TarjetasNodos({ lista, yo, papel, cargando }) {
               }} />
               <b className="mono" style={{ fontSize: 14.5 }}>{n.nombre}</b>
               {(n.tipo || "infra") === "usuario" || n.nombre?.startsWith("peer_") ? (
-                <span className="chip acento" style={{ fontSize: 10 }}>personal{!n.hoppable && " · sin servicio peer"}</span>
+                <span className="chip acento" style={{ fontSize: 10 }}>
+                  personal{!n.hoppable && " · sin servicio peer"}{n.hoppable && !n.responde && " · no responde"}
+                </span>
               ) : null}
+              {/* validación de vida: responde = la sonda TCP lo alcanzó ya */}
+              {n.responde && (
+                <span className="chip mono" style={{ fontSize: 9.5, color: "var(--acento-1)" }} title="el servidor conectó por TCP con este nodo hace menos de 1 minuto">✓ verificado</span>
+              )}
+              {n.hoppable && !n.responde && (
+                <span className="chip mono nota" style={{ fontSize: 9.5 }} title="anuncia un servicio peer (host:puerto) pero la última sonda TCP no conectó: no salta">◌ sin verificar</span>
+              )}
               {n.alias && <span className="nota" style={{ fontSize: 11.5 }}>“{n.alias}”</span>}
               {p && <span className={`chip ${p === "exit" ? "vivo" : "acento"}`}>{activo ? `${p} · tu circuito #${pos + 1}` : p}</span>}
               <span className={`chip mono ${vivo ? "vivo" : "muerto"}`} style={{ marginLeft: "auto", fontSize: 10.5 }}>{n.estado.toUpperCase()}</span>
@@ -228,6 +239,7 @@ function TarjetasNodos({ lista, yo, papel, cargando }) {
               <div className="mono nota" style={{ fontSize: 11.5, display: "flex", gap: 14, flexWrap: "wrap" }}>
                 <span>⛓ {n.conexiones ?? 0} conexiones</span>
                 <span>↔ {n.direccion}</span>
+                {n.saltable && <span style={{ color: "var(--acento-1)" }}>⚡ saltable</span>}
               </div>
             </div>
           </div>
@@ -238,6 +250,7 @@ function TarjetasNodos({ lista, yo, papel, cargando }) {
           {cargando ? "cargando nodos…"
             : bloque === "vivos" ? "no hay nodos conectados en este momento"
             : bloque === "desconectados" ? "ningún nodo desconectado ahora: todos están en pie"
+            : bloque === "externos" ? "todavía no hay equipos externos validados: conéctate con un peer y saldrá aquí"
             : bloque === "busca" ? "nadie casa con la búsqueda"
             : "no hay nodos registrados todavía"}
         </div>
@@ -259,6 +272,7 @@ function TablaNodos({ lista, papel, cargando }) {
             <th>nodo</th>
             <th>papel</th>
             <th>estado</th>
+            <th>validación</th>
             <th className="der">latencia</th>
             <th className="der">conexiones</th>
             <th className="der">último latido</th>
@@ -279,6 +293,13 @@ function TablaNodos({ lista, papel, cargando }) {
                     {n.estado}
                   </span>
                 </td>
+                <td>
+                  {n.responde
+                    ? <span className="chip mono" style={{ fontSize: 10, color: "var(--acento-1)" }} title="la sonda TCP del servidor conectó">✓ verificado</span>
+                    : (n.tipo || "infra") === "usuario"
+                      ? <span className="chip mono nota" style={{ fontSize: 10 }}>sin verificar</span>
+                      : <span className="nota">—</span>}
+                </td>
                 <td className="der">{n.ms != null ? `${n.ms} ms` : "—"}</td>
                 <td className="der">{n.conexiones ?? 0}</td>
                 <td className="der nota" style={{ textAlign: "right" }}>{n.ultimo_hb != null ? `hace ${n.ultimo_hb}s` : "—"}</td>
@@ -287,7 +308,7 @@ function TablaNodos({ lista, papel, cargando }) {
             );
           })}
           {!lista.length && !cargando && (
-            <tr><td colSpan={7} className="nota">no hay nodos registrados todavía</td></tr>
+            <tr><td colSpan={8} className="nota">no hay nodos registrados todavía</td></tr>
           )}
         </tbody>
       </table>

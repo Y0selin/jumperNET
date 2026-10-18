@@ -24,14 +24,18 @@ const MOCK_PAGINA = /* js */ `
   const b64u = (o) => btoa(JSON.stringify(o)).replace(/=+$/, "").replace(/\\+/g, "-").replace(/\\//g, "_");
   const jwt = () => { const a = Math.floor(Date.now() / 1000); return b64u({ alg: "HS256", typ: "JWT" }) + "." + b64u({ sub: "7", email: S.email, iat: a, exp: a + 7200 }) + ".firma-simulada"; };
   const NODOS = [
-    { nombre: "nodo1", direccion: "nodo1:9000", estado: "vivo", conexiones: 1, ultimo_hb: 3.2, ms: 4, tipo: "infra", dueno: null, alias: null, hoppable: true },
-    { nombre: "nodo2", direccion: "nodo2:9000", estado: "vivo", conexiones: 2, ultimo_hb: 4.1, ms: 5, tipo: "infra", dueno: null, alias: null, hoppable: true },
-    { nombre: "nodo3", direccion: "nodo3:9000", estado: "vivo", conexiones: 0, ultimo_hb: 6.0, ms: 3, tipo: "infra", dueno: null, alias: null, hoppable: true },
-    { nombre: "nodo4", direccion: "nodo4:9000", estado: "vivo", conexiones: 0, ultimo_hb: 8.4, ms: 7, tipo: "infra", dueno: null, alias: null, hoppable: true },
-    { nombre: "nodo5", direccion: "nodo5:9000", estado: "vivo", conexiones: 0, ultimo_hb: 2.2, ms: 6, tipo: "infra", dueno: null, alias: null, hoppable: true },
-    { nombre: "nodo6", direccion: "nodo6:9000", estado: "caido", conexiones: 0, ultimo_hb: 62.0, ms: null, tipo: "infra", dueno: null, alias: null, hoppable: true },
+    { nombre: "nodo1", direccion: "nodo1:9000", estado: "vivo", conexiones: 1, ultimo_hb: 3.2, ms: 4, tipo: "infra", dueno: null, alias: null, hoppable: true, responde: true, sin_ok_s: 2.1, saltable: true },
+    { nombre: "nodo2", direccion: "nodo2:9000", estado: "vivo", conexiones: 2, ultimo_hb: 4.1, ms: 5, tipo: "infra", dueno: null, alias: null, hoppable: true, responde: true, sin_ok_s: 3.3, saltable: true },
+    { nombre: "nodo3", direccion: "nodo3:9000", estado: "vivo", conexiones: 0, ultimo_hb: 6.0, ms: 3, tipo: "infra", dueno: null, alias: null, hoppable: true, responde: true, sin_ok_s: 1.7, saltable: true },
+    { nombre: "nodo4", direccion: "nodo4:9000", estado: "vivo", conexiones: 0, ultimo_hb: 8.4, ms: 7, tipo: "infra", dueno: null, alias: null, hoppable: true, responde: true, sin_ok_s: 4.0, saltable: true },
+    { nombre: "nodo5", direccion: "nodo5:9000", estado: "vivo", conexiones: 0, ultimo_hb: 2.2, ms: 6, tipo: "infra", dueno: null, alias: null, hoppable: true, responde: true, sin_ok_s: 2.8, saltable: true },
+    { nombre: "nodo6", direccion: "nodo6:9000", estado: "caido", conexiones: 0, ultimo_hb: 62.0, ms: null, tipo: "infra", dueno: null, alias: null, hoppable: true, responde: false, sin_ok_s: null, saltable: false },
     // nodo personal DINÁMICO del usuario e2e (id 7): entra por su latido
-    { nombre: "peer_u7", direccion: "83.34.12.7:0", estado: "vivo", conexiones: 0, ultimo_hb: 1.5, ms: null, tipo: "usuario", dueno: 7, alias: "Mi portátil", hoppable: false },
+    { nombre: "peer_u7", direccion: "83.34.12.7:0", estado: "vivo", conexiones: 0, ultimo_hb: 1.5, ms: null, tipo: "usuario", dueno: 7, alias: "Mi portátil", hoppable: false, responde: false, sin_ok_s: null, saltable: false },
+    // peer EXTERNO validado (servicio de un usuario que SÍ responde)
+    { nombre: "peer_ext_casa", direccion: "93.176.44.10:9000", estado: "vivo", conexiones: 1, ultimo_hb: 2.0, ms: 48, tipo: "usuario", dueno: 9, alias: "El peer de una amigos", hoppable: true, responde: true, sin_ok_s: 5.5, saltable: true },
+    // peer externo que ENVÍA latido pero su servicio NO responde
+    { nombre: "peer_zombi", direccion: "88.12.9.44:9000", estado: "vivo", conexiones: 0, ultimo_hb: 1.0, ms: null, tipo: "usuario", dueno: 11, alias: null, hoppable: true, responde: false, sin_ok_s: null, saltable: false },
   ];
   const GEO = {
     [IP_REAL]: { ok: true, lat: 43.2630, lon: -2.9350, ciudad: "Bilbao", region: "País Vasco", pais: "España", org: "Euskaltel", fuente: "ipwho.is" },
@@ -60,18 +64,28 @@ const MOCK_PAGINA = /* js */ `
         return res({ id: 7, email: S.email, ip_real: IP_REAL, ip_salida: S.activo ? IP_SALIDA : null,
                      nodo_exit: S.circuito.length ? S.circuito[S.circuito.length - 1] : null,
                      circuito: S.circuito, activo: S.activo, ultimo_cambio: S.ultimoCambio || null,
+                     // Fase 9 - modo de saltos elegido por el usuario + IP del exit externo
+                     modo: S.modo || "todos", exit_ip: (S.modo === "externos" ? "93.176.44.10" : null),
                      // panel nuevo: rol y plano con límites (solo el moderador ve TODOS los nodos)
                      rol: "moderador", plan: "pro", saltos_min: 3, saltos_max: 7,
                      puede_elegir_saltos: true, refresco_cada_h: 10 });
       }
-      if (ruta === "/connect") { S.activo = true; S.circuito = ["nodo2", "nodo1", "nodo6"]; S.ultimoCambio = Date.now() / 1000; return res({ ok: true }); }
+      if (ruta === "/connect") {
+        S.activo = true; S.ultimoCambio = Date.now() / 1000;
+        S.modo = cuerpo.modo || "todos";
+        S.conexiones = S.conexiones || [];
+        S.conexiones.push({ modo: S.modo, saltos: cuerpo.saltos || null });
+        // modo externos -> circuito SOLO con peers tipo usuario (validados)
+        S.circuito = S.modo === "externos" ? ["peer_ext_casa"] : ["nodo2", "nodo1", "nodo6"];
+        return res({ ok: true });
+      }
       if (ruta === "/rotate") { S.circuito = ["nodo3", "nodo5", "nodo4"]; S.ultimoCambio = Date.now() / 1000; return res({ ok: true }); }
       if (ruta === "/disconnect") { S.activo = false; S.circuito = []; return res({ ok: true }); }
       if (ruta === "/nodos") return res(NODOS);
       if (ruta === "/nodos/usuario") { S.latidos = (S.latidos || 0) + 1; const f = NODOS.find((n) => n.nombre === "peer_u7"); return res(f); }
       if (ruta === "/nodosvivos") {
         const v = NODOS.filter((n) => n.estado === "vivo").length;
-        return res({ total: v + (S.activo ? 1 : 0), infra: v, equipos: S.activo ? 1 : 0, nodos_usuario: 1, cuando: Date.now() / 1000 });
+        return res({ total: v + (S.activo ? 1 : 0), infra: v - 1, equipos: S.activo ? 1 : 0, nodos_usuario: 2, validados: 7, externos_saltables: 1, cuando: Date.now() / 1000 });
       }
       if (ruta === "/salida") return res({ ip_salida: IP_SALIDA, nodo_exit: S.circuito.slice(-1)[0] || null, activo: S.activo });
       if (ruta === "/geo") {
@@ -268,6 +282,11 @@ igual(await pagina.evaluate(() =>
   [...document.querySelectorAll("button[disabled]")].some((b) => (b.textContent || "").includes("Comprobar"))), true, "la comprobación está deshabilitada con la red apagada");
 /* selector de nº de saltos (nuevo, plan pro): las 5 opciones visibles */
 igual(await pagina.evaluate(() => [...document.querySelectorAll("button")].some((b) => (b.textContent || "").includes("7 saltos"))), true, "selector de saltos con la opción 7");
+/* Fase 9 — selector del MODO de saltos: todos vs solo externos + contador validados */
+igual(await incluye("¿Por dónde quieres saltar?"), true, "selector del modo de saltos arriba del interruptor");
+igual(await pagina.evaluate(() => [...document.querySelectorAll("button")].some((b) => (b.textContent || "").includes("Solo externos"))), true, "opción de modo SÓLO EXTERNOS visible (prueba de IP del peer)");
+igual(await incluye("equipo(s) externo(s) validados"), true, "contador de externos validados por sonda TCP");
+igual(await incluye("validados por sonda"), true, "el contador global ensea los nodos verificados por sondeo");
 await captura("03-panel-apagado");
 
 console.log("\n== 4 · ACTIVAR RED + verificación real de la IP ==");
@@ -322,6 +341,20 @@ igual(nodosEnPagina >= 6, true, `vas a ver los 6 nodos aunque estés en vista ta
 igual(c.includes("exit") && c.includes("entrada"), true, "papel de cada nodo en tu circuito (entrada / exit)");
 igual(await incluye("nodo6:9000"), true, "dirección interna real de cada nodo");
 igual(await incluye("caido"), true, "nodo6 sin latido marcado como caído (estado por heartbeat real)");
+/* validación de vida y externos en la lista de nodos */
+igual(await incluye("peer_ext_casa"), true, "el peer externo validado aparece en la lista");
+igual(await incluye("peer_zombi"), true, "el peer que late sin servicio también se ve");
+igual(await incluye("verificado"), true, "chips de verificación por sonda TCP");
+igual(await incluye("sin verificar"), true, "el peer zombi queda marcado como sin verificar (no saltable)");
+igual(await incluye("saltable"), true, "los validados se marcan como saltables");
+/* filtro EXTERNOS en el desplegable: solo quedan peers tipo usuario validados */
+await pagina.select('select[aria-label="Filtrar nodos"]', "externos");
+await espera(600);
+c = await cuerpo();
+igual(c.includes("peer_ext_casa"), true, "con filtro externos se conserva el peer validado");
+igual(c.includes("peer_zombi") || c.includes("nodo1"), false, "con filtro externos NO aparecen ni zombis ni infra");
+await pagina.select('select[aria-label="Filtrar nodos"]', "todos");
+await espera(400);
 await captura("06-nodos");
 
 console.log("\n== 8 · DOCUMENTACIÓN, CUENTA y DISEÑADOR ==");
