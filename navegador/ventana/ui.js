@@ -1,72 +1,50 @@
-/* JumperNET Browser — UI: pestañas, omnibox, circuito tipo Tor */
+/* JumperNET Browser v2 — UI: pestañas, omnibox y chip PROXY */
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const pestanas = []; // [{view, capturada:bool, titulo}]
-let ptab = -1;       // índice de la pestaña activa
+const HOME = "https://duckduckgo.com/?q=";
 
-/* La home es LOCAL (: jn://inicio, página propia con el buscador integrado —
- * como la página-cta del Tor Browser pero nuestra). El MOTOR por defecto es
- * DuckDuckGo, igual que Tor: cualquier texto libre del omnibox va a
- * duckduckgo.com/?q=… a través del circuito. */
-const HOME = "jn://inicio";
+const pestanas = []; // [{view, titulo}]
+let ptab = -1;
 
-/* ───── estado de la red (chip + menú) ───── */
-function pintaEstado(st) {
-  const chip = $("chipEstado");
-  if (st && st.activo) {
-    chip.className = "chip viva";
-    chip.textContent = "CIRCUITO ACTIVO";
-  } else if (st && st.conectado) {
-    chip.className = "chip apagada";
-    chip.textContent = "RED APAGADA — pulsa ⌖";
-  } else {
-    chip.className = "chip";
-    chip.textContent = "SIN SESIÓN";
-  }
-  $("notaCuenta").textContent = st && st.email ? "sesión: " + st.email : "sin sesión";
-  if (st && st.activo) {
-    const saltos = (st.circuito || []).join(" → ") || "nodo → nodo → nodo";
-    $("cadenaCircuit").textContent = "tu página → " + saltos + " → internet";
-    $("notaCircuit").textContent = "exit: " + (st.ip_salida || "midiendo…") + " · 3 saltos";
-    $("bRotar").disabled = false;
-  } else {
-    $("cadenaCircuit").textContent = st && st.error ? "error: " + st.error : "circuito apagado — conecta tu cuenta";
-    $("notaCircuit").textContent = "exit: —";
-    $("bRotar").disabled = true;
-  }
+/* telemetría legible por CDP / depuración: window.__jn */
+window.__jn = { eventos: [], estado: null };
+function logDiag(t) {
+  try {
+    window.__jn.eventos.push(new Date().toISOString().slice(11, 19) + " " + t);
+    if (window.__jn.eventos.length > 60) window.__jn.eventos.shift();
+  } catch { /* nada */ }
 }
 
-async function refrescaEstado() {
-  try { pintaEstado(await window.jn.estado()); } catch { /* sin API aún */ }
-}
+/* ═══════════════════════════════════════════════════════════ pestañas ══ */
 
 function creaPestana(url = HOME) {
   const view = document.createElement("webview");
-  view.style.display = "none";
-  view.setAttribute("partition", "persist:jn"); // sesión persistente del navegador
+  view.setAttribute("partition", "persist:jn");
   view.setAttribute("allowpopups", "");
+  view.setAttribute("webpreferences", "backgroundThrottling=no");
+  view.style.display = "none";
   view.src = url;
   $("paginas").appendChild(view);
 
   const p = { view, titulo: "Nueva pestaña" };
   pestanas.push(p);
 
-  view.addEventListener("page-title-updated", (e) => {
-    p.titulo = e.title || p.titulo;
-    pintaPestanas();
-  });
+  view.addEventListener("page-title-updated", (e) => { p.titulo = e.title || p.titulo; pintaPestanas(); });
   view.addEventListener("did-navigate", () => { if (pestanas[ptab] === p) pintaNav(view); });
   view.addEventListener("did-navigate-in-page", () => { if (pestanas[ptab] === p) pintaNav(view); });
-  view.addEventListener("dom-ready", () => {
-    try { pintaNav(view); } catch { /* nada */ }
-    try { view.focus(); } catch { /* nada */ }
-  });
+  view.addEventListener("did-start-loading", () => logDiag("carga: " + String(view.src || "").slice(0, 60)));
   view.addEventListener("did-fail-load", (e) => {
-    if (e.errorCode === -3) return; // carga abortada
-    if (pestanas[ptab] === p) {
-      $("candado").className = "candado"; $("candado").style.color = "var(--error)";
-    }
+    if (e.errorCode === -3) return;
+    logDiag("fallo " + e.errorCode + " " + (e.errorDescription || "") + " en " + String(e.validatedURL || "").slice(0, 50));
+    pintaCandado(view, true);
+  });
+  view.addEventListener("dom-ready", () => {
+    let u = "";
+    try { u = view.getURL() || ""; } catch { u = view.src || ""; }
+    logDiag("dom-ready " + u.slice(0, 60));
+    if (pestanas[ptab] === p) pintaNav(view);
+    try { view.focus(); } catch { /* nada */ }
   });
 
   activaPestana(pestanas.length - 1);
@@ -84,7 +62,6 @@ function activaPestana(i) {
 function cierraPestana(i) {
   const p = pestanas[i];
   if (!p) return;
-  try { p.view.closeHandled = true; } catch { /* nada */ }
   p.view.remove();
   pestanas.splice(i, 1);
   if (!pestanas.length) { creaPestana(HOME); return; }
@@ -98,9 +75,12 @@ function pintaPestanas() {
     const d = document.createElement("div");
     d.className = "pestana" + (i === ptab ? " activa" : "");
     const t = document.createElement("span");
-    t.className = "titulo"; t.textContent = p.titulo || "·";
+    t.className = "titulo";
+    t.textContent = p.titulo || "·";
     const c = document.createElement("span");
-    c.className = "cruces"; c.textContent = "✕"; c.title = "Cerrar pestaña";
+    c.className = "cruces";
+    c.textContent = "✕";
+    c.title = "Cerrar pestaña";
     c.onclick = (e) => { e.stopPropagation(); cierraPestana(i); };
     d.append(t, c);
     d.onclick = () => activaPestana(i);
@@ -108,100 +88,152 @@ function pintaPestanas() {
   });
 }
 
-/* ───── omnibox ───── */
-function pintaNav(v) {
-  /* los getters del webview LANZAN hasta que no hace "dom-ready" (por ejemplo
-   * justo tras crear la pestana). Nada de esto puede romper el flujo del
-   * login: si no estara listo, usamos el src que conocemos y ya. */
+/* ═══════════════════════════════════════════════════════════ omnibox ══ */
+
+function pintaCandado(view, enError = false) {
   let u = "";
-  try { u = v.getURL ? v.getURL() : ""; } catch { u = v.src || ""; }
-  if (/^jn:/.test(u)) $("url").value = u;              // esquema propio, sin trims
-  else $("url").value = /^https:/.test(u) ? u.replace(/^https:\/\//, "") : u;
-  $("candado").className = "candado" + (/^https:/.test(u) ? " https" : "");
-  $("candado").style.color = "";
-  const i = pestanas.findIndex((p) => p.view === v);
+  try { u = view.getURL ? view.getURL() : ""; } catch { u = view.src || ""; }
+  const https = /^https:/.test(u);
+  $("candado").textContent = enError ? "◈!" : (https ? "◈" : "◇");
+  $("candado").style.color = enError ? "var(--rojo)" : (https ? "var(--ok)" : "var(--suave)");
+}
+
+function pintaNav(view) {
+  let u = "";
+  try { u = view.getURL ? view.getURL() : ""; } catch { u = view.src || ""; }
+  $("url").value = u.startsWith("jn://") ? u : u.replace(/^https?:\/\//, "");
+  pintaCandado(view, false);
+  const i = pestanas.findIndex((p) => p.view === view);
   if (i >= 0) {
-    let titulo;
-    try { titulo = v.getTitle ? v.getTitle() : null; } catch { titulo = null; }
+    let titulo = null;
+    try { titulo = view.getTitle ? view.getTitle() : null; } catch { /* nada */ }
     pestanas[i].titulo = titulo || pestanas[i].titulo;
     pintaPestanas();
   }
 }
 
 function normalizaAUrl(txt) {
-  const t = txt.trim();
+  const t = (txt || "").trim();
   if (!t) return HOME;
-  if (/^(https?:\/\/|about:|file:)/i.test(t)) return t;
+  if (/^(https?:\/\/|about:|jn:)/i.test(t)) return t;
   if (/^[\w-]+(\.[\w-]+)+(\/|$|\?|:)/.test(t)) return "https://" + t;
   return "https://duckduckgo.com/?q=" + encodeURIComponent(t);
 }
 
-/* ───── arranque ───── */
+/* ═══════════════════════════════════════════════ chip PROXY + panel ══ */
+
+function pintaChip(st) {
+  const chip = $("chipProxy");
+  chip.className = "chipProxy " + (st && st.proxyActivo ? "activo" : (st && st.trabajando ? "trabajando" : "apagado"));
+  $("chipTexto").textContent = st && st.proxyActivo ? "PROXY ACTIVO" : "PROXY";
+  $("chipPunto").title = st && st.proxyActivo
+    ? "conectado — IP de salida: " + (st.ipSalida || "midiendo…")
+    : "conexión directa (sin circuito)";
+}
+
+function pintaPanel(st) {
+  if (!st) return;
+  $("credZona").hidden = !!st.proxyActivo;
+  $("estadoZona").hidden = !st.proxyActivo;
+  if (st.proxyActivo) {
+    $("vEmail").textContent = st.email || "—";
+    $("vRed").textContent = st.redActiva ? "encendida ✓" : "apagada";
+    $("vCircuito").textContent = (st.circuito || []).join(" → ") || "—";
+    $("vIP").textContent = st.ipSalida || "midiendo…";
+  }
+}
+
+function muestraPanel() {
+  $("panelVelo").hidden = false;
+  pintaPanel(window.__jn.estado);
+  const est = $("panelEstado");
+  est.className = "estado";
+  est.textContent = window.__jn.estado && window.__jn.estado.proxyActivo
+    ? "el proxy está activo: todo tu tráfico va por el circuito."
+    : "introduce tus credenciales para activar el proxy del circuito.";
+}
+
+function cierraPanel() { $("panelVelo").hidden = true; }
+
+async function activarProxy() {
+  const email = $("eEmail").value.trim();
+  const clave = $("eClave").value;
+  const est = $("panelEstado");
+  if (!email || !clave) {
+    est.className = "estado error";
+    est.textContent = "escribe tu email y contraseña (los de la web).";
+    return;
+  }
+  est.className = "estado";
+  est.textContent = "conectando el circuito…";
+  const b = $("bActivar");
+  b.disabled = true;
+  b.textContent = "…conectando";
+  try {
+    const r = await window.jn.activar({ email, clave });
+    if (!r.ok) {
+      est.className = "estado error";
+      est.textContent = r.error || "no se pudo conectar";
+      return;
+    }
+    est.className = "estado ok";
+    est.textContent = "conectado ✓ todo tu tráfico sale por el circuito.";
+    pintaPanel(window.__jn.estado);
+    // la portada del buscador ya navega por el proxy
+    if (!pestanas.length) creaPestana(HOME);
+  } catch (e) {
+    est.className = "estado error";
+    est.textContent = String((e && e.message) || e).slice(0, 120);
+  } finally {
+    b.disabled = false;
+    b.textContent = "⚡ Activar el proxy";
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════ arranque ══ */
+
 window.addEventListener("DOMContentLoaded", async () => {
-  $("bMin").onclick = () => window.jn.minimizar();
-  $("bMax").onclick = () => window.jn.maximizar();
-  $("bCerrar").onclick = () => window.jn.salir();
+  // barra de ventana nativa: esta ventana SÍ tiene marco del sistema
   $("bNueva").onclick = () => creaPestana(HOME);
   $("bAtras").onclick = () => pestanas[ptab] && pestanas[ptab].view.goBack();
   $("bDelante").onclick = () => pestanas[ptab] && pestanas[ptab].view.goForward();
   $("bRecargar").onclick = () => pestanas[ptab] && pestanas[ptab].view.reload();
-  $("bCircuito").onclick = () => abrirCerrarMenu();
-  $("bMenu").onclick = () => abrirCerrarMenu();
-  $("bRotar").onclick = async () => {
-    $("bRotar").textContent = "…rotando";
-    try { await window.jn.rotar(); } catch { /* el estado lo cuenta */ }
-    $("bRotar").textContent = "⟳ Nuevo circuito (3 saltos)";
-    refrescaEstado();
+  $("bLog").onclick = () => { if (pestanas[ptab]) pestanas[ptab].view.loadURL("jn://log"); };
+  $("bMenu").onclick = () => { $("menu").hidden = !$("menu").hidden; };
+  $("mRotar").onclick = async () => {
+    $("menu").hidden = true;
+    const r = await window.jn.rotar();
+    logDiag("rotar: " + JSON.stringify(r));
   };
-  $("bReiniciar").onclick = () => window.jn.reiniciar();
-  $("bCerrarSesion").onclick = async () => {
-    await window.jn.desconectar();
-    $("acceso").hidden = false;
-    $("estadoAcceso").textContent = "sesión cerrada — el navegador navega directo hasta conectarte";
-    refrescaEstado();
-  };
+  $("mEstado").onclick = () => { $("menu").hidden = true; muestraPanel(); };
+  $("mLog").onclick = () => { $("menu").hidden = true; if (pestanas[ptab]) pestanas[ptab].view.loadURL("jn://log"); };
+  $("mReiniciar").onclick = () => window.jn.reiniciar();
 
   $("url").addEventListener("keydown", (e) => {
     if (e.key !== "Enter") return;
     const v = pestanas[ptab] && pestanas[ptab].view;
-    if (v) v.loadURL(normalizaAUrl($("url").value));
-    if (v) v.focus();
+    if (v) { v.loadURL(normalizaAUrl($("url").value)).catch(() => {}); v.focus(); }
   });
 
-  $("bEntrar").onclick = async () => {
-    const email = $("eEmail").value.trim();
-    const clave = $("eClave").value;
-    const est = $("estadoAcceso");
-    if (!email || !clave) { est.className = "estado error"; est.textContent = "escribe tu email y contraseña"; return; }
-    est.className = "estado"; est.textContent = "conectando el circuito…";
-    try {
-      const st = await window.jn.entrar({ email, clave });
-      if (st.error) { est.className = "estado error"; est.textContent = st.error; return; }
-    } catch (e) { est.className = "estado error"; est.textContent = String(e.message || e).slice(0, 100); return; }
-    est.className = "estado ok";
-    est.textContent = "conectado ✓";
-    $("acceso").hidden = true;
-    try {
-      if (!pestanas.length) creaPestana(HOME);   // si aún no está lista, la pinta el dom-ready
-    } catch { /* nunca deja el UI a medias */ }
-    refrescaEstado();
-  };
+  // chip y panel
+  $("chipProxy").onclick = muestraPanel;
+  $("panelCerrar").onclick = cierraPanel;
+  $("panelVelo").addEventListener("click", (e) => { if (e.target === $("panelVelo")) cierraPanel(); });
+  $("bActivar").onclick = activarProxy;
+  $("eClave").addEventListener("keydown", (e) => { if (e.key === "Enter") activarProxy(); });
+  $("bDesactivar").onclick = async () => { await window.jn.desactivar(); pintaPanel(window.__jn.estado); };
+  $("bRotar").onclick = async () => { await window.jn.rotar(); pintaPanel(window.__jn.estado); };
 
-  window.jn.alNuevaPestana((url) => creaPestana(url));
+  window.jn.alEstado((st) => { window.__jn.estado = st; pintaChip(st); pintaPanel(st); });
+  window.jn.alPestaña((url) => creaPestana(url || HOME));
 
-  // sesión existente: arrancamos ya navegando dentro del circuito
-  const st = await window.jn.estado();
-  if (st.conectado) {
-    $("acceso").hidden = true;
-    try { if (!pestanas.length) creaPestana(HOME); } catch { /* dom-ready la pinta */ }
-  } else {
-    $("acceso").hidden = false;
-  }
-  refrescaEstado();
-  setInterval(refrescaEstado, 30000);
+  // arranque: abrimos nuestra portada de búsqueda (jn://inicio, estilo Tor) y
+  // consultamos el estado inicial del proxy
+  try { creaPestana("jn://inicio"); } catch (e) { logDiag("error creando pestaña: " + e); }
+  try { window.__jn.estado = await window.jn.obtenerEstado(); } catch (e) { logDiag("estado inicial falló: " + e); }
+  pintaChip(window.__jn.estado);
+  pintaPanel(window.__jn.estado);
+
+  // si hay sesión guardada y activa, aviso discreto en el chip (ya navega por el proxy)
+  logDiag("shell listo");
 });
-
-function abrirCerrarMenu() {
-  const m = $("menu");
-  m.hidden = !m.hidden;
-}

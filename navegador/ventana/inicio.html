@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>JumperNET · búsqueda</title>
+  <style>
+    :root{--ac:#6c5ce7;--ac2:#8f7bff;--cy:#38bdf8;--bor:#262631;--txt:#e8e8ea;--suave:#9a9aa2}
+    *{box-sizing:border-box;margin:0}
+    html,body{height:100%}
+    body{
+      font-family:system-ui,"Segoe UI",sans-serif;color:var(--txt);
+      background:
+        radial-gradient(900px 430px at 60% -12%, rgb(108 92 231/.25), transparent 60%),
+        radial-gradient(760px 330px at 10% 88%, rgb(56 189 248/.10), transparent 55%),
+        linear-gradient(rgb(255 255 255/.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgb(255 255 255/.025) 1px, transparent 1px),
+        #0b0b10;
+      background-size:auto,auto,46px 46px,46px 46px,auto;
+      display:grid;place-items:center;
+    }
+    ::selection{background:rgb(108 92 231/.45)}
+    .caja{width:min(640px,92vw);text-align:center;padding:24px}
+    .logo{display:flex;align-items:center;justify-content:center;gap:10px}
+    .logo .cubo{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;color:#fff;
+      font-weight:800;font-size:17px;background:linear-gradient(135deg,var(--ac),#4a3fd8);
+      box-shadow:0 8px 26px rgb(108 92 231/.35)}
+    .logo h1{font-size:26px;letter-spacing:-.02em;font-weight:800;
+      background:linear-gradient(90deg,var(--ac2),var(--cy));
+      -webkit-background-clip:text;background-clip:text;color:transparent}
+    .sub{margin-top:7px;font-size:12.5px;color:var(--suave)}
+
+    form{margin-top:28px;display:grid;place-items:center}
+    .cajaBusqueda{display:flex;align-items:center;gap:10px;width:100%;
+      background:rgba(255,255,255,.05);border:1px solid var(--bor);border-radius:999px;
+      padding:4px 6px 4px 20px;transition:border-color .2s, box-shadow .2s}
+    .cajaBusqueda:focus-within{border-color:var(--ac);box-shadow:0 0 0 4px rgb(108 92 231/.22)}
+    .cajaBusqueda .lupa{color:#6e6e78;font-size:15px}
+    input{
+      flex:1;background:transparent;border:0;outline:0;color:var(--txt);
+      font-size:15px;padding:11px 0;
+    }
+    input::placeholder{color:#6e6e78}
+    .cajaBusqueda button{
+      border:0;border-radius:999px;padding:10px 18px;font-weight:700;font-size:13px;color:#fff;
+      background:linear-gradient(135deg,var(--ac),#5747e0);cursor:pointer;
+    }
+    .cajaBusqueda button:hover{filter:brightness(1.08)}
+
+    .motor{margin-top:12px;font-size:11.5px;color:var(--suave)}
+    .motor b{color:#cfc7ff}
+    .chips{display:flex;gap:8px;justify-content:center;margin-top:22px;flex-wrap:wrap}
+    .chips a{
+      padding:8px 15px;border:1px solid var(--bor);border-radius:999px;color:#cfc7ff;
+      text-decoration:none;font-size:12.5px;background:rgba(255,255,255,.03);
+      transition:border-color .2s, background .2s
+    }
+    .chips a:hover{border-color:var(--ac);background:rgba(108 92 231/.12)}
+    .nota{margin-top:20px;font-size:11.5px;color:var(--suave);line-height:1.6}
+    .nota b{color:#cfc7ff}
+  </style>
+</head>
+<body>
+  <div class="caja">
+    <div class="logo">
+      <span class="cubo">≋</span>
+      <h1>JumperNET</h1>
+    </div>
+    <div class="sub">el navegador que ya viene conectado a tu red</div>
+
+    <form action="https://duckduckgo.com/" method="get">
+      <div class="cajaBusqueda">
+        <span class="lupa">⌕</span>
+        <input name="q" placeholder="Buscar de verdad — por tu circuito de 3 saltos" autocomplete="off" autofocus />
+        <button type="submit">Buscar</button>
+      </div>
+    </form>
+    <div class="motor">motor: <b>DuckDuckGo</b> (por defecto, como el Tor Browser)</div>
+
+    <div class="chips">
+      <a href="https://duckduckgo.com/">resultados DDG directos</a>
+      <a href="jn://log">registro interno</a>
+      <a href="https://y0selin.github.io/jumperNET/">panel</a>
+    </div>
+
+    <p class="nota">
+      Con el <b>chip PROXY</b> (esquina inferior derecha) activas el circuito:
+      pides tus credenciales una vez y <b>todo</b> el tráfico sale con la
+      <b>IP del nodo de salida</b>, no con la tuya. «⌖ Nuevo circuito» rota los 3 saltos.
+    </p>
+  </div>
+</body>
+</html>

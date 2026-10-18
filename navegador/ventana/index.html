@@ -2,32 +2,17 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self';" />
   <title>JumperNET Browser</title>
   <link rel="stylesheet" href="ui.css" />
 </head>
 <body>
 
-  <!-- ───── barra propia de la ventana (frame:false) ───── -->
-  <div class="barra">
-    <div class="logo" id="arrastrar">
-      <span class="onda">≋</span>
-      <span class="nombre">JumperNET</span>
-      <span class="chip" id="chipEstado" title="estado del circuito">…</span>
-    </div>
-    <div class="controles">
-      <button class="ctrl" id="bMin" title="Minimizar">—</button>
-      <button class="ctrl" id="bMax" title="Maximizar">▢</button>
-      <button class="ctrl cerrar" id="bCerrar" title="Cerrar">✕</button>
-    </div>
-  </div>
-
-  <!-- ───── navegador: pestañas + omnibox + circuito ───── -->
+  <!-- ───── barra de pestañas + navegación ───── -->
   <div class="chrome">
-
     <div class="fila-pestanas">
       <div class="pestanas" id="pestanas"></div>
-      <button class="nueva" id="bNueva" title="Nueva pestaña">＋</button>
+      <button class="nueva" id="bNueva" title="Nueva pestaña (abre DuckDuckGo)">＋</button>
     </div>
 
     <div class="fila-nav">
@@ -35,44 +20,68 @@
       <button class="nav" id="bDelante" title="Delante">→</button>
       <button class="nav" id="bRecargar" title="Recargar">⟳</button>
       <div class="omnibox">
-        <span class="candado" id="candado">●</span>
-        <input id="url" type="text" placeholder="Busca en la web o escribe una dirección…" spellcheck="false" autocomplete="off" />
+        <span class="candado" id="candado">◈</span>
+        <input id="url" type="text" placeholder="Busca en DuckDuckGo o escribe una dirección…" spellcheck="false" autocomplete="off" />
       </div>
-      <button class="nav circuito" id="bCircuito" title="Circuito actual (nuevo = Tor Browser)">⌖</button>
-      <button class="nav" id="bMenu" title="Circuito / cuenta">☰</button>
+      <button class="nav" id="bLog" title="Registro interno (jn://log)">⌄</button>
+      <button class="nav" id="bMenu" title="Opciones">☰</button>
     </div>
 
-    <!-- panel desplegable: circuito tipo Tor + cuenta + rotation -->
+    <!-- menú desplegable -->
     <div class="menu" id="menu" hidden>
-      <div class="tarjeta-menu">
-        <div class="tit-menu">CIRCUITO</div>
-        <div class="cadena" id="cadenaCircuit">—</div>
-        <div class="nota-menu" id="notaCircuit">exit: —</div>
-        <button class="btn primario" id="bRotar">⟳ Nuevo circuito (3 saltos)</button>
-        <button class="btn" id="bReiniciar">⟲ Reiniciar navegador (nueva conexión)</button>
-        <div class="tit-menu">CUENTA</div>
-        <div class="nota-menu" id="notaCuenta">sin sesión</div>
-        <button class="btn" id="bCerrarSesion">Salir de la red</button>
-      </div>
+      <button class="item" id="mRotar">⟳ Nuevo circuito (3 saltos)</button>
+      <button class="item" id="mEstado">⌖ Estado del circuito…</button>
+      <button class="item" id="mLog">⌄ Registro interno (depuración)</button>
+      <div class="sep"></div>
+      <button class="item" id="mReiniciar">⟲ Reiniciar el navegador</button>
     </div>
-
   </div>
 
-  <!-- ───── zona de páginas ───── -->
+  <!-- ───── páginas (una webview por pestaña) ───── -->
   <div class="paginas" id="paginas"></div>
 
-  <!-- ───── acceso si no hay sesión ───── -->
-  <div class="mascara" id="acceso" hidden>
-    <div class="caja-acceso">
-      <div class="onda grande">≋</div>
-      <h1>JumperNET Browser</h1>
-      <p class="slogan">Todo tu tráfico, tres saltos, la IP del nodo de salida.<br/>Sin extensiones ni configuración: este navegador ya viene conectado.</p>
-      <label for="eEmail">Email de tu cuenta</label>
-      <input id="eEmail" type="email" autocomplete="username" spellcheck="false" placeholder="tu@correo.es" />
-      <label for="eClave">Contraseña</label>
-      <input id="eClave" type="password" autocomplete="current-password" placeholder="••••••••" />
-      <button class="btn primario ancho" id="bEntrar">Conectar el circuito →</button>
-      <div class="estado" id="estadoAcceso">…</div>
+  <!-- ───── chip PROXY: esquina inferior derecha, SIEMPRE encima ───── -->
+  <button class="chipProxy apagado" id="chipProxy" title="Activar / desactivar el proxy del circuito">
+    <span class="punto" id="chipPunto"></span>
+    <span class="texto" id="chipTexto">PROXY</span>
+  </button>
+
+  <!-- ───── panel del proxy (credenciales + estado) ───── -->
+  <div class="velo" id="panelVelo" hidden>
+    <div class="panel">
+      <button class="cierre" id="panelCerrar" title="Cerrar">✕</button>
+
+      <div class="cabeceraPanel">
+        <span class="onda">≋</span>
+        <div>
+          <h1>Proxy del circuito</h1>
+          <p id="panelSub">Tu tráfico por 3 nodos, con la IP del nodo de salida.</p>
+        </div>
+      </div>
+
+      <!-- formulario de credenciales (se ve cuando el proxy está apagado) -->
+      <div id="credZona">
+        <label for="eEmail">Email de tu cuenta</label>
+        <input id="eEmail" type="email" autocomplete="username" spellcheck="false" placeholder="tu@correo.es" />
+        <label for="eClave">Contraseña</label>
+        <input id="eClave" type="password" autocomplete="current-password" placeholder="••••••••" />
+        <button class="primario" id="bActivar">⚡ Activar el proxy</button>
+        <p class="mini">La contraseña se guarda en este ordenador para responder el desafío 407 del proxy. Nada viaja por terceros.</p>
+      </div>
+
+      <!-- estado cuando el proxy está encendido -->
+      <div id="estadoZona" hidden>
+        <div class="filaEstado"><span>Cuenta</span><b id="vEmail">—</b></div>
+        <div class="filaEstado"><span>Red</span><b id="vRed">—</b></div>
+        <div class="filaEstado"><span>Circuito</span><b id="vCircuito" class="mono">—</b></div>
+        <div class="filaEstado"><span>IP de salida</span><b id="vIP" class="mono">—</b></div>
+        <div class="filaOpciones">
+          <button class="segundario ancho" id="bRotar">⟳ Rotar circuito (3 saltos nuevos)</button>
+          <button class="segundario ancho" id="bDesactivar">■ Desactivar el proxy</button>
+        </div>
+      </div>
+
+      <div class="estado" id="panelEstado"></div>
     </div>
   </div>
 

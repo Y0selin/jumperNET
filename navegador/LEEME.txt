@@ -1,40 +1,48 @@
-JumperNET Browser — el navegador que ya viene conectado a tu red
-================================================================
+JumperNET Browser v2 — el navegador con TU circuito a un clic
+=============================================================
 
-Es un Chromium propio (Electron) con TU circuito integrado: no configura
-nada, no usa FoxyProxy, no pesca conflictos de extensiones. Al abrirlo:
+Es un Chromium propio (Electron), igual que Tor Browser pero sobre TU red.
 
-  1. Escribe tu email y contraseña (los de la web) y pulsa «Conectar».
-  2. El navegador enciende la RED por ti (si estaba apagada) y manda
-     TODO el tráfico — páginas, WebSockets, fetch — por tu circuito de
-     3 saltos con la IP del nodo de salida.
+USO (Windows y Linux)
+  · Al abrir aparecen DuckDuckGo y, en la esquina inferior derecha, el chip
+    «PROXY» (rojo = directo, morado = activo).
+  · Pulsa el chip, escribe tu email y contraseña de la web y dale a
+    «⚡ Activar el proxy»: TODAS las pestañas pasan a navegar por tu circuito
+    de 3 saltos con la IP del nodo de salida (páginas, fetch, WebSockets).
+  · «⌖ Estado del circuito…» (menú ☰) muestra cuenta, red, circuito e IP.
+  · «⟳ Nuevo circuito (3 saltos)» rota los nodos, como el «New Circuito».
+  · La contraseña se guarda solo en este ordenador y responde el desafío
+    407 del proxy: sin ventanas extra, sin extensiones, sin configurar nada.
 
-NUEVOS SALTOS (estilo Tor Browser)
-  · Botón ⌖ (o ☰ → «Nuevo circuito (3 saltos)»): rota el circuito en el
-    servidor y el tráfico nuevo sale por otros 3 nodos.
-  · ☰ → «Reiniciar navegador»: cierra y relanza la conexión desde cero,
-    como el reinicio del circuito del Tor Browser.
+SI ALGO FALLA pudo (no depura, destino)
+  · Las pestañas reintentan 2 veces; si sigue sin cargar, verás una página
+    local «No se pudo cargar» con el motivo EXACTO (ERR_*…), una pista y el
+    botón «↻ Reintentar».
+  · «⌄ Registro interno» (y jn://log) muestra el log del navegador, límpio
+    de credenciales (el email sale enmascarado).
 
-INSTALAR EN WINDOWS
-  · Descomprime el zip «jumpernat-navegador-windows.zip» donde quieras
-    (p. ej. C:\JumperNET) y ejecuta «JumperNET Browser.exe».
-  · La primera vez Windows (SmartScreen) dirá «aplicación sin firmar»:
-    pulsa «Más información» → «Ejecutar de todas formas».
+REINICIAR
+  · ☰ → «⟲ Reiniciar el navegador»: cierra y relanza la conexión desde cero.
+
+INSTALAR EN WINDOWS (2 modos)
+  1) Portable: descomprime «jumpernet-navegador-windows.zip» donde quieras
+     (p. ej. C:\JumperNET Browser) y ejecuta «win-unpacked\JumperNET Browser.exe».
+  2) Instalador NSIS: «JumperNET Browser Setup 1.0.0.exe» instala en
+     %LOCALAPPDATA%\Programs con acceso directo.
+  · Primera vez, Windows (SmartScreen) dirá «aplicación sin firmar»:
+    «Más información» → «Ejecutar de todas formas».
 
 INSTALAR EN LINUX
   · chmod +x JumperNET-1.0.0.AppImage && ./JumperNET-1.0.0.AppImage
   · (En algunas distros instala libfuse2: sudo apt install libfuse2)
 
 Detalles técnicos
-  · El proxy es la entrada HTTP del circuito (host:1081) con autenticación
-    Basic de tu cuenta; las credenciales del 407 se responden en el propio
-    navegador, sin ventanas y sin tocar la configuración del navegador.
-  · Las pestañas usan una partición de sesión persistente propia
-    (persist:jn): cookies y logins del navegador JumperNET no se mezclan
-    con Chrome ni Firefox de tu sistema.
+  · Proxy: entrada HTTP del circuito con Basic auth; el 407 se responde
+    dentro del navegador sin ventanas (app.on("login")).
+  · El proxy se aplica a las DOS sesiones (default + persist:jn): ni una
+    sola pestaña navega directa cuando el chip está ACTIVO.
   · localStorage de la cuenta: ~/.config/JumperNET Browser (Linux) /
-    %APPDATA%\JumperNET Browser (Windows). Solo ahí están tu email, clave
-    y token (modo 0600 en Linux).
-
-Nota: los servidores del circuito admiten puertos 80 y 443 (HTTP/HTTPS),
-que es lo que usa la navegación web.
+    %APPDATA%\JumperNET Browser (Windows). Sin archivos externos.
+  · Motor por defecto: DuckDuckGo, como Tor Browser; el omnibox también
+    busca (texto libre = búsqueda DDG).
+  · Puertos soportados por servidores del circuito: 80 y 443 (navegación web).

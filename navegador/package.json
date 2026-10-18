@@ -17,20 +17,50 @@
   "build": {
     "appId": "org.jumpernat.navegador",
     "productName": "JumperNET Browser",
-    "directories": { "output": "salida", "buildResources": "recursos" },
-    "files": ["main.js", "ventana/**/*", "recursos/**/*", "package.json", "!recursos/hace_iconos.py"],
+    "directories": {
+      "output": "salida",
+      "buildResources": "recursos"
+    },
+    "files": [
+      "main.js",
+      "ventana/**/*",
+      "recursos/**/*",
+      "package.json",
+      "!recursos/hace_iconos.py"
+    ],
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }, { "target": "portable", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "recursos/jumpernat.ico",
       "signAndEditExecutable": false,
       "forceCodeSigning": false
     },
     "linux": {
-      "target": ["AppImage"],
+      "target": [
+        "AppImage"
+      ],
       "icon": "recursos/jumpernat.png",
       "category": "Network"
     },
-    "nsis": { "oneClick": true, "perMachine": false, "deleteAppDataOnUninstall": false },
-    "appImage": { "artifactName": "JumperNET-${version}.AppImage" }
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false
+    },
+    "appImage": {
+      "artifactName": "JumperNET-${version}.AppImage"
+    }
   }
 }
