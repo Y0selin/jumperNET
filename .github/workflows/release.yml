@@ -26,9 +26,18 @@ jobs:
           curl -fL --retry 3 -o notas.md "$base/notas-release.md"
           ls -la
 
-      - name: Crear release (si no existe)
+      - name: Limpiar releases draft huerfanas y crear la release (ligada al tag)
         run: |
           set -o pipefail
+          TOKEN="${{ github.token }}"
+          REPO="${{ github.repository }}"
+          # drafts huerfanas: quedaron sin tag al repunter el tag y son invisibles
+          DIDS=$(curl -sf -H "Authorization: Bearer $TOKEN" "https://api.github.com/repos/$REPO/releases" \
+            | python3 -c 'import json,sys; [print(r["id"]) for r in json.load(sys.stdin) if r["draft"]]') || true
+          for id in $DIDS; do
+            echo "borro draft huerfana $id"
+            curl -sf -X DELETE -H "Authorization: Bearer $TOKEN" "https://api.github.com/repos/$REPO/releases/$id" || true
+          done
           {
             if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
               echo "la release $GITHUB_REF_NAME ya existe — solo subo activos"
