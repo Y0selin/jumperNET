@@ -107,11 +107,21 @@ async def api(metodo, ruta, cuerpo=None, cab=None):
 # ------------------------------------------------- circuito
 
 async def conectar_circuito(saltos, mapa, dest: str):
-    """Abre el primer salto y le deja escrita la ruta restante (Fase 1)."""
+    """Abre el primer salto y le deja escrita la ruta restante (Fase 1).
+    Salto por túnel inverso (tunel:<peer>): no hay host:puerto real — se
+    conecta al BROKER (puerto de nodos) y manda DIAL <peer>; luego la ruta
+    viaja exactamente igual (reenvío ciego, protocolo de nodo sin cambios)."""
     primera = mapa[saltos[0]]
-    host_p, _, puerto_p = primera.rpartition(":")
     await asyncio.sleep(0)
-    reader, writer = await asyncio.open_connection(host_p, int(puerto_p or "9000"))
+    if primera.startswith("tunel:"):
+        broker = os.environ.get("BROKER_HOST", "broker")
+        puerto_b = int(os.environ.get("BROKER_PORT_NODOS", "9009"))
+        reader, writer = await asyncio.open_connection(broker, puerto_b)
+        writer.write(f"DIAL {primera[6:]}\n".encode())
+        await writer.drain()
+    else:
+        host_p, _, puerto_p = primera.rpartition(":")
+        reader, writer = await asyncio.open_connection(host_p, int(puerto_p or "9000"))
     ruta = (",".join(mapa[s] for s in saltos[1:]) if len(saltos) > 1 else "") or ""
     w = f"{f'{ruta},' if ruta else ''}{dest}\n"
     writer.write(w.encode())

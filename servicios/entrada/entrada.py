@@ -218,7 +218,7 @@ async def retransmitir_descifrado(a: asyncio.StreamReader, b: asyncio.StreamWrit
     try:
         magia = await asyncio.wait_for(a.readexactly(4), timeout=15)
         if not cifra.es_magia(magia):
-            print("[entrada] el exit no respondio en modo JENC", flush=True)
+            print(f"[entrada] el exit no respondio en modo JENC (recibi {magia!r})", flush=True)
             return
         receptor = cifra.Receptor(aead)
         while True:
@@ -276,8 +276,19 @@ async def atender(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
             writer.write(b"\x05\x02\x00\x01" + b"\x00" * 4 + b"\x00\x00")
             return
         # 4. conectar al primer salto y enviarle la ruta restante
-        host_p, puerto_p = primera.rsplit(":", 1) if ":" in primera else (primera, "9000")
-        conecta, w_nodo = await asyncio.open_connection(host_p, int(puerto_p))
+        #    Nodo PERSONAL por túnel inverso (tunel:<peer>): el primer salto no
+        #    tiene host:puerto real — se conecta al BROKER (puerto de nodos) y
+        #    manda DIAL <peer>; desde ahí la conversación es idéntica (la entrada
+        #    solo ve un socket y retransmite ciego, no cambia nada de protocolo).
+        if primera.startswith("tunel:"):
+            broker = os.environ.get("BROKER_HOST", "broker")
+            puerto_b = int(os.environ.get("BROKER_PORT_NODOS", "9009"))
+            conecta, w_nodo = await asyncio.open_connection(broker, puerto_b)
+            w_nodo.write(f"DIAL {primera[6:]}\n".encode())
+            await w_nodo.drain()
+        else:
+            host_p, puerto_p = primera.rsplit(":", 1) if ":" in primera else (primera, "9000")
+            conecta, w_nodo = await asyncio.open_connection(host_p, int(puerto_p))
         ruta = f"{','.join(mapa[s] for s in saltos[1:]) if len(saltos) > 1 else ''},{dest}\n"
         if len(saltos) == 1:
             ruta = f"{dest}\n"

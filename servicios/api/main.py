@@ -354,20 +354,39 @@ def exit_ip_de(nombre_nodo: str | None) -> str | None:
 
     Si el exit es un peer (equipo de un usuario), la IP que ve internet es la
     del exit (su casa), no la del VPS: usamos la parte de host de la dirección
-    anunciada SI es una IPv4 pública (el peer la detecta con api.ipify e la
+    anunciada SI es una IPv4 pública (el peer la detecta con api.ipify y la
     registra con esa IP real). Para nodos de la infraestructura ("nodo1:9000",
     nombres docker) devuelve None: entonces se usa medir_ip_publica() del
     VPS, que es la IP por donde salen los contenedores.
-    """
+    Con dirección `tunel:<peer>`: la IP pública es la **IP real del dueño**
+    del peer (usuarios.ip_real, observada en su registro/latido): el tráfico
+    saldrá desde SU casa, aunque la dirección no lleve host:puerto."""
     if not nombre_nodo:
         return None
     try:
         c = conex()
-        f = c.execute("SELECT direccion, tipo FROM nodos WHERE nombre=?", (nombre_nodo,)).fetchone()
+        f = c.execute(
+            """SELECT n.direccion, n.dueno, u.ip_real AS ip_dueno
+                 FROM nodos n LEFT JOIN usuarios u ON u.id = n.dueno
+                WHERE n.nombre=?""",
+            (nombre_nodo,),
+        ).fetchone()
     except Exception:
         return None
     if f is None or not f["direccion"]:
         return None
+    if f["direccion"].startswith("tunel:"):
+        ip_real = f["ip_dueno"]
+        if ip_real:
+            try:
+                ip = ipaddress.ip_address(ip_real)
+                if ip.version == 4 and not (ip.is_private or ip.is_loopback
+                                            or ip.is_link_local or ip.is_multicast
+                                            or ip.is_reserved):
+                    return str(ip)
+            except ValueError:
+                pass
+        return None  # sin IP del dueño: el fallback del caller mide la del VPS
     host = f["direccion"].rsplit(":", 1)[0]
     try:
         ip = ipaddress.ip_address(host)
@@ -437,6 +456,13 @@ def fila_a_dict(f) -> dict:
 # ya unificada con INTERNAL_TOKEN en el modelo TOR, es lo que les das a los
 # amigos cuando quieres que su equipo sea un saltificio de la red.
 PEER_TOKEN = os.environ.get("PEER_TOKEN", "")
+# Clave del cifrado de saltos (JENC): si está configurada, el exit del circuito
+# descifra el stream punt-a-punt (ver _comun/cifra.py). El peer externo que hace
+# de exit necesita la misma clave: /peer_token la entrega a su dueño autenticado.
+CLAVE_SALTOS = os.environ.get("CLAVE_SALTOS", "")
+# Broker del túnel inverso (host:puerto de nodos): para sondear los saltos
+# `tunel:<peer>` con PING. Dentro del compose, `broker:9009` (red interna).
+BROKER_NODOS = os.environ.get("BROKER_NODOS", "broker:9009")
 
 
 def _hoppable(direccion: str) -> bool:
@@ -579,11 +605,19 @@ class NodoUsuario(BaseModel):
 def medir_ms(direccion: str, timeout: float = 0.8) -> int | None:
     """Milisegundos de un TCP connect al nodo (None si no responde).
     Cache corta (8 s) para no machacar a los peers con sondas si la web
-    pide la lista varias veces seguidas."""
+    pide la lista varias veces seguidas.
+    Direcciones `tunel:<peer>`: no hay host:puerto real — se sondea por el
+    broker (PING al puerto de nodos, BROKER_NODOS) que solo responde OK si
+    el túnel del peer está ABIERTO de verdad en su RAM. Así el juez de vida
+    de los saltos por túnel sigue siendo un hecho, no una promesa del latido."""
     ahora = time.time()
     cache = _ms_nodos.get(direccion)
     if cache and ahora - cache[0] < 8:
         return cache[1]
+    if direccion.startswith("tunel:"):
+        ms = medir_ms_tunel(direccion.split(":", 1)[1], timeout)
+        _ms_nodos[direccion] = (ahora, ms)
+        return ms
     ms = None
     try:
         host, puerto = direccion.rsplit(":", 1)
@@ -594,6 +628,30 @@ def medir_ms(direccion: str, timeout: float = 0.8) -> int | None:
         ms = None
     _ms_nodos[direccion] = (ahora, ms)
     return ms
+
+
+def medir_ms_tunel(nombre_peer: str, timeout: float = 1.5) -> int | None:
+    """Latencia de un salto por TÚNEL: PING al broker (host:puerto en
+    BROKER_NODOS; dentro del compose, `broker:9009`). En ambientes sin broker
+    configurado devuelve None: el nodo túnel simplemente no pasa el sondeo
+    (comportamiento seguro, nunca un falso vivo)."""
+    try:
+        host, puerto = BROKER_NODOS.rsplit(":", 1)
+        t0 = time.perf_counter()
+        with socket.create_connection((host, int(puerto)), timeout=timeout) as s:
+            s.settimeout(timeout)
+            s.sendall(f"PING {nombre_peer}\n".encode())
+            resp = b""  # una línea: OK <peer>\n / ERR <peer> fuera de linea\n
+            while b"\n" not in resp:
+                dato = s.recv(256)
+                if not dato:
+                    break
+                resp += dato
+        if resp.startswith(b"OK "):
+            return round((time.perf_counter() - t0) * 1000)
+    except Exception:
+        pass
+    return None
 
 
 def sondear_y_apuntar(nombre: str, direccion: str) -> int | None:
@@ -1398,7 +1456,13 @@ def peer_token_de_sesion(token: str | None = Header(default=None, alias="Authori
     u = _auth(token)
     if not PEER_TOKEN:
         raise HTTPException(status_code=503, detail="la red no tiene el túnel activado")
+    # CLAVE_SALTOS para el agente: el peer externo es el EXIT del circuito
+    # cuando le toca, y en una red con JENC el exit tiene que poder DESCIFRAR
+    # el stream punt оa punto. Se entrega con las mismas credenciales del peer
+    # (JWT + opt-in), nunca al broker ni a terceros. Con la red sin JENC, clave
+    # vacía: el agente sabe que no hay cifrado.
     return {"peer_token": PEER_TOKEN, "nombre": f"peer_u{u['id']}",
+            "clave_saltos": (CLAVE_SALTOS or ""),
             "broker": os.environ.get("BROKER_PUBLICO", "jumpernet.duckdns.org:9008")}
 
 

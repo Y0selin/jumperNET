@@ -126,6 +126,10 @@ services:
       # interno para que un amigo no necesita conocer los secretos de sistemas
       PEER_TOKEN: ${PEER_TOKEN:-}
       UMBRAL_CAIDO_SEG: "35"
+      # Clave JENC: /peer_token la entrega al peer con opt-in (su agente es el
+      # exit del circuito cuando le toca y tiene que poder descifrar)
+      CLAVE_SALTOS: ${CLAVE_SALTOS:-}
+      BROKER_NODOS: broker:9009
     volumes:
       - ./data:/data
     # Regla 2: la API NO se publica en el host. Binding a 127.0.0.1 para

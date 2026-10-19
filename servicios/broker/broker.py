@@ -184,10 +184,21 @@ async def atender_nodo(reader: asyncio.StreamReader, writer: asyncio.StreamWrite
     try:
         linea = (await asyncio.wait_for(reader.readline(), timeout=15))[:MAX_LINEA].decode().strip()
         partes = linea.split()
-        if len(partes) != 2 or partes[0] != "DIAL":
+        if len(partes) != 2:
             writer.close()
             return
-        _, nombre = partes
+        cmd, nombre = partes
+        if cmd == "PING":
+            # sondeo de vida que usa la API para validar nodos tunel:
+            # un túnel solo responde OK si está ABIERTO de verdad (en RAM)
+            vivo = nombre in TUNELES
+            writer.write((f"OK {nombre}\n" if vivo else f"ERR {nombre} fuera de linea\n").encode())
+            await writer.drain()
+            writer.close()
+            return
+        if cmd != "DIAL":
+            writer.close()
+            return
         t = TUNELES.get(nombre)
         if not t:
             writer.write(b"ERR peer fuera de linea\n")
