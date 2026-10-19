@@ -128,6 +128,7 @@ async def atender_peer(reader: asyncio.StreamReader, writer: asyncio.StreamWrite
         writer.write(b"OK\n")
         await writer.drain()
         TUNELES[nombre] = {"reader": reader, "writer": writer, "subs": {}, "pulse": time.time()}
+        _log(f"presentación OK: {nombre}")
         _log(f"túnel abierto: {nombre} (sin puertos abiertos en su router)")
         await bombear_peer(nombre, reader)
     except Exception as e:
@@ -194,9 +195,10 @@ async def bombear_peer(nombre: str, reader: asyncio.StreamReader) -> None:
 async def atender_nodo(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
     global contador
     try:
-        linea = (await asyncio.wait_for(reader.readline(), timeout=15))[:MAX_LINEA].decode().strip()
-        partes = linea.split()
-        if len(partes) != 2:
+        raw = (await asyncio.wait_for(reader.readline(), timeout=15))[:MAX_LINEA]
+        partes = raw.decode(errors="replace").strip().split()
+        if len(partes) != 2 or partes[0] not in ("DIAL", "PING"):
+            _log(f"nodo: primera línea inválida ({len(raw)} B, no es DIAL/PING)")
             writer.close()
             return
         cmd, nombre = partes
@@ -219,6 +221,7 @@ async def atender_nodo(reader: asyncio.StreamReader, writer: asyncio.StreamWrite
             return
         contador += 1
         idc = f"c{contador}"
+        _log(f"DIAL {nombre} → {idc} (subs vivos del peer: {len(t['subs'])})")
         t["subs"][idc] = ("nodo", writer)
         # pide al peer abrir su servicio local para esta conexión
         t["writer"].write(f"OPEN {idc}\n".encode())

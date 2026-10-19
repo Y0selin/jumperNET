@@ -65,6 +65,10 @@ services:
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
     ports:
       - "9008:9008"
+      # DIAL entre PEERS: si el túnel de un peer es saltó intermedio y el
+      # siguiente salto es OTRO peer (tunel:peer_uX), su agente hace DIAL aquí
+      # (la entrada HTTP lo usa desde dentro de la red; los peers, desde fuera)
+      - "9009:9009"
     depends_on:
       - api
     networks: [red_jumper]

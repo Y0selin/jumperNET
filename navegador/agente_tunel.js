@@ -32,6 +32,9 @@ const PUERTOS_OK = new Set((PUERTOS_PERMITIDOS_ || "80,443").split(",").map(Numb
 // ejecutar el EXIT descifrando el stream punt-a-punt. Sin clave: relés ciegos
 // (intermedio) y exit plano (red sin JENC).
 const CLAVE_SALTOS = process.argv[7] || "";
+// Puerto de NODOS del broker (DIAL entre peers): convención 9008 peers /
+// 9009 nodos; el 9º arg lo permite pasar por si un despliegue cambia puertos.
+const PTO_BROKER_NODOS = Number(process.argv[9]) || 9009;
 // laboratorio (prueba_tunel local con destinos 127.x): nunca en producción
 const PRUEBA_LOCAL = /^(1|prueba|local)$/i.test(process.argv[8] || "");
 const JENC = {
@@ -107,9 +110,13 @@ function abre_salto(idc, rutaLinea, resto) {
   if (!partes.length) { cierra(idc); envia(idc, "FIN"); return; }
   const primero = partes[0];
   const esExit = partes.length === 1;
-  const idx = primero.lastIndexOf(":");
-  const host = primero.slice(0, idx);
-  const puerto = Number(primero.slice(idx + 1));
+  // Salto a OTRO peer por túnel ("tunel:peer_u41"): igual que hace la entrada
+  // (ver conectar_circuito de entrada-http): DIAL al puerto de NODOS del
+  // broker y desde ahí la conversación es un socket directo al servicio local
+  // del siguiente peer — ese peer nunca abre puertos en su router.
+  const dialPeer = primero.startsWith("tunel:") ? primero.slice(6) : null;
+  const host = dialPeer ? BROKER_HOST : primero.slice(0, primero.lastIndexOf(":"));
+  const puerto = dialPeer ? PTO_BROKER_NODOS : Number(primero.slice(primero.lastIndexOf(":") + 1));
 
   if (esExit) {
     // exit externo: mismas reglas del circuito (80/443, anti-privadas). Con
@@ -136,13 +143,19 @@ function abre_salto(idc, rutaLinea, resto) {
       s.cola = [];
     }
     if (s.inbuf.length) { alimenta(s, s.inbuf); s.inbuf = Buffer.alloc(0); }
-    // si quedan más saltos tras este peer, pasar la ruta restante (ciego:
-    // el JENC del circuito es transpaente para los intermedios)
-    if (!esExit) {
+    if (dialPeer) {
+      // pedimos al broker la conexión con el siguiente peer y le pasamos la
+      // ruta restante (el servicio local de ese peer ejecuta el salto)
+      sock.write(`DIAL ${dialPeer}\n`);
+      const resto = partes.slice(1).join(",");
+      if (resto) sock.write(resto + "\n");
+    } else if (!esExit) {
+      // si quedan más saltos tras este peer, pasar la ruta restante (ciego:
+      // el JENC del circuito es transpaente para los intermedios)
       const resto = partes.slice(1).join(",");
       if (resto) sock.write(resto + "\n");
     }
-    // (si es exit: nada que escribir, el destino espera bytes del usuario)
+      // (si es exit: nada que escribir, el destino espera bytes del usuario)
   });
   s.sock = sock;
   sock.setNoDelay(true);
