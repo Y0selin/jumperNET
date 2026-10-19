@@ -48,6 +48,28 @@ services:
     networks: [red_jumper]
     <<: *limites
 
+  # Broker del túnel inverso (Fase 9-tunel): los equipos de usuarios que
+  # ACEPTAN ser salto conectan HACIA él (cero puertos abiertos en su router,
+  # modelo Tor) y los nodos de la red reenvían hacia ellos con DIAL. No se
+  # publica al host: los peers llegan por el 443 de Caddy (SNI MÓDULO TCP) y
+  # los nodos por la red interna.
+  broker:
+    build: ./servicios/broker
+    image: jumpernat/broker
+    restart: unless-stopped
+    environment:
+      BROKER_PORT_PEERS: "9008"
+      BROKER_PORT_NODOS: "9009"
+      API_URL: http://api:8000
+      PEER_TOKEN: ${PEER_TOKEN:-}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+    ports:
+      - "9008:9008"
+    depends_on:
+      - api
+    networks: [red_jumper]
+    <<: *limites
+
   # Entrada HTTP (publica 1081): proxy HTTP CONNECT con autenticacion Basic
   # para la extension del navegador (Chrome no admite SOCKS5 con credenciales;
   # la extension SI puede responder al 407 con webRequest.onAuthRequired).
@@ -84,7 +106,6 @@ services:
       DOMINIO: ${DOMINIO}
     volumes:
       - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./descargas:/srv/bajares:ro
       - ./data/caddy:/data
       - ./data/caddy-config:/config
     depends_on:
@@ -125,6 +146,8 @@ services:
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
       CLAVE_SALTOS: ${CLAVE_SALTOS:-}
       INTERVALO_HB_SEG: "10"
+      BROKER_HOST: broker
+      BROKER_PORT_NODOS: "9009"
   nodo2:
     <<: *nodo
     environment:
@@ -134,6 +157,8 @@ services:
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
       CLAVE_SALTOS: ${CLAVE_SALTOS:-}
       INTERVALO_HB_SEG: "10"
+      BROKER_HOST: broker
+      BROKER_PORT_NODOS: "9009"
   nodo3:
     <<: *nodo
     environment:
@@ -143,6 +168,8 @@ services:
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
       CLAVE_SALTOS: ${CLAVE_SALTOS:-}
       INTERVALO_HB_SEG: "10"
+      BROKER_HOST: broker
+      BROKER_PORT_NODOS: "9009"
   nodo4:
     <<: *nodo
     environment:
@@ -152,6 +179,8 @@ services:
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
       CLAVE_SALTOS: ${CLAVE_SALTOS:-}
       INTERVALO_HB_SEG: "10"
+      BROKER_HOST: broker
+      BROKER_PORT_NODOS: "9009"
   nodo5:
     <<: *nodo
     environment:
@@ -161,6 +190,8 @@ services:
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
       CLAVE_SALTOS: ${CLAVE_SALTOS:-}
       INTERVALO_HB_SEG: "10"
+      BROKER_HOST: broker
+      BROKER_PORT_NODOS: "9009"
   nodo6:
     <<: *nodo
     environment:
@@ -170,6 +201,8 @@ services:
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
       CLAVE_SALTOS: ${CLAVE_SALTOS:-}
       INTERVALO_HB_SEG: "10"
+      BROKER_HOST: broker
+      BROKER_PORT_NODOS: "9009"
 
   web-destino:
     image: nginx:1.27-alpine
@@ -193,36 +226,3 @@ services:
     working_dir: /tests
     entrypoint: ["python"]
     networks: [red_jumper]
-
-  # ─── Documentación (WordPress): caddy la sirve en https://DOMINIO/docs/ ───
-  wp_db:
-    image: mariadb:10.11
-    restart: unless-stopped
-    environment:
-      MYSQL_DATABASE: wordpress
-      MYSQL_USER: wp
-      MYSQL_PASSWORD: ${WP_DB_PASS}
-      MYSQL_ROOT_PASSWORD: ${WP_DB_ROOT}
-    command: --max_allowed_packet=16M --innodb_buffer_pool_size=48M
-    volumes:
-      - ./data/wp_db:/var/lib/mysql
-    networks: [red_jumper]
-    mem_limit: 192m
-
-  wp:
-    image: wordpress:6-php8.2-apache
-    restart: unless-stopped
-    environment:
-      WORDPRESS_DB_HOST: wp_db
-      WORDPRESS_DB_NAME: wordpress
-      WORDPRESS_DB_USER: wp
-      WORDPRESS_DB_PASSWORD: ${WP_DB_PASS}
-      WORDPRESS_CONFIG_EXTRA: |
-        define("WP_HOME", "https://jumpernet.duckdns.org/docs");
-        define("WP_SITEURL", "https://jumpernet.duckdns.org/docs");
-        define("DISALLOW_FILE_EDIT", true);
-    volumes:
-      - ./data/wp:/var/www/html
-    depends_on: [wp_db]
-    networks: [red_jumper]
-    mem_limit: 224m

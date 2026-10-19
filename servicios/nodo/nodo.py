@@ -204,8 +204,33 @@ async def hop_handler(reader, writer):
         print(f"[HOP] origen={origen} -> siguiente={siguiente} restosaltos={resto or '(exit)'}", flush=True)
 
         # 2) conectar al siguiente salto (o al destino si somos el exit)
-        host, puerto = siguiente.rsplit(":", 1)
+        # Nodo PERSONAL por túnel inverso (sin puertos abiertos en su router):
+        # la dirección viene como "tunel:<nombre>" y el BROKER mantiene la
+        # conexión de salida que el peer ya abrió (modelo Tor). Se conecta al
+        # puerto de nodos del broker, manda DIAL <nombre> y desde ahí la
+        # conversación es idéntica a un socket directo (primera línea de
+        # ruta + reenvío ciego).
+        dial_broker = None
+        if siguiente.startswith("tunel:"):
+            dial_broker = siguiente[6:]
+            host = os.environ.get("BROKER_HOST", "broker")
+            puerto = os.environ.get("BROKER_PORT_NODOS", "9009")
+        else:
+            host, puerto = siguiente.rsplit(":", 1)
         r2, w2 = await asyncio.open_connection(host, int(puerto))
+        if dial_broker is not None:
+            w2.write(f"DIAL {dial_broker}\n".encode())
+            await w2.drain()
+            # la ruta restante va INMEDIATAMENTE tras el DIAL (sin esperar
+            # respuesta: si el peer está offline el broker ya respondió ERR
+            # y la conexión se cierra; no hay nada que leer antes de escribir)
+            if partes[1:]:
+                w2.write((",".join(partes[1:]) + "\n").encode())
+                await w2.drain()
+            # la conversación con el peer es la estándar del protocolo nodo:
+            # reenvío ciego en ambos sentidos hasta que cierren
+            await asyncio.gather(pipe(reader, w2), pipe(r2, writer), return_exceptions=True)
+            return
 
         # 3) si quedan saltos, pasar la ruta restante; si es exit, no se envia nada
         if partes[1:]:

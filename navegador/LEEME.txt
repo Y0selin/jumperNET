@@ -51,3 +51,15 @@ Detalles técnicos
   · Motor por defecto: DuckDuckGo, como Tor Browser; el omnibox también
     busca (texto libre = búsqueda DDG).
   · Puertos soportados por servidores del circuito: 80 y 443 (navegación web).
+
+QUIERES SER SALTO DE LA RED SIN ABRIR PUERTOS (túnel inverso)
+  · Si activas el opt-in «salto público» en el panel web, este navegador
+    también ACTÚA COMO NODO del circuito: abre solo (fichero agente_tunel.js,
+    arrancado por el app principal) una conexión SALIENTE hacia el broker de
+    saltos (jumpernet.duckdns.org:9008, modelo Tor) y tu equipo entra al
+    sorteo sin abrir NINGÚN puerto en el router. Se apaga y enciende con el opt-in,
+    sin opciones ni archivos adicionales.
+  · También lo puedes ejecutar aparte sin el navegador:
+      python3 deploy/peer/nodo_personal.py --tunel
+    (mismo protocolo TUNNEL/OPEN/DATA/FIN y mismo token PEER_TOKEN que el
+    agente del navegador).

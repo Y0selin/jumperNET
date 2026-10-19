@@ -75,10 +75,13 @@
         <div class="filaEstado"><span>Red</span><b id="vRed">—</b></div>
         <div class="filaEstado"><span>Circuito</span><b id="vCircuito" class="mono">—</b></div>
         <div class="filaEstado"><span>IP de salida</span><b id="vIP" class="mono">—</b></div>
+        <div class="filaEstado"><span>Mi equipo como salto</span><b id="vSalto">—</b></div>
         <div class="filaOpciones">
+          <button class="segundario ancho" id="bSerSalto">✓ Aceptar ser salto (sin abrir puertos)</button>
           <button class="segundario ancho" id="bRotar">⟳ Rotar circuito (3 saltos nuevos)</button>
           <button class="segundario ancho" id="bDesactivar">■ Desactivar el proxy</button>
         </div>
+        <p class="mini" id="miniSalto">Si aceptas, tu equipo ayuda a la red como salto externo con UNA conexión saliente al servidor (cero puertos abiertos en tu router, como una relay de Tor). Revócalo cuando quieras.</p>
       </div>
 
       <div class="estado" id="panelEstado"></div>

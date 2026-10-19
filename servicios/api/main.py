@@ -440,9 +440,12 @@ PEER_TOKEN = os.environ.get("PEER_TOKEN", "")
 
 
 def _hoppable(direccion: str) -> bool:
-    """Direcciones con puerto real (1..65535) son saltables. El registro de un
-    equipo cliente sin servicio peer abierto va con :0 y NUNCA se elige como
-    salto (se ve en la lista, pero el circuito no lo usa)."""
+    """Direcciones saltables: con puerto real (1..65535) O por el túnel del
+    broker (`tunel:<nombre>`, conexión saliente del peer — sin puertos abiertos
+    en su router, modelo Tor). El registro de un equipo cliente sin servicio
+    peer ni túnel va con :0 y NUNCA se elige como salto."""
+    if direccion.startswith("tunel:"):
+        return len(direccion) > 6
     try:
         _, puerto = direccion.rsplit(":", 1)
         return 0 < int(puerto) <= 65535 and not direccion.endswith(":0")
@@ -473,13 +476,21 @@ def registrar_nodo_usuario(uid: int, alias_u: str | None, direccion: str | None,
         # No se conserva la previa: revocar el opt-in tiene que quitar el nodo
         # de los pools de salto en la misma actualización.
         dir_final = f"peer_u{uid}:0"
-    elif not dir_final:
-        base_ip = (fila_u["ip_real"] if fila_u else None) or "0.0.0.0"
-        dir_final = f"{base_ip}:0"
+    elif dir_final.startswith("tunel:"):
+        # dirección por TÚNEL INVERSO (broker): sin puertos abiertos en el
+        # router del peer — se acepta tal cual (el nodo hará DIAL al broker)
+        pass
+    elif not dir_final or _hoppable(dir_final) is False:
+        # opt-in aceptado y el cliente NO anuncia servicio host:puerto:
+        # el salto va de todos modos POR TÚNEL (agente del navegador o
+        # nodo_personal.py --tunel conectado al broker, modelo Tor).
+        dir_final = f"tunel:{nombre}"
     previa = c.execute("SELECT direccion, alias FROM nodos WHERE nombre=?", (nombre,)).fetchone()
-    if not _hoppable(dir_final) and aceptado and previa:
-        # con opt-in pero sin servicio anunciado: se conserva la previa
-        dir_final = previa["direccion"] if _hoppable(previa["direccion"]) else f"peer_u{uid}:0"
+    if dir_final == f"tunel:{nombre}" and previa and previa["direccion"] == f"tunel:{nombre}":
+        pass  # la fila ya está como túnel: sin cambios
+    elif dir_final == f"tunel:{nombre}" and previa and _hoppable(previa["direccion"]):
+        # conserva un anuncio host:puerto real si ya existía (mejor directo que túnel)
+        dir_final = previa["direccion"]
     alias_final = alias_u or (previa["alias"] if previa else None)
     c.execute(
         """INSERT INTO nodos(nombre, direccion, ultimo_heartbeat, estado, conexiones, tipo, dueno, alias)
@@ -1376,6 +1387,21 @@ def geo(ip: str | None = None, token: str | None = Header(default=None, alias="A
 #   · EQUIPOS de usuarios conectados (activo=1): también cuentan como nodos —
 #     si alguien deja de usar la red, el número baja en tiempo real.
 
+@app.get("/peer_token")
+def peer_token_de_sesion(token: str | None = Header(default=None, alias="Authorization")):
+    """Devuelve el PEER_TOKEN al usuario YA LOGUEADO (con su JWT).
+
+    Es lo que necesita el agente de túnel del navegador / nodo_personal.py
+    para presentar el túnel al broker SIN que el usuario toque nada: el token
+    no es un secreto del usuario, es el bloque de entrada de su red (el broker
+    lo cruza con el opt-in antes de abrir el túnel)."""
+    u = _auth(token)
+    if not PEER_TOKEN:
+        raise HTTPException(status_code=503, detail="la red no tiene el túnel activado")
+    return {"peer_token": PEER_TOKEN, "nombre": f"peer_u{u['id']}",
+            "broker": os.environ.get("BROKER_PUBLICO", "jumpernet.duckdns.org:9008")}
+
+
 @app.get("/nodosvivos")
 def nodosvivos(token: str | None = Header(default=None, alias="Authorization")):
     _auth(token)   # cualquier usuario autenticado puede ver el contador
@@ -1575,6 +1601,23 @@ def admin_borrar(id_usuario: int, token: str | None = Header(default=None, alias
     c.execute("DELETE FROM usuarios WHERE id=?", (id_usuario,))
     c.commit()
     return {"ok": True, "borrado": f["email"]}
+
+
+@app.get("/interno/peer_tunel")
+def interno_peer_tunel(nombre: str, x_interno: str | None = Header(default=None)):
+    """El broker pregunta aquí (red interna) si el peer tiene el túnel permitido:
+    requiere el nombre peer_u<id> con el OPT-IN aceptado por su dueño.
+    Sin aceptación NO hay túnel (el broker responde NOOPTIN al peer)."""
+    if not INTERNAL_TOKEN or x_interno != INTERNAL_TOKEN:
+        raise HTTPException(status_code=401, detail="token no valido")
+    m = re.fullmatch(r"peer_u(\d+)", nombre.strip())
+    if not m:
+        raise HTTPException(status_code=422, detail="nombre no es peer_u<id>")
+    c = conex()
+    f = c.execute("SELECT peer_publico FROM usuarios WHERE id=?", (int(m.group(1)),)).fetchone()
+    if f is None:
+        raise HTTPException(status_code=404, detail="usuario inexistente")
+    return {"tunel_ok": bool(f["peer_publico"])}
 
 
 @app.delete("/admin/nodos/{nombre}")

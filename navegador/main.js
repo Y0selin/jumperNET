@@ -25,6 +25,7 @@
 const { app, BrowserWindow, ipcMain, session, Menu, protocol, webContents } = require("electron");
 const fs = require("fs");
 const path = require("path");
+const { spawn } = require("child_process");
 
 /* ------------------------------------------------------------------ config */
 
@@ -66,6 +67,7 @@ let estado = { // lo que verá el chip/panel
   ipSalida: null,
   email: null,
   error: null,
+  tunel: null,      // "conectado" | "rechazado" | null (estado del túnel peer)
 };
 
 const ficheroCuenta = () => path.join(app.getPath("userData"), "cuenta.json");
@@ -186,6 +188,9 @@ async function conectarProxy(credencialesNuevas) {
     await proxyEncender();
     difundirEstado();
 
+    // 3b) túnel del peer si el opt-in está aceptado (sin puertos, modelo Tor)
+    tunelSegunOptin(yo);   // en segundo plano: no bloquea la conexión del proxy
+
     // 4) verificación HONESTA de la IP: la mide el SERVIDOR haciendo una
     //    petición real por el circuito (independiente del stack del navegador).
     //    Fallback: fetch por la sesión (fixed_servers ya está activo).
@@ -235,10 +240,61 @@ async function comprobarIPSalida() {
 
 async function desconectarProxy() {
   await proxyApagar();
+  detenerTunel();
   estado.redActiva = false;
   estado.circuito = null;
   difundirEstado();
   return { ok: true };
+}
+
+/* ══════════════════════════════ túnel inverso (ser salto, sin puertos) ════
+ * Si el usuario ACEPTÓ ser salto (POST /me salto_publico=true), este proceso
+ * hijo mantiene UNA conexión saliente al broker del VPS: su equipo queda
+ * disponible como salto externo SIN abrir puertos en el router (modelo Tor:
+ * la conexión la abre él hacia afuera). El broker la sirve a la red cuando
+ * alguien salta por él. Detener el agente o revocar el opt-in = sin salto. */
+let tunelProceso = null;
+
+function detenerTunel() {
+  if (tunelProceso) {
+    try { tunelProceso.kill(); } catch { /* nada */ }
+    tunelProceso = null;
+    estado.tunel = null;
+    log("túnel del peer detenido");
+  }
+}
+
+async function tunelSegunOptin(yo) {
+  detenerTunel();
+  if (!yo.salto_publico) return;   // no aceptó: nada de túnel
+  try {
+    const info = await api("GET", "/peer_token");
+    const args = [
+      info.broker.split(":")[0] || "jumpernet.duckdns.org",
+      info.broker.split(":")[1] || "9008",
+      info.nombre || `peer_u${yo.id}`,
+      info.peer_token,
+      "80,443",
+    ];
+    // ELECTRON_RUN_AS_NODE=1: en producción (empaquetado) process.execPath no
+    // es node sino electron-as-node; en dev es el node del sistema. Igual que
+    // agente_tunel.js es Node puro.
+    tunelProceso = spawn(process.execPath, [path.join(__dirname, "agente_tunel.js"), ...args], {
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    });
+    tunelProceso.stdout.on("data", (d) => {
+      const s = String(d);
+      if (s.includes("túnel aceptado")) { estado.tunel = "conectado"; difundirEstado(); }
+      if (s.includes("NOOPTIN")) { estado.tunel = "sin-optin"; difundirEstado(); }
+    });
+    tunelProceso.stderr.on("data", (d) => log("tunel(stderr): " + String(d).slice(0, 120), "aviso"));
+    tunelProceso.on("exit", (code) => { tunelProceso = null; estado.tunel = null; log("agente del túnel salió (código " + code + ")"); difundirEstado(); });
+    log("túnel del peer arrancado (conexión saliente: sin puertos abiertos)");
+  } catch (e) {
+    log("no pude arrancar el túnel: " + e.message, "aviso");
+  }
 }
 
 async function rotarCircuito() {
@@ -268,6 +324,17 @@ ipcMain.handle("jn:rotar", () => rotarCircuito());
 ipcMain.handle("jn:log", () => LOG_LINEAS.join("\n"));
 ipcMain.handle("jn:reiniciar", () => { app.relaunch(); app.exit(0); });
 ipcMain.handle("jn:abrirExterno", (_e, url) => require("electron").shell.openExternal(url));
+/* opt-in del salto (aceptar/revocar) + encendido inmediato del túnel (sin puertos) */
+ipcMain.handle("jn:serSalto", async (_e, acepta) => {
+  try {
+    await api("PATCH", "/me", { salto_publico: !!acepta });
+    if (acepta) await tunelSegunOptin({ salto_publico: true, id: null });
+    else detenerTunel();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e.message || e).slice(0, 160) };
+  }
+});
 
 /* ═════════════════════════════════════════════════ ventana + esquema jn:// */
 
@@ -323,10 +390,13 @@ function crearVentana() {
   const guardados = cargaBounds();
   let letras = base;
   if (guardados) letras = { ...base, ...guardados, maximizada: undefined };
+  // NUNCA abrir más grande que el area de trabajo del monitor: el browser
+  // siempre se ve ENTERO (no hay «corte por la mitad» al arrancar)
   letras = recortaAlArea(letras);
   ventana = new BrowserWindow({
     ...letras,
     useContentSize: false,
+    center: !letras.x,
     backgroundColor: "#0d0d14",
     icon: path.join(__dirname, "recursos", "jumpernat.png"),
     title: "JumperNET Browser",
@@ -338,6 +408,19 @@ function crearVentana() {
       spellcheck: false,
       backgroundThrottling: false, // pestañas al fondo siguen reintentando
     },
+  });
+  // doble seguro de visibilidad TOTAL en el primer arranque: una vez cargada
+  // la página, se re-clampa al workArea Y se centra (por si el WM la puso
+  // abajo/derecha al crearla — el «form a media pantalla» de la captura)
+  ventana.webContents.once("did-finish-load", () => {
+    const b = ventana.getBounds();
+    const encajado = recortaAlArea(b);
+    if (b.width !== encajado.width || b.height !== encajado.height ||
+        b.x < 0 || b.y < 0) {
+      ventana.setBounds(encajado);
+    }
+    if (!guardados) ventana.center();
+    ventana.show();
   });
   if (guardados && guardados.maximizada) ventana.maximize();
   ventana.loadFile(path.join(__dirname, "ventana", "index.html"));

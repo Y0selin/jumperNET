@@ -147,7 +147,44 @@ function pintaPanel(st) {
     $("vRed").textContent = st.redActiva ? "encendida ✓" : "apagada";
     $("vCircuito").textContent = (st.circuito || []).join(" → ") || "—";
     $("vIP").textContent = st.ipSalida || "midiendo…";
+    pintaSalto(st.tunel);
   }
+}
+
+/* estado del opt-in «ser salto»:
+ *   tunel = "conectado"  → aceptado y túnel vivo
+ *           "sin-optin"  → el servidor dice que no está aceptado
+ *           null         → sin activar
+ * Conecta con la ficha del estado guardada en localStorage (vSaltoAceito). */
+function pintaSalto(tunel) {
+  const aceptadoLS = window.localStorage.getItem("jn_salto") === "1";
+  const activo = tunel === "conectado";
+  $("vSalto").textContent = activo ? "ACTIVO ✓ (túnel vivo, sin puertos)" :
+    aceptadoLS ? "aceptado — conectando túnel…" : "no participando";
+  const b = $("bSerSalto");
+  b.textContent = aceptadoLS ? "⨯ Dejar de ser salto" : "✓ Aceptar ser salto (sin abrir puertos)";
+}
+
+async function toggleSalto() {
+  const b = $("bSerSalto");
+  const acepta = window.localStorage.getItem("jn_salto") !== "1";
+  b.disabled = true;
+  const est = $("panelEstado");
+  est.className = "estado";
+  est.textContent = acepta ? "aceptando el salto y abriendo el túnel…" : "revocando el salto…";
+  const r = await window.jn.serSalto(acepta);
+  b.disabled = false;
+  if (r && r.ok) {
+    window.localStorage.setItem("jn_salto", acepta ? "1" : "0");
+    est.className = "estado ok";
+    est.textContent = acepta
+      ? "✓ Tu equipo ya es salto de la red (conexión saliente, cero puertos abiertos)."
+      : "✓ Tu equipo ya NO es salto de la red.";
+  } else {
+    est.className = "estado error";
+    est.textContent = (r && r.error) || "no se pudo cambiar el opt-in";
+  }
+  pintaPanel(window.__jn.estado);
 }
 
 function muestraPanel() {
@@ -263,6 +300,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("bActivar").onclick = activarProxy;
   $("eClave").addEventListener("keydown", (e) => { if (e.key === "Enter") activarProxy(); });
   $("bDesactivar").onclick = async () => { await window.jn.desactivar(); pintaPanel(window.__jn.estado); };
+  $("bSerSalto").onclick = toggleSalto;
   $("bRotar").onclick = async () => { await window.jn.rotar(); pintaPanel(window.__jn.estado); };
 
   window.jn.alEstado((st) => { window.__jn.estado = st; pintaChip(st); pintaPanel(st); });

@@ -20,18 +20,17 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
   /* OPT-IN del salto: tu nodo personal (peer_u<id>) se registra al abrir esta
      pestaña, pero NUNCA salta hasta que aceptas ser salto de la red. Aquí
      se muestra el estado y el botón de aceptar/revocar. */
-  const miPeer = lista.find((n) => n.nombre === `peer_u${yo?.id}`);
-  async function cambiarSalto(acepta) {
-    setCambiando(true);
-    try {
-      await editarMe({ salto_publico: acepta });
-      aviso(acepta
-        ? "✓ Aceptado: tu equipo ya puede saltar cuando su servicio peer esté encendido"
-        : "✓ Revocado: tu equipo ya no salta por el circuito de nadie");
-      await trae();
-    } catch (e) { aviso(e.message, "error"); }
-    finally { setCambiando(false); }
-  }
+  const miPeer = lista.find((n) => n.nombre === `peer_u${yo?.id}`);      async function cambiarSalto(acepta) {
+        setCambiando(true);
+        try {
+          await editarMe({ salto_publico: acepta });
+          aviso(acepta
+            ? "✓ Aceptado: tu equipo ya es salto de la red — el navegador abre el túnel solo (cero puertos abiertos)"
+            : "✓ Revocado: tu equipo ya no salta por el circuito de nadie");
+          await trae();
+        } catch (e) { aviso(e.message, "error"); }
+        finally { setCambiando(false); }
+      }
 
   /* Privacidad de la vista: un usuario NORMAL solo ve los nodos DE SU CIRCUITO
      (dónde pega el tráfico). Moderadores y administradores ven la red completa.
@@ -125,21 +124,21 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
                 Tu equipo está registrado en la red como <b className="mono">peer_u{yo?.id}</b>
                 {miPeer && <> · estado <b>{miPeer.estado}</b> · dirección <b className="mono">{miPeer.direccion}</b></>}.
                 Por defecto <b>no salta por el circuito de nadie</b>. Si lo aceptas, tu equipo
-                entra al pool de saltos externos y el tráfico de otros usuarios puede salir
-                por tu IP — igual que una relay pública de Tor — pero SOLO cuando tengas tu
-                servicio peer encendido (<span className="mono">nodo_personal.py</span>) y su
-                puerto abierto en el router: el servidor lo valida con un sondeo TCP real
-                antes de usarlo. Puedes revocarlo aquí mismo cuando quieras.
+                entra al pool de saltos externos y el tráfico de otros usuarios puede pasar
+                por él — igual que una relay de Tor — <b>sin abrir NADA en tu router</b>: el
+                navegador (o <span className="mono">nodo_personal.py --tunel</span>) mantiene
+                una conexión saliente al servidor y la red salta por ahí. Revócalo cuando quieras.
               </p>
               {!miPeer && (
                 <p className="nota" style={{ marginTop: 6, fontSize: 11.5 }}>
                   Tu nodo personal aparecerá aquí cuando conectes la red (o mantengas esta pestaña abierta).
                 </p>
               )}
-              {miPeer?.salto_publico && !miPeer.hoppable && (
-                <p className="nota" style={{ marginTop: 6, fontSize: 11.5, color: "#ffb454" }}>
-                  Aceptado, pero el servidor no ve tu servicio peer: lanza <span className="mono">nodo_personal.py</span>
-                  en tu equipo y abre su puerto en el router para que el sondeo TCP lo valide.
+              {miPeer?.salto_publico && (
+                <p className="nota" style={{ marginTop: 6, fontSize: 11.5 }}>
+                  Aceptado: el salto va por el túnel automático (el navegador lo lleva solo,
+                  cero puertos abiertos). Si usas otro equipo sin el navegador, lanza ahí
+                  <span className="mono"> nodo_personal.py --tunel</span> con tu cuenta.
                 </p>
               )}
             </div>

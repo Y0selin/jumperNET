@@ -218,6 +218,12 @@ async def main() -> None:
     if not conf.get("peer_token"):
         print("falta el token de PEER en la configuración: relanza y te lo pido")
         return
+    # MODO TÚNEL (--tunel): cero puertos abiertos. El equipo abre UNA conexión
+    # saliente al broker del VPS y la red salta por ahí (modelo Tor). No se
+    # necesita abrir nada en el router ni saber tu IP pública: el agente corre
+    # aquí mismo con tu token de peer y el servidor valida tu opt-in.
+    if "--tunel" in sys.argv:
+        return tunel_main(conf)
     if conf.get("clave_saltos"):
         try:
             import cryptography  # noqa: F401
@@ -225,7 +231,7 @@ async def main() -> None:
             print("ATENCIÓN: el servidor tiene el cifrado de saltos, pero este equipo "
                   "no tiene `cryptography` instalado — instálalo con: pip install cryptography")
             return
-        print("[peer] cifrado JENC: pendiente de soporte en nodos personales — "
+        print("[peer] cifrado JENC: pendiente de soporte en honos personales — "
               "pele con el dueño de la red para desactivar CLAVE_SALTOS o instale cryptography")
         return
     contador = {"vivas": 0}
@@ -236,6 +242,128 @@ async def main() -> None:
     print(f"[peer] nodo personal '{conf['nombre']}' escuchando en 0.0.0.0:{conf['puerto']}")
     async with servidor:
         await servidor.serve_forever()
+
+
+# ------------------------------------------------------------------ túnel inverso
+# Con --tunel este EQUIPO es el salto SIN puertos abiertos: el broker del VPS
+# multiplexa por la conexión saliente (mismo protocolo que el agente del
+# navegador: TUNNEL / OPEN / DATA <id> <n> / FIN) y este bucle ejecuta el salto
+# localmente con las mismas reglas que hop_handler (solo 80/443 y nada de IPs
+# privadas como exit). Sin configuración extra: token + nombre del config.
+
+async def tunel_main(conf: dict) -> None:
+    broker_host = conf.get("broker_host") or (conf.get("api_host") or "jumpernet.duckdns.org")
+    nombre = conf["nombre"]
+    token = conf["peer_token"]
+    retardo = 1
+    subs: dict[str, dict] = {}
+
+    async def hacia_broker(idc: str, datos: bytes) -> None:
+        # encolado seguro: la escritura del frame la hace el bucle principal
+        cola = subs.get(idc, {}).setdefault("cola_salida", [])
+        cola.append(datos)
+
+    while True:
+        w = None
+        try:
+            r, w = await asyncio.open_connection(broker_host, 9008)
+            w.write(f"TUNNEL {nombre} {token}\n".encode())
+            await w.drain()
+            resp = (await asyncio.wait_for(r.readline(), timeout=30)).decode().strip()
+            if resp != "OK":
+                pista = "activa el OPT-IN en el panel" if "NOOPT" in resp else "token/nombre rechazado"
+                print(f"[tunel] broker: {resp} ({pista})")
+                await asyncio.sleep(retardo); retardo = min(30, retardo * 2); continue
+            print("[tunel] túnel vivo: tu equipo es salto SIN puertos abiertos ✓")
+            retardo = 1
+            subs.clear()
+            while True:
+                cab = (await asyncio.wait_for(r.readline(), timeout=180)).decode().strip()
+                if not cab:
+                    break                                   # broker cerró: reconectar
+                partes = cab.split()
+                tipo = partes[0]
+                idc = partes[1] if len(partes) > 1 else ""
+                if tipo == "OPEN":
+                    subs[idc] = {}
+                elif tipo == "DATA" and idc in subs:
+                    n = int(partes[2]); payload = await r.readexactly(n)
+                    s = subs[idc]
+                    if "sock_w" not in s:
+                        # primer payload = línea de ruta del protocolo nodo
+                        await _abre_salto(idc, payload.decode(errors="replace"), s)
+                        # vaciar cola que llegó mientras conectaba
+                        for trozo in s.get("cola_entrada", []):
+                            s["sock_w"].write(trozo)
+                        s["cola_entrada"] = []
+                    elif s.get("sock_w"):
+                        s["sock_w"].write(payload)
+                    # bombeo de la cola hacia el broker (respuestas del salto)
+                    for frame in list(s.get("cola_salida", [])):
+                        w.write(frame)
+                    s["cola_salida"] = []
+                    await w.drain()
+                elif tipo == "FIN":
+                    s = subs.pop(idc, None)
+                    if s and s.get("sock_w"):
+                        try: s["sock_w"].close()
+                        except Exception: pass
+        except Exception as e:
+            print(f"[tunel] reconectando en {retardo}s: {e}")
+        for s in list(subs.values()):
+            try:
+                if s.get("sock_w"): s["sock_w"].close()
+            except Exception: pass
+        subs.clear()
+        await asyncio.sleep(retardo); retardo = min(30, retardo * 2)
+
+
+async def _abre_salto(idc: str, ruta: str, s: dict) -> None:
+    """Ejecuta el salto local (protocolo nodo): conecta al siguiente/destino,
+    pasa la ruta restante y deja el socket listo para DATA/FIN del broker."""
+    partes = [p for p in ruta.strip().split(",") if p]
+    if not partes:
+        s["denegado"] = True
+        return
+    primero = partes[0]; es_exit = len(partes) == 1
+    try:
+        host, puerto = primero.rsplit(":", 1); puerto = int(puerto)
+    except ValueError:
+        s["denegado"] = True
+        return
+    if es_exit and (puerto not in PUERTOS_PERMITIDOS or destino_bloqueado(host)):
+        print(f"[tunel] exit denegado a {host}:{puerto} (reglas del circuito)")
+        s["denegado"] = True
+        return
+    print(f"[tunel] salto hacia {primero} {'(exit)' if es_exit else '(relé)'}")
+    try:
+        r2, w2 = await asyncio.open_connection(host, puerto)
+    except Exception as e:
+        print(f"[tunel] no conecta a {primero}: {e}")
+        s["denegado"] = True
+        return
+    if not es_exit:
+        resto = ",".join(partes[1:])
+        w2.write((resto + "\n").encode())
+        await w2.drain()
+    s["sock_w"] = w2
+
+    async def leer_del_salto():
+        try:
+            while True:
+                d = await r2.read(65536)
+                if not d: break
+                s.setdefault("cola_salida", []).append(f"DATA {idc} {len(d)}\n".encode() + d)
+            s.setdefault("cola_salida", []).append(f"FIN {idc}\n".encode())
+        except Exception:
+            pass
+        finally:
+            try: w2.close()
+            except Exception: pass
+    asyncio.ensure_future(leer_del_salto())
+
+
+import sys  # tras las constantes (argv --tunel)
 
 
 if __name__ == "__main__":

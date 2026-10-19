@@ -14,7 +14,7 @@ add_action('wp_enqueue_scripts', function () {
 			wp_get_theme()->parent()->get('Version')
 		);
 	}
-	wp_enqueue_style('jumpernet-child', get_stylesheet_uri(), array('twentytwentyfour-style'), '1.0.1');
+	wp_enqueue_style('jumpernet-child', get_stylesheet_uri(), array('twentytwentyfour-style'), '1.0.5');
 });
 
 /* ─── login con la marca ─── */

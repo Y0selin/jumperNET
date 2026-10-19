@@ -17,6 +17,28 @@ esa persona**, no la del servidor — exactamente lo que hace el exit de TOR.
    que está vivo, su equipo entra al pool de saltos aleatorios y puede salir
    en cualquier circuito de cualquier usuario.
 
+## Sin abrir puertos: TÚNEL INVERSO (modo Tor completo)
+
+No quieres reenvío de puertos en el router (CGNAT, pereza, o simplemente
+cautela): hay una segunda vía — el equipo del usuario se conecta **hacia
+fuera** y desde ahí sirve los saltos, como el relay de puente de Tor:
+
+- El agente del navegador JumperNET lo hace solo si activas el opt-in en el
+  panel: abre una conexión TCP saliente hacia el broker (9008) y la mantiene
+  viva. También puedes hacerlo con el mismo programa sin navegador:
+  `python3 peer/nodo_personal.py --tunel`.
+- El broker valida el `PEER_TOKEN` y pregunta a la API si ese `peer_u<id>`
+  tiene el opt-in aceptado; solo entonces responde `OK` y registra el túnel
+  (visible en `/nodos` como dirección `tunel:peer_u<id>` — sin puerto).
+- Cuando un nodo de la red necesita reenviar a ese peer, conecta al broker
+  (9009) y manda `DIAL peer_u<id>`: el broker multiplexa por el túnel del
+  peer (OPEN/DATA/FIN por id) y la conexión del nodo es transparente —
+  primera línea de ruta y reenvío ciego, igual que si fuera un socket real.
+- Las reglas del salto NO cambian: en modo túnel el peer solo acepta
+  conexiones a 80/443 y nunca servirá destinos privados como exit.
+- Límites sanos: línea de control ≤ 256 B, máx. 8 sub-conexiones por peer
+  (BROKER_MAX_CONEX) y sin persistencia: solo conexiones vivas en RAM.
+
 ## Seguridad y qué ve cada parte
 
 - Los peers se registran con un **token de peer** (`PEER_TOKEN` en `.env` del

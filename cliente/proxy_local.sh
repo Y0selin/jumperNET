@@ -1,14 +1,14 @@
 #!/bin/bash
-# JumperNAT en tu navegador con UN comando.
+# JumperNET en tu navegador con UN comando.
 #
 #   bash proxy_local.sh on <usuario> <clave>   enciende: rele + Firefox + Chrome
 #   bash proxy_local.sh off                    apaga y deja los navegadores como estaban
 #   bash proxy_local.sh prueba                 mide la IP que ve internet a traves del rele
-#   bash proxy_local.sh firefox                abre el Firefox dedicado de JumperNAT
+#   bash proxy_local.sh firefox                abre el Firefox dedicado de JumperNET
 #   bash proxy_local.sh chrome                 lanza Chrome/Chromium por el rele (si existe)
 #   bash proxy_local.sh estado                 ¿esta el rele vivo?
 #
-# El SOCKS5 de JumperNAT exige usuario/clave y los navegadores no pueden
+# El SOCKS5 de JumperNET exige usuario/clave y los navegadores no pueden
 # decirselo solos (Chrome no admite credenciales SOCKS; Firefox pregunta en
 # cada conexion). Este script levanta un RELE local sin clave (rele_socks.py)
 # que se autentica el, y deja los navegadores apuntando a 127.0.0.1: la clave
@@ -90,7 +90,7 @@ usuario_pref() {
   [ -n "$dir" ] || return 0
   mkdir -p "$dir"
   {
-    echo '# perfil dedicado de JumperNAT: SOLO navega por el rele local.'
+    echo '# perfil dedicado de JumperNET: SOLO navega por el rele local.'
     echo '# regenerado por proxy_local.sh; lo que pongas aqui sobrevive.'
     echo 'user_pref("browser.shell.checkDefaultBrowser", false);'
     echo 'user_pref("datareporting.policy.dataSubmissionPolicyBypassNotification", true);'
@@ -131,7 +131,7 @@ abre_firefox() {
   local dir="$(perfil_jumpernet)"
   [ -f "$dir/user.js" ] || muere "primero enciende el rele: $0 on"
   usuario_pref "$dir" on
-  ban "abriendo el Firefox dedicado de JumperNAT (tu Firefox normal no se toca)"
+  ban "abriendo el Firefox dedicado de JumperNET (tu Firefox normal no se toca)"
   setsid firefox --profile "$dir" --no-remote >/dev/null 2>&1 &
 }
 
@@ -149,7 +149,7 @@ escribe_lanzador() {
   mkdir -p "$(dirname "$LANZADOR")"
   cat >"$LANZADOR" <<LANZ
 #!/bin/bash
-# Lanzador del navegador por el circuito de JumperNAT.
+# Lanzador del navegador por el circuito de JumperNET.
 # Lo genera proxy_local.sh ('proxy_local.sh on'); se puede editar a mano.
 AQUI='$AQUI'
 PUERTO=$PUERTO

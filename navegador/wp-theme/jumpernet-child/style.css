@@ -1,9 +1,9 @@
 /*
 Theme Name: JumperNET Docs
-Description: Tema hijo de Twenty Twenty-Four con el diseño oscuro/terminal de JumperNET para la documentación: portada hero, tarjetas de índice, tablas y bloques de código estilo consola. v1.0.3: reequilibrio tipográfico, foco alto-contraste, mejores enlaces, kbd, callouts y detalles de portada.
+Description: Tema hijo de Twenty Twenty-Four con el diseño oscuro/terminal de JumperNET para la documentación: portada hero, tarjetas de índice, tablas y bloques de código estilo consola. v1.0.5: título de categoría/archivo claro, tarjetas vacías del índice eliminadas y defensivo anti-texto-oscuro inline.
 Author: jumpernet
 Template: twentytwentyfour
-Version: 1.0.3
+Version: 1.0.5
 */
 
 :root{
@@ -264,6 +264,62 @@ footer .wp-block-social-links svg{fill:#b9b9c3 !important}
 /* admin-bar para admin */
 #wpadminbar{background:#12121a !important;color:var(--jn-texto) !important}
 #wpadminbar a,#wpadminbar .ab-item{color:var(--jn-texto) !important}
+
+/* ═══════════ TEXTOS EN NEGRO DETECTADOS EN VIVO (Chromium + estilos computados) ═══════════
+   Tres culpables reales sobre el fondo oscuro (rgb(17,17,17) del padre y un
+   degradado con clip texto que no pinta):
+     · h1 de PORTADA (fuera de article): negro rgb(17,17,17) → sólido claro.
+     · span del h1 .jn-titulo: gradiente roto → color violeta sólido.
+     · h2 de la sección Comentarios dentro de .wp-block-comments → claro.
+   Además, defensivo contra estilos inline oscuros y paletas del padre. */
+
+/* título grande de la portada: SIEMPRE claro visible */
+.wp-site-blocks h1.wp-block-post-title,
+.main-content h1.wp-block-post-title,
+body h1.wp-block-post-title{
+  color:var(--jn-texto) !important;
+  background:none !important;
+  -webkit-text-fill-color:var(--jn-texto) !important
+}
+
+/* título de archivo/categoría («Category: …» del tema padre, sale negro) */
+.wp-block-query-title,
+.wp-block-query-title *,
+h1.wp-block-query-title span{
+  color:var(--jn-texto) !important;
+  background:none !important;
+  -webkit-text-fill-color:var(--jn-texto) !important
+}
+
+/* tarjetas vacías del índice («Leer en orden»): cada tarjeta del HTML fuente
+ * trae un <a class="jn-card"> duplicado SIN contenido que se pintaba como un
+ * botón en blanco al lado del bueno — fuera; y el <p> que lo envuelve */
+.jn-grid a.jn-card:empty{display:none !important}
+.jn-grid p:has(> a.jn-card:empty){display:none !important}
+.jn-grid br:has(+ a.jn-card:empty){display:none !important}
+
+/* subtítulo con gradiente roto dentro del hero (jn-titulo): visible y acorde */
+.jn-titulo span{
+  color:#c9c2ff !important;
+  background:none !important;
+  -webkit-text-fill-color:#c9c2ff !important
+}
+
+/* sección de comentarios entera legible (el "Comments" del padre salía negro) */
+.wp-block-comments h2.wp-block-heading,
+.wp-block-comments h3.wp-block-heading,
+.comment-reply-title{
+  color:var(--jn-texto) !important
+}
+.wp-block-comments :is(p,li,div,span,label,small){color:var(--jn-texto) !important}
+.wp-block-comments a{color:var(--jn-acento2) !important}
+
+/* defensivo: cualquier texto con color oscuro inline o del padre sobre la web oscura */
+:is([style*="color:#000"],[style*="color:#111"],[style*="color:#222"],
+[style*="color:#000000"],[style*="color:#111111"],[style*="color:#222222"],
+.has-contrast-color,.has-contrast-2-color,.has-contrast-3-color:not(pre):not(code)){
+  color:var(--jn-texto) !important
+}
 
 /* ── enlaces y detalles de diseño refined ── */
 :not(pre) > code{border-color: rgb(122 105 255/.3)}
