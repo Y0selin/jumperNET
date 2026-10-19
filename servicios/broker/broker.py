@@ -39,8 +39,10 @@ proyecto). Todo el control va con límites de tamaño (línea <= 256 B) y el
 reenvío no interpreta contenido.
 """
 import asyncio
+import ipaddress
 import json
 import os
+import re
 import time
 import urllib.request
 
@@ -61,6 +63,75 @@ contador = 0
 
 def _log(mensaje: str) -> None:
     print(f"[broker {time.strftime('%H:%M:%S')}] {mensaje}", flush=True)
+
+
+def fuente_interna(writer: asyncio.StreamWriter) -> bool:
+    """True si la conexión viene de la red interna (contenedores compose).
+    Los nodos de infra Y la entrada hablan al 9009 desde dentro; los agentes
+    de los peers conectan desde FUERA (IP pública) y deben acreditar el
+    PEER_TOKEN para usar el broker como relay (nada de relay gratis)."""
+    try:
+        ip = ipaddress.ip_address(writer.get_extra_info("peername")[0])
+        return ip.is_private or ip.is_loopback
+    except Exception:
+        return False
+
+
+async def _dialn(worker: asyncio.StreamWriter, reader: asyncio.StreamReader,
+                 destino: str) -> None:
+    """DIALN <nodo>:9000 — el broker conecta por ti a un nodo de
+    INFRAESTRUCTURA (inaccesible desde fuera: los contenedores no publican
+    puertos) y hace de puente transparente. Whitelist cerrada: nada de
+    relay arbitrario hacia la red interna."""
+    if not re.fullmatch(r"(nodo\d+|web-destino|broker):(9000|80)", destino):
+        worker.write(b"ERR destino no permitido\n")
+        await worker.drain()
+        worker.close()
+        return
+    host, puerto = destino.rsplit(":", 1)
+    try:
+        r_nodo, w_nodo = await asyncio.open_connection(host, int(puerto))
+    except Exception as e:
+        _log(f"DIALN {destino}: no conecta ({type(e).__name__})")
+        worker.write(b"ERR nodo no responde\n")
+        await worker.drain()
+        worker.close()
+        return
+    _log(f"DIALN {destino} -> puente")
+
+    async def hacia_nodo():
+        try:
+            while True:
+                datos = await reader.read(65536)
+                if not datos:
+                    break
+                w_nodo.write(datos)
+                await w_nodo.drain()
+        except Exception:
+            pass
+        finally:
+            try:
+                w_nodo.close()
+            except Exception:
+                pass
+
+    async def hacia_externo():
+        try:
+            while True:
+                datos = await r_nodo.read(65536)
+                if not datos:
+                    break
+                worker.write(datos)
+                await worker.drain()
+        except Exception:
+            pass
+        finally:
+            try:
+                worker.close()
+            except Exception:
+                pass
+
+    await asyncio.gather(hacia_nodo(), hacia_externo(), return_exceptions=True)
 
 
 def optin_ok(nombre: str) -> bool:
@@ -127,7 +198,11 @@ async def atender_peer(reader: asyncio.StreamReader, writer: asyncio.StreamWrite
         await limpiar_peer(nombre)
         writer.write(b"OK\n")
         await writer.drain()
-        TUNELES[nombre] = {"reader": reader, "writer": writer, "subs": {}, "pulse": time.time()}
+        try:
+            ip_origen = writer.get_extra_info("peername")[0]
+        except Exception:
+            ip_origen = "?"
+        TUNELES[nombre] = {"reader": reader, "writer": writer, "subs": {}, "pulse": time.time(), "src": ip_origen}
         _log(f"presentación OK: {nombre}")
         _log(f"túnel abierto: {nombre} (sin puertos abiertos en su router)")
         await bombear_peer(nombre, reader)
@@ -197,11 +272,36 @@ async def atender_nodo(reader: asyncio.StreamReader, writer: asyncio.StreamWrite
     try:
         raw = (await asyncio.wait_for(reader.readline(), timeout=15))[:MAX_LINEA]
         partes = raw.decode(errors="replace").strip().split()
-        if len(partes) != 2 or partes[0] not in ("DIAL", "PING"):
-            _log(f"nodo: primera línea inválida ({len(raw)} B, no es DIAL/PING)")
+        if len(partes) not in (2, 3) or partes[0] not in ("DIAL", "PING", "DIALN", "SRC"):
+            _log(f"nodo: primera línea inválida ({len(raw)} B, no es DIAL/DIALN/PING/SRC)")
             writer.close()
             return
-        cmd, nombre = partes
+        cmd, nombre = partes[0], partes[1]
+        token = partes[2] if len(partes) == 3 else ""
+        if cmd == "SRC" and fuente_interna(writer):
+            # IP pública de ORIGEN del túnel del peer (el broker la ve en su
+            # socket = la IP por la que SALDRÍA el tráfico del exit): la API
+            # la consulta para anunciar la ip_salida HONESTA del exit externo
+            # (users.ip_real del dueño es la del último login: puede estar
+            # desfasada si el dueño latió desde otro sitio).
+            src = (TUNELES.get(nombre) or {}).get("src") or "?"
+            vivo = bool(TUNELES.get(nombre))
+            writer.write((f"OK {nombre} {src}" if vivo else f"ERR {nombre} fuera de linea\n").encode() + b"\n")
+            await writer.drain()
+            writer.close()
+            return
+        if not fuente_interna(writer):
+            # conexión EXTERNA (agente de un peer desde su casa): tiene que
+            # acreditar el PEER_TOKEN — el 9009 está publicado y sin esto
+            # cualquiera usaría los saltos como exit sin credenciales.
+            if not (PEER_TOKEN and token == PEER_TOKEN):
+                writer.write(b"ERR token\n")
+                await writer.drain()
+                writer.close()
+                return
+        if cmd == "DIALN":
+            await _dialn(writer, reader, nombre)
+            return
         if cmd == "PING":
             # sondeo de vida que usa la API para validar nodos tunel:
             # un túnel solo responde OK si está ABIERTO de verdad (en RAM)

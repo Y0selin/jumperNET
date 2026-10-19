@@ -137,16 +137,16 @@ function abre_salto(idc, rutaLinea, resto) {
   if (resto && resto.length) s.inbuf = Buffer.concat([s.inbuf, resto]);
   const sock = net.connect(puerto, host, () => {
     s.sock = sock;
-    // usar la cola antes de la conexión (payloads llegados entre medias)
-    if (s.cola && s.cola.length) {
-      for (const trozo of s.cola) alimenta(s, trozo);
-      s.cola = [];
-    }
-    if (s.inbuf.length) { alimenta(s, s.inbuf); s.inbuf = Buffer.alloc(0); }
+    // OJO con el ORDEN: la línea DIAL y la ruta restante van PRIMERO. Si se
+    // vaciara antes la cola de bytes del usuario (posible binario/JENC), el
+    // broker los intentaría leer como línea DIAL y revienta
+    // ('utf-8' codec can't decode) — exactamente lo que pasó en campo.
     if (dialPeer) {
       // pedimos al broker la conexión con el siguiente peer y le pasamos la
       // ruta restante (el servicio local de ese peer ejecuta el salto)
       sock.write(`DIAL ${dialPeer}\n`);
+      s.dialPeer = dialPeer;
+      s.dialGate = true;          // la primera respuesta puede ser ERR del broker
       const resto = partes.slice(1).join(",");
       if (resto) sock.write(resto + "\n");
     } else if (!esExit) {
@@ -155,13 +155,48 @@ function abre_salto(idc, rutaLinea, resto) {
       const resto = partes.slice(1).join(",");
       if (resto) sock.write(resto + "\n");
     }
-      // (si es exit: nada que escribir, el destino espera bytes del usuario)
+    // (si es exit: nada que escribir, el destino espera bytes del usuario)
+    // AHORA sí: los bytes del usuario que llegaron mientras conectaba (posible
+    // magia JENC y primer registro) van DETRÁS de la línea DIAL
+    if (s.cola && s.cola.length) {
+      for (const trozo of s.cola) alimenta(s, trozo);
+      s.cola = [];
+    }
+    if (s.inbuf.length) { alimenta(s, s.inbuf); s.inbuf = Buffer.alloc(0); }
   });
   s.sock = sock;
   sock.setNoDelay(true);
   sock.on("data", (d) => respuesta(s, idc, d));
-  sock.on("close", () => { try { cierra_salida(s, idc); } catch {} cierra(idc); });
-  sock.on("error", (e) => { log(`salto ${host}:${puerto}: ${e.message}`); try { envia(idc, "FIN"); } catch {} cierra(idc); });
+  sock.on("close", () => { if (s.sock === sock) { try { cierra_salida(s, idc); } catch {} cierra(idc); } });
+  sock.on("error", (e) => {
+    // Nombre de INFRA (nodoX docker) no resoluble desde fuera: reencamina el
+    // salto por el broker con DIALN (el broker vive dentro y sí lo ve).
+    // El token de peer acredita la conexión externa al 9009.
+    if (!esExit && !dialPeer && (e.code === "ENOTFOUND" || e.code === "EAI_AGAIN")
+        && !s.dialnHecho && PTO_BROKER_NODOS && PEER_TOKEN) {
+      s.dialnHecho = true;
+      s.sock = null;                 // el close del viejo no debe matar la sub
+      sock.destroy();
+      log(`salto ${host}:${puerto}: sin DNS desde fuera → DIALN vía broker`);
+      const destinoDialn = `${host}:${puerto}`;
+      const sockD = net.connect(PTO_BROKER_NODOS, BROKER_HOST, () => {
+        s.sock = sockD;
+        sockD.write(`DIALN ${destinoDialn} ${PEER_TOKEN}\n`);
+        const resto2 = partes.slice(1).join(",");
+        if (resto2) sockD.write(resto2 + "\n");
+        if (s.cola && s.cola.length) { for (const trozo of s.cola) alimenta(s, trozo); s.cola = []; }
+        if (s.inbuf.length) { alimenta(s, s.inbuf); s.inbuf = Buffer.alloc(0); }
+      });
+      sockD.setNoDelay(true);
+      sockD.on("data", (d) => respuesta(s, idc, d));
+      sockD.on("close", () => { if (s.sock === sockD) cierra(idc); });
+      sockD.on("error", (e2) => { log(`DIALN ${destinoDialn}: ${e2.message}`); try { envia(idc, "FIN"); } catch {} cierra(idc); });
+      return;
+    }
+    log(`salto ${host}:${puerto}: ${e.message}`);
+    try { envia(idc, "FIN"); } catch {}
+    cierra(idc);
+  });
   if (esExit && s.inbuf.length && sock.writable && sock.connecting === false) {
     alimenta(s, s.inbuf); s.inbuf = Buffer.alloc(0);
   }
@@ -172,7 +207,15 @@ function abre_salto(idc, rutaLinea, resto) {
 // registro len=0 = cierre ordenado. Sin JENC: bytes planos. La decisión es
 // OJO: los 4 primeros bytes tras la ruta (exacto como nodo.py exit).
 function alimenta(s, d) {
-  if (!s.sock || !s.sock.writable) { (s.pendiente = Buffer.concat([s.pendiente||Buffer.alloc(0), d])); return; }
+  // Bytes que llegan mientras CONECTA hay que ENCOLAR, no escribir: net.Socket encola
+  // las llamadas write() hechas antes del 'connect' y las flush EN EL ORDEN
+  // DE LLAMADA — el stream JENC del usuario (que llega por el túnel a la vez
+  // que la ruta) saldría ANTES que la línea DIAL del callback de connect y el
+  // broker la leería como primera línea binaria ('utf-8' codec can't decode).
+  if (!s.sock || !s.sock.writable || s.sock.connecting) {
+    (s.cola = s.cola || []).push(d);
+    return;
+  }
   s.inbuf = Buffer.concat([s.inbuf, d]);
   if (s.fase === "decide") {
     // entrada de datos en espera de conocer el modo
@@ -216,6 +259,28 @@ function alimenta(s, d) {
 function respuesta(s, idc, datos) {
   // guarda ID para los errores del socket
   s.idc = idc;
+  // puerta del DIAL: tras mandar "DIAL <peer>", el broker puede contestar
+  // "ERR ...\n" y cerrar (peer fuera de línea) o callarse (túnel empalmado).
+  // Miramos la primera línea: si dice ERR, abortamos esta subconexión.
+  if (s.dialGate) {
+    s.dialBuf = Buffer.concat([s.dialBuf || Buffer.alloc(0), datos]);
+    const nl = s.dialBuf.indexOf(10);
+    if (nl < 0) {
+      if (s.dialBuf.length < 32) return;   // puede seguir viniendo la línea entera
+      s.dialGate = false;                  // no pinta de ERR: tráfico real
+      datos = s.dialBuf; s.dialBuf = null;
+    } else {
+      const linea = s.dialBuf.slice(0, nl).toString();
+      if (linea.startsWith("ERR")) {
+        log(`DIAL ${s.dialPeer}: ${linea.trim()}`);
+        try { envia(idc, "FIN"); } catch {}
+        cierra(idc);
+        return;
+      }
+      s.dialGate = false;
+      datos = s.dialBuf; s.dialBuf = null; // era tráfico del peer: sigue normal
+    }
+  }
   if (s.modo !== "jenc") { try { envia(idc, "DATA", datos); } catch { cierra(idc); } return; }
   try {
     // TODO lo que sale hacia el broker va EMARCADO como DATA <idc> <n> (el broker

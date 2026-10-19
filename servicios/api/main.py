@@ -349,6 +349,32 @@ def ip_salida_efectiva(f) -> str | None:
     return medida
 
 
+def ip_tunel_en_vivo(nombre_peer: str | None) -> str | None:
+    """IP pública real del salto por túnel: el BROKER la ve en su socket
+    (la conexión la abrió el peer desde su casa) y la responde al comando
+    SRC. Devuelve None si el túnel no está abierto o no hay broker — nunca
+    una IP inventada."""
+    if not nombre_peer or not BROKER_NODOS:
+        return None
+    try:
+        host, puerto = BROKER_NODOS.rsplit(":", 1)
+        with socket.create_connection((host, int(puerto)), timeout=2.5) as s:
+            s.settimeout(2.5)
+            s.sendall(f"SRC {nombre_peer}\n".encode())
+            resp = b""
+            while b"\n" not in resp:
+                dato = s.recv(128)
+                if not dato:
+                    break
+                resp += dato
+        partes = resp.decode(errors="replace").strip().split()
+        if len(partes) == 3 and partes[0] == "OK" and _es_ipv4(partes[2]):
+            return partes[2]
+    except Exception:
+        pass
+    return None
+
+
 def exit_ip_de(nombre_nodo: str | None) -> str | None:
     """IP pública por la que sale internet cuando el EXIT es un nodo externo.
 
@@ -376,6 +402,13 @@ def exit_ip_de(nombre_nodo: str | None) -> str | None:
     if f is None or not f["direccion"]:
         return None
     if f["direccion"].startswith("tunel:"):
+        # 1) LA VERDAD EN TIEMPO REAL: la IP pública de origen del túnel que
+        #    ve el broker (por ahí sale el tráfico del exit). Si el dueño
+        #    latió desde otro sitio, users.ip_real estaría desfasada.
+        en_vivo = ip_tunel_en_vivo(nombre_nodo)
+        if en_vivo:
+            return en_vivo
+        # 2) fallback: la IP del último latido/login del dueño
         ip_real = f["ip_dueno"]
         if ip_real:
             try:
@@ -395,6 +428,25 @@ def exit_ip_de(nombre_nodo: str | None) -> str | None:
     if ip.version == 4 and not (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_reserved):
         return str(ip)
     return None
+
+
+def ip_salida_de_circuito(circ: dict | None) -> str | None:
+    """IP pública que verá internet por el circuito RECÉN elegido.
+
+    La decide el EXIT real, no el modo del usuario: si el último salto es un
+    equipo de usuario (peer externo), internet ve la IP de SU casa (el
+    `exit_ip_de` la saca de la dirección anunciada o de la IP real del dueño
+    anotada en su último latido) — aunque el circuito sea modo 'todos'. Para
+    VARIOS exit externo, cada /connect y /rotate la recalculan con el exit
+    nuevo. Si el exit es infra (contenedor del VPS) o no se sabe, mide la IP
+    pública del VPS. Así la IP esperada de la extensión coincide SIEMPRE con
+    lo que el circuito hace de verdad y la prueba verde/roja no miente."""
+    try:
+        nombre_exit = circ.get("exit") if circ else None
+    except AttributeError:
+        return medir_ip_publica()
+    ip_exit = exit_ip_de(nombre_exit)
+    return ip_exit or medir_ip_publica()
 
 
 def datos_plan(u) -> dict:
@@ -436,7 +488,11 @@ def fila_a_dict(f) -> dict:
         "salto_publico": bool(publico),
         "alta": f["fecha_registro"],
         "ip_real": f["ip_real"],
-        "ip_salida": ip_salida_efectiva(f) if activo else None,
+        # ip_salida: la que verá internet por el circuito ACTIVO (exit peer =
+        # su casa, medida en vivo por el broker; exit infra = VPS). La columna
+        # guardada solo manda si el exit no la da (circuito viejo).
+        "ip_salida": ((exit_ip_de(json.loads(f["circuito"])[-1]) if f["circuito"] else None)
+                       or ip_salida_efectiva(f)) if activo else None,
         "nodo_exit": (json.loads(f["circuito"])[-1] if f["circuito"] else None),
         "circuito": json.loads(f["circuito"]) if f["circuito"] else None,
         "activo": activo,
@@ -1163,7 +1219,7 @@ def connect(
         # internet?» — el peer está en su casa, no en el VPS).
         (
             json.dumps(circ["saltos"]),
-            (exit_ip_de(circ["exit"]) or medir_ip_publica() or circ["exit"]) if modo == "externos" else (medir_ip_publica() or circ["exit"]),
+            ip_salida_de_circuito(circ),   # según el EXIT real (peer = su casa)
             ip_real(request), modo, time.time(), u["id"],
         ),
     )
@@ -1213,7 +1269,7 @@ def rotate(request: Request, token: str | None = Header(default=None, alias="Aut
     )
     c.execute(
         "UPDATE usuarios SET circuito=?, ip_salida=?, ultimo_cambio=? WHERE id=?",
-        (json.dumps(circ["saltos"]), (exit_ip_de(circ["exit"]) or medir_ip_publica() or circ["exit"]) if modo_previo == "externos" else (medir_ip_publica() or circ["exit"]), time.time(), u["id"]),
+        (json.dumps(circ["saltos"]), ip_salida_de_circuito(circ), time.time(), u["id"]),
     )
     c.commit()
     return fila_a_dict(c.execute("SELECT * FROM usuarios WHERE id=?", (u["id"],)).fetchone())
@@ -1352,8 +1408,11 @@ def comprobar(cp: Comprobacion, token: str | None = Header(default=None, alias="
     observada = cuerpo.split()[0] if cuerpo else ""
     if not _es_ipv4(observada):
         return {"ok": False, "error": f"respuesta inesperada del destino: {cuerpo[:80]!r}", "ms": ms}
-    esperada = ip_salida_efectiva(dict(u))
     circuitos = json.loads(u["circuito"]) if u["circuito"] else []
+    # la esperada la decide el EXIT REAL del circuito (un peer externo = su
+    # casa, infra = VPS): la columna ip_salida puede estar desfasada; si el
+    # exit no la da, ahí sí, la guardada (o medida ahora).
+    esperada = (exit_ip_de(circuitos[-1]) if circuitos else None) or ip_salida_efectiva(dict(u))
     return {
         "ok": True,
         "ip_observada": observada,
@@ -1590,7 +1649,7 @@ def admin_editar(id_usuario: int, body: CambioAdmin, token: str | None = Header(
             raise HTTPException(status_code=403, detail="solo el admin conecta a otros")
         cir = elegir_circuito(3)
         cambios.append("activo=1"); cambios.append("circuito=?"); cambios.append("ip_salida=?")
-        valores += [json.dumps(cir["saltos"]), medir_ip_publica() or cir["exit"]]
+        valores += [json.dumps(cir["saltos"]), ip_salida_de_circuito(cir)]
     if not cambios:
         raise HTTPException(status_code=400, detail="nada que cambiar")
     c.execute("UPDATE usuarios SET " + ", ".join(cambios) + " WHERE id=?", (*valores, id_usuario))
@@ -1639,10 +1698,12 @@ def socks_auth(cr: CredencialesSocks, x_interno: str | None = Header(default=Non
     if not all(s in vivos for s in saltos):
         cir = elegir_circuito()
         saltos = cir["saltos"]
-        salida = medir_ip_publica() or f["ip_salida"]
+        # la IP de salida va según el EXIT del circuito nuevo (peer externo =
+        # su casa, infra = VPS), no del modo del usuario: así la extensión
+        # comprueba con la IP REAL que verá internet.
         c.execute(
             "UPDATE usuarios SET circuito=?, ip_salida=?, ultimo_cambio=? WHERE id=?",
-            (json.dumps(saltos), salida, time.time(), f["id"]),
+            (json.dumps(saltos), ip_salida_de_circuito({"exit": saltos[-1]}), time.time(), f["id"]),
         )
         c.commit()
         print(f"[socks_auth] circuito reparado para {email}: {saltos}", flush=True)
