@@ -108,6 +108,8 @@ services:
       - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./data/caddy:/data
       - ./data/caddy-config:/config
+      # /bajares/*: los binarios del navegador que sirve el Caddyfile
+      - ./descargas:/srv/bajares:ro
     depends_on:
       - api
     networks: [red_jumper]
