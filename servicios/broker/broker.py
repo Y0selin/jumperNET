@@ -156,6 +156,18 @@ async def bombear_peer(nombre: str, reader: asyncio.StreamReader) -> None:
         partes = cab.split()
         tipo = partes[0]
         idc = partes[1] if len(partes) > 1 else ""
+        if tipo == "PING" and not idc:
+            # keepalive del agente del peer (cada 25 s): ANOTA el pulso y
+            # resetea el wait_for de arriba (el readline llegó). El túnel
+            # queda vivo aunque nadie salte por él (y NAT/routers no
+            # olvidan la conexión con tráfico cada 25 s).
+            t["pulse"] = time.time()
+            try:
+                t["writer"].write(b"PONG\n")
+                await t["writer"].drain()
+            except Exception:
+                break
+            continue
         if tipo == "DATA" and len(partes) == 3:
             n = int(partes[2])
             payload = await reader.readexactly(n)

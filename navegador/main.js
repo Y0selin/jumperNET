@@ -254,8 +254,10 @@ async function desconectarProxy() {
  * la conexión la abre él hacia afuera). El broker la sirve a la red cuando
  * alguien salta por él. Detener el agente o revocar el opt-in = sin salto. */
 let tunelProceso = null;
+let tunelDeseado = false;   // el opt-in sigue aceptado → el agente DEBE estar vivo
 
 function detenerTunel() {
+  tunelDeseado = false; // sin opt-in activo el vigilante no re-lanza nada
   if (tunelProceso) {
     try { tunelProceso.kill(); } catch { /* nada */ }
     tunelProceso = null;
@@ -267,6 +269,7 @@ function detenerTunel() {
 async function tunelSegunOptin(yo) {
   detenerTunel();
   if (!yo.salto_publico) return;   // no aceptó: nada de túnel
+  tunelDeseado = true;
   try {
     const info = await api("GET", "/peer_token");
     const args = [
@@ -275,6 +278,7 @@ async function tunelSegunOptin(yo) {
       info.nombre || `peer_u${yo.id}`,
       info.peer_token,
       "80,443",
+      info.clave_saltos || "",   // JENC: solo el exit la necesita (/peer_token la da al dueño)
     ];
     // ELECTRON_RUN_AS_NODE=1: en producción (empaquetado) process.execPath no
     // es node sino electron-as-node; en dev es el node del sistema. Igual que
@@ -287,7 +291,9 @@ async function tunelSegunOptin(yo) {
     tunelProceso.stdout.on("data", (d) => {
       const s = String(d);
       if (s.includes("túnel aceptado")) { estado.tunel = "conectado"; difundirEstado(); }
-      if (s.includes("NOOPTIN")) { estado.tunel = "sin-optin"; difundirEstado(); }
+      // credenciales rechazadas o sin opt-in: no tiene sentido re-lanzarlo
+      if (s.includes("NOOPTIN")) { estado.tunel = "sin-optin"; tunelDeseado = false; difundirEstado(); }
+      if (s.includes("credenciales rechazadas")) { tunelDeseado = false; }
     });
     tunelProceso.stderr.on("data", (d) => log("tunel(stderr): " + String(d).slice(0, 120), "aviso"));
     tunelProceso.on("exit", (code) => { tunelProceso = null; estado.tunel = null; log("agente del túnel salió (código " + code + ")"); difundirEstado(); });
@@ -296,6 +302,16 @@ async function tunelSegunOptin(yo) {
     log("no pude arrancar el túnel: " + e.message, "aviso");
   }
 }
+
+/* Vigilante del túnel: si el agente MUERE (fallo de red, <>…), main lo
+ * re-lanza en ≤25 s mientras el opt-in siga aceptado. Es lo que permite
+ * que el peer figure SIEMPRE saltable (con latencia) mientras el
+ * usuario haya dicho «acep tar ser salto» — sin tocar nada. */
+setInterval(() => {
+  if (!tunelDeseado || tunelProceso) return;
+  log("el agente del túnel no está: lo re-lanzo (auto-sanación)");
+  tunelSegunOptin({ salto_publico: true }).catch(() => { /* ya logueado */ });
+}, 25000);
 
 async function rotarCircuito() {
   try {
