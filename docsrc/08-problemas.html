@@ -1,0 +1,87 @@
+<h2>El diario de incidencias (completo)</h2>
+<p>Estos problemas aparecieron de verdad durante el desarrollo y las pruebas. Cada uno con síntoma, causa de raíz y solución, para que nadie repita el viaje. Cada solución tiene su prueba en <span class="mono">tests/run_all.sh</span> o en la suite e2e del navegador.</p>
+
+<h3>1. «Veo mi IP real con la red encendida» (el más importante)</h3>
+<ul>
+<li><b>Síntoma:</b> el popup / la comprobación de ipify mostraba la IP del cliente con el circuito activo.</li>
+<li><b>Causa raíz (doble):</b> (a) en Chrome ≥131 el alias <span class="mono">browser</span> existe y la extensión aplicaba el ajuste con el esquema erróneo (método de Firefox); (b) en el navegador Electron, el <span class="mono">&lt;webview&gt;</span> usa su propia sesión <span class="mono">persist:jn</span>: el proxy solo estaba en la sesión por defecto, así que las pestañas navegaban directo.</li>
+<li><b>Solución:</b> detección canónica del motor en la extensión + aplicar el proxy a TODAS las sesiones (default y <span class="mono">persist:jn</span>).</li>
+<li><b>Prueba:</b> pasos 5.5 y 9.3 de run_all (IP por SOCKS = IP por HTTP = IP por circuito) y la comprobación del panel.</li>
+</ul>
+
+<h3>2. El mapa «API KEY REQUIRED»</h3>
+<ul>
+<li><b>Síntoma:</b> el mapa del panel mostraba la imagen de error del proveedor de tiles.</li>
+<li><b>Causa:</b> los tiles de Carto responden <b>HTTP 200 con la imagen del mensaje de error</b>; el detector <span class="mono">tileerror</span> nunca dispara (no hay error HTTP).</li>
+<li><b>Solución:</b> se retiró el proveedor: el mapa se pinta SIEMPRE con GeoJSON vectorial de países servido desde el propio panel (<span class="mono">mundo.json</span>): sin tiles, claves ni terceros.</li>
+</ul>
+
+<h3>3. HTTP plano muerto con JENC activado</h3>
+<ul>
+<li><b>Síntoma:</b> <span class="mono">curl http://web-destino</span> por el proxy devolvía «Empty reply»; https funcionaba.</li>
+<li><b>Causa:</b> en la entrada HTTP, la petición GET se escribía en claro ANTES de la magia; el exit leía «GET » como prefijo, no reconocía JENC y el stream quedaba partido (log: «el exit no respondió en modo JENC»).</li>
+<li><b>Solución:</b> la petición inicial viaja como PRIMER registro JENC dentro del mismo flujo (ver post JENC). Verificado: http y https 200 por el circuito (test 8.1).</li>
+</ul>
+
+<h3>4. «Nodo vivo» que en realidad está muerto (arreglado en Fase 9)</h3>
+<ul>
+<li><b>Síntoma:</b> circuitos que elegían nodos «vivos» (por heartbeat) pero cuyo servicio no respondía: el salto colapsaba, o un equipo rebotaba en la lista sin ser útil a nadie. El usuario lo reportó así: «lo de que el nodo esté vivo o caído va un poco mal».</li>
+<li><b>Causa:</b> el heartbeat solo demuestra que el EQUIPO está encendido, no que el SERVICIO de reenvío responda ni que su puerto sea alcanzable.</li>
+<li><b>Solución:</b> validación con hechos: un sondeo TCP real (connect + medición de latencia) a cada nodo con puerto real, concurrente (hilos), cada 15 s desde un hilo de fondo de la API, que apunta <span class="mono">lat_ms</span> y <span class="mono">ult_ok</span>. <b>Es el juez:</b> solo es <span class="mono">saltable</span> el nodo cuyo sondeo conectó dentro de <span class="mono">TTL_OK</span> (≥45 s). Y si el circuito necesita un nodo «frío», lo sondea ahí mismo ANTES de rechazarlo (no hay 503 injustas).</li>
+<li><b>Prueba:</b> peer con servicio que NO escucha → el corazón late pero <span class="mono">saltable=false</span> y no entra en sorteos (test 9.x + fase9_externos.py con <span class="mono">saltable</span>).</li>
+</ul>
+
+<h3>5. El navegador se abría «cortado por la mitad»</h3>
+<ul>
+<li><b>Síntoma del usuario:</b> «se ve la mitad de la pantalla el navegador, se corta por la mitad».</li>
+<li><b>Causa:</b> la ventana abría fija a 1200×820 (min 720×540): en monitores menores (1366×768) la ventana quedaba más alta que el área de trabajo. Además, si los bounds guardados venían de otro monitor mayor, se reabría aún más cortada.</li>
+<li><b>Solución:</b> <span class="mono">recortaAlArea()</span> (main.js): al abrir y al mover, se recorta la ventana al <span class="mono">workArea</span> del monitor con mayor solape; bounds en <span class="mono">bounds.json</span> con estado de maximizada; re-encuadre con debounce al arrastrar a otro monitor + aviso IPC al shell para re-alinear webviews (self-heal).</li>
+<li><b>Prueba:</b> e2e con bounds envenenados (1900×1500) en monitor 1280×1024 → ventana 1279×1023, webview copia exacta (1279×933) y borde inferior pegado; y resize 900×500 → webview 900×410 pegado.</li>
+</ul>
+
+<h3>6. La pestaña quedaba cortada al redimensionar la ventana</h3>
+<ul>
+<li><b>Síntoma:</b> al cambiar el tamaño de la ventana, el <span class="mono">&lt;webview&gt;</span> conservaba el tamaño viejo (mitad de pantalla la web, sin reach al fondo).</li>
+<li><b>Causa doble:</b> (a) el <span class="mono">display:grid</span> del velo del panel del chip anulaba el atributo <span class="mono">hidden</span> (el panel «invisble» tapaba clicks); (b) el auto-ajuste usaba <span class="mono">requestAnimationFrame</span>, que NO dispara cuando la shell no renderiza (ventana oculta/minimizada) → el fix «se colgaba» en Xvfb (invento de la prueba con CDP).</li>
+<li><b>Solución:</b> <span class="mono">.velo[hidden]{display:none}</span> en el CSS + llamada directa a <span class="mono">reajustaWebviews()</span> (con ResizeObserver, evento resize, timeout de 30 ms en activación de pestaña, intervalo de 1 s como red de seguridad y aviso IPC «jn:reencuadre» desde el principal).</li>
+<li><b>Prueba:</b> webview envenenado a 600×300 → se re-alinea al segundo a 1200×730 con el borde inferior pegado al de la ventana (suite e2e del navegador con CDP).</li>
+</ul>
+
+<h3>7. Carrera de lectura de <span class="mono">ult_ok</span> en /nodos</h3>
+<ul>
+<li><b>Síntoma:</b> a veces <span class="mono">/nodos</span> devolvía <span class="mono">responde/saltable</span> «en blanco» (así par) justo después de medir, y el test 11 lo vió fallar de forma intermitente.</li>
+<li><b>Causa:</b> el hilo validador y el handler de <span class="mono">/nodos</span> leían/escribían la misma fila sin reconciliar: el cálculo de «sin_ok» podía salir negativo o con estado de carrería.</li>
+<li><b>Solución:</b> lectura coherente: el handler recalcula <span class="mono">responde</span> desde <span class="mono">ult_ok</span> del MISMO snapshot y clampa <span class="mono">sin_ok_s</span> a ≥ 0.</li>
+</ul>
+
+<h3>8. Cooldown de /rotate: los tests esperaban el comportamiento antiguo</h3>
+<ul>
+<li><b>Síntoma:</b> fases 3 y 9.2 fallaban «rotate con cooldown» tras añadir el cooldown por plan (free 24 h, pro 10 h, admin/moderador sin cooldown).</li>
+<li><b>Causa:</b> tests desactualizados: esperaban rotar libremente y el cooldown ahora responde 429 con «te quedan X h».</li>
+<li><b>Solución:</b> tests actualizados: la prueba modera el rol a moderador antes de rotar (ningún cooldown) o valida el 429 con el detalle de horas restantes — así el artefacto documenta el comportamiento REAL.</li>
+</ul>
+
+<h3>9. run_all roto bajo sudo: «cd: /root/jumpernat»</h3>
+<ul>
+<li><b>Síntoma:</b> al relanzar la suite con <span class="mono">sudo bash tests/run_all.sh</span> desde <span class="mono">~/jumpernat</span>, 16/16 marcadas FALLÍDAS con «Permission denied» en los logs temporales.</li>
+<li><b>Causa:</b> la suite hacía <span class="mono">cd ~/jumpernat</span> (bajo sudo: <span class="mono">/root/jumpernat</span>, que no existe) y los ficheros de log <span class="mono">/tmp/runall_*</span> quedaban con dueño distinto entre ejecuciones.</li>
+<li><b>Solución:</b> la raíz se resuelve desde la localización del script (<span class="mono">$(dirname BASH_SOURCE)/..</span>) y se limpian los logs previos; además <span class="mono">set -u</span> para no seguir con variables vacías.</li>
+</ul>
+
+<h3>10. Registro con 429 «demasiados registros»</h3>
+<ul>
+<li><b>Explicación:</b> NO es un bug: es la ventana anti-spam por IP (3 cuentas / 5 min). El test de la fase 3 espera o usa la cuenta ya existente. En desarrollo se reinicia la API para vaciar el contador.</li>
+</ul>
+
+<h3>11. WordPress «Error establishing a database connection» intermitente</h3>
+<ul>
+<li><b>Causa:</b> el wp-config generado con escapes del heredoc + la carrera de arranque de MariaDB al primer segundo; el buffer pool por defecto variaba con la memoria del contenedor.</li>
+<li><b>Solución:</b> wp-config limpio sin escapes, recrear contenedor y fijar <span class="mono">innodb_buffer_pool_size</span>=48M. Documentado en el post de despliegue.</li>
+</ul>
+
+<h3>12. La prueba e2e «mata» electrones a los ~60 s (entorno, no bug)</h3>
+<ul>
+<li><b>Síntoma:</b> la app moría sola en minutos bajo Xvfb: «Network service crashed», zygote muerto, GPU launch failed (error 1002).</li>
+<li><b>Causa:</b> memoria/sandbox del entorno de pruebas en VM (no del producto): los procesos hijo de Chromium (GPU/network) mueren al agotarse la VM.</li>
+<li><b>Lección práctica para testing:</b> levantar el electron bajo Xvfb propio con <span class="mono">--disable-gpu --no-sandbox --disable-dev-shm-usage</span> y medición CDP en la primera ventana de vida; incluye Xauthority por pantalla (un Xvfb viejo con otra cookie tumba la conexión con «Invalid MIT-MAGIC-COOKIE»).</li>
+</ul>

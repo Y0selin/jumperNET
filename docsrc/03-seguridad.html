@@ -1,0 +1,41 @@
+<h2>Principio rector</h2>
+<p>Guardamos lo mínimo imprescindible para operar la red, ciframos lo sensible y bloqueamos por defecto. Y, sobre todo: <b>no existe histórico de destinos</b> — la base de datos solo guarda el estado actual del usuario (regla 4 del proyecto).</p>
+
+<h2>Cuentas</h2>
+<ul>
+<li><b>Contraseñas nunca en claro:</b> se guardan con <span class="mono">argon2</span> (hash con memoria). Ni logs ni dumps contienen la cadena original.</li>
+<li><b>Sesiones:</b> JWT firmado con <span class="mono">JWT_SECRET</span> (en <span class="mono">.env</span> fuera de git), caduca en 7200 s (2 h).</li>
+<li><b>Login duro:</b> 5 intentos por minuto por IP; al 5.º fallo de una cuenta, bloqueo de 5 min; respuesta genérica «credenciales no validas» para no revelar si el email existe.</li>
+<li><b>Registro anti-spam:</b> máximo 3 cuentas creadas por IP cada 5 min (<span class="mono">429</span> más allá) y tope global de usuarios (<span class="mono">MAX_USUARIOS</span>, 500).</li>
+</ul>
+
+<h2>Planes y roles (lo que puede y no puede hacer cada cuenta)</h2>
+<table>
+<tr><th>Plan</th><th>Saltos</th><th>Refresco del circuito</th></tr>
+<tr><td class="mono">free</td><td>3 fijos</td><td>1 vez al día (cooldown 24 h)</td></tr>
+<tr><td class="mono">pro</td><td>3..7 a elección</td><td>cada 10 h (cooldown 10 h)</td></tr>
+<tr><td class="mono">empresarial</td><td>3..7 a elección</td><td>cada 10 h</td></tr>
+</table>
+<p><b>Roles</b> (<span class="mono">rol usuario/moderador/admin</span>): admin y moderador resetean el cooldown (tareas de gestión y pruebas) aunque mantienen 3 saltos fijos. El plan se resuelve en <span class="mono">datos_plan()</span> y vive en la fila del usuario.</p>
+
+<h2>La red por dentro</h2>
+<ul>
+<li><b>Solo dos métodos SOCKS5 válidos:</b> usuario/contraseña (0x02). GSSAPI (0x01) e «no-auth» (0x00) se rechazan SIEMPRE — esto no es un proxy abierto.</li>
+<li><b>Credenciales = cuenta:</b> email + contraseña de la web, validados contra la API (argon2) en cada conexión; el usuario debe estar conectado (<span class="mono">/connect</span>) para tener circuito vigente.</li>
+<li><b>Doble filtro de destino:</b> la entrada valida puertos 80/443 y bloquea IPs privadas, redes docker, link-local y la metadata 169.254.169.254 de Oracle; el exit re-valida (defensa en profundidad). Excepción explícita: el destino interno de pruebas <span class="mono">web-destino</span>.</li>
+<li><b>Cifrado entre saltos:</b> con <span class="mono">CLAVE_SALTOS</span> los datos viajan como registros ChaCha20-Poly1305 (JENC): los nodos intermedios ven solo ruido autenticado (ver el post JENC).</li>
+<li><b>Tokens de red:</b> INTERNAL_TOKEN para nodos de infraestructura y PEER_TOKEN para los personales de usuarios (nombre <span class="mono">peer_*</span>). La API solo escucha en 127.0.0.1:8000 y red docker.</li>
+</ul>
+
+<h2>La IP real solo cuando la peticion viene de un proxy de confianza</h2>
+<p>La API toma <span class="mono">X-Forwarded-For</span> únicamente cuando la conexión llega desde <span class="mono">PROXIES_CONFIANZA</span> (Caddy en docker: 172.16.0.0/12, 10.0.0.0/8). Un cliente que golpease la API directo no podría suplantar otra IP.</p>
+
+<h2>Qué ve la web del panel y qué NO</h2>
+<p>El panel enseña: cuenta (alias, lema, foto), estado activo, modo (<span class="mono">todos</span>/<span class="mono">externos</span>), circuito de saltos, IP de salida y última comprobación. No enseña (y no existe): tráfico, DNS, destinos ni histórico de circuitos.</p>
+
+<h2>Buenas prácticas del navegador</h2>
+<ul>
+<li>La contraseña del chip PROXY se guarda en localStorage local (nunca en la red) y se enmascara en el log interno.</li>
+<li>El proxy se aplica a TODAS las sesiones del Chromium (por defecto y <span class="mono">persist:jn</span>): ni una pestaña escapa en claro.</li>
+<li>Los logs internos (= <span class="mono">jn://log</span>) limpian credenciales: el correo sale enmascarado.</li>
+</ul>

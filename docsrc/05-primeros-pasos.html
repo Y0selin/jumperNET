@@ -1,0 +1,55 @@
+<h2>De cero a navegar por tu circuito</h2>
+<p>Esta guía es la ruta completa: cuenta en el panel, conexión, y las tres formas de usar tu IP oculta (extensión, navegador dedicado y apps externas por SOCKS5/HTTP).</p>
+
+<h3>1. Crea tu cuenta</h3>
+<ol>
+<li>Abre el panel: <span class="mono">https://y0selin.github.io/jumperNET/</span>.</li>
+<li>Pestaña «Cuenta» → registras email + contraseña (mínimo 8 caracteres). Plan <span class="mono">free</span> por defecto: 3 saltos fijos, refresco del circuito 1 vez al día.</li>
+<li>Si te registras por curl, cuida el rate limit: 3 cuentas por IP cada 5 minutos.</li>
+</ol>
+
+<h3>2. Conecta tu cuenta a la red</h3>
+<ul>
+<li><b>Botón «Conectar»</b> del panel (o <span class="mono">POST /connect</span> con tu token JWT). Te asigna un circuito de 3 nodos vivos <b>validados por sondeo TCP</b>: nodos que no responden jamás entran al sorteo.</li>
+<li>Puedes elegir <b>modo</b>: <span class="mono">todos</span> (infra docker + equipos de usuarios) o <span class="mono">externos</span> (SOLO equipos de usuarios — ver el post Fase 9).</li>
+<li>En plan pro puedes pedir 3..7 saltos: <span class="mono">POST /connect {"saltos":5}</span>.</li>
+<li>«⟳ Rotar circuito» cambia todos los saltos (respeta tu modo); con cooldown de plan (free 24 h, pro 10 h).</li>
+</ul>
+
+<h3>3. Comprueba tu IP de salida (la filosofía del proyecto)</h3>
+<pre><code>curl --socks5-hostname jumpernet.duckdns.org:1080 \
+     --proxy-user 'tu@correo:TU_CLAVE' https://api.ipify.org
+# o en el panel: pestaña «Red» → «Comprobar ahora» (contraseña + petición real)</code></pre>
+<p>La IP devuelta es la del nodo de salida. En modo <span class="mono">externos</span> con tu equipo de salida, es la IP pública de TU casa (se anuncia desde tu cliente peer).</p>
+
+<h3>4A. Extensión del navegador (tu navegador de siempre)</h3>
+<ol>
+<li>Descarga el zip desde «Descargas» y cárgalo sin empaquetar (chrome://extensions → modo desarrollador) o instálala desde la tienda si ya está publicada.</li>
+<li>Pulsa su icono: piden email+contraseña, guardadas en el storage de la extension y usadas SOLO para responder al 407 de la entrada HTTP (1081): nunca ventanas de login ni pestañas extra.</li>
+<li>El vigía interno (ver post 7) vigila que el proxy del navegador no lo cambie nadie: si se pierde, se repone y te avisa.</li>
+</ol>
+
+<h3>4B. Navegador JumperNET (Chromium dedicado)</h3>
+<ol>
+<li>Descarga el instalador/portable/AppImage desde «Descargas».</li>
+<li>Ábrelo: pestañas normales + chip «PROXY» en la esquina inferior derecha (gris = directo, ámbar = conectando, verde = ACTIVO).</li>
+<li>Pulsa el chip, escribe cuenta y «⚡ Activar el proxy»: TODO (pestañas, fetch, WebSockets) sale por el circuito; las pruebas simuladas nunca.</li>
+<li>«⌖ Estado del circuito…» (menú ☰) muestra cuenta, red, circuito e IP; «⟳ Nuevo circuito» rota; «⌄ Registro interno» enseña el log sin credenciales.</li>
+<li>Si una pestaña falla por el circuito, reintenta 2 veces y te muestra el motivo EXACTO (<span class="mono">ERR_*</span>) con página amable.</li>
+</ol>
+
+<h3>4C. Apps y comandos externos</h3>
+<pre><code># SOCKS5 (recomendado): cifrado y name-resolution POR el circuito
+curl --socks5-hostname jumpernet.duckdns.org:1080 \
+     --proxy-user 'tu@correo:TU_CLAVE' https://tuweb.org
+
+# HTTP con Basic auth (lo que usa la extension)
+curl -x jumpernet.duckdns.org:1081 \
+     -u 'tu@correo:TU_CLAVE' https://tuweb.org</code></pre>
+<p>Solo se permite el puerto 80/443: puertos prohibidos (8080, 22…) y destinos privados devuelven <span class="mono">403-no permitido</span> por protocolo.</p>
+
+<h3>5. Desconexión y cierre</h3>
+<ul>
+<li>Chip PROXY «⏸ Apagar» o panel «Desconectar»: el backend vacía el circuito de tu fila (<span class="mono">activo=0</span>); el socks de entrada deja de servirte.</li>
+<li>Borrar la cuenta (<span class="mono">DELETE /me</span>) elimina fila, nodo personal registrado y credenciales (y tu peer deja de latir).</li>
+</ul>

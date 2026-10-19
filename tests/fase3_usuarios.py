@@ -134,27 +134,21 @@ comprobar("/comprobar con clave mala -> ok False (el proxy valida en serio)",
           st == 200 and r.get("ok") is False, r)
 
 # rotate
-# rotate saca un circuito ALEATORIO (orden incluido): puede coincidir el orden
-# exacto con el anterior por pura casualidad (con 6 nodos, 1 de cada 120). Se
-# compara el circuito ordenado y se reintenta un par de veces por si colisiona.
+# PLAN FREE: el refresco del circuito tiene cooldown de 24 h (plan pro: 10 h).
+# Inmediatamente después de conectar, SIEMPRE cae el 429 con el mensaje de
+# cooldown — el test lo EXIGE así (antes esperaba un rotate libre y llevaba
+# cuenta desfasada respecto al producto). El que rotar de verdad CAMBIA el
+# circuito se verifica en la batería local (TestClient, usuario plan pro) y
+# para el cooldown se comprueba el mensaje exacto.
 time.sleep(0.2)
 st, r = pedir("POST", "/rotate", token=token)
-comprobar("rotate -> circuito valido", st == 200 and len(r.get("circuito", [])) == 3, r)
-circuito2 = r.get("circuito", [])
-intentos_r = 0
-while circuito2 == circuito1 and intentos_r < 3:
-    time.sleep(0.2)
-    st, r = pedir("POST", "/rotate", token=token)
-    circuito2 = r.get("circuito", [])
-    intentos_r += 1
-comprobar("rotate entrega OTRO circuito (cambia el orden de los saltos)",
-          circuito2 != circuito1, f"{circuito1} -> {circuito2}")
-comprobar("rotate mantiene la IP publica del servidor (misma IP, otros nodos)",
-          r.get("ip_salida") == salida1, f"{salida1} -> {r.get('ip_salida')}")
+comprobar("rotate con plan free recién conectado -> 429 cooldown 24 h",
+          st == 429 and "refrescar el circuito cada 24 h" in json.dumps(r),
+          (st, r))
+# la sesión SIGUE funcionando con el circuito original (el cooldown no rompe nada)
 st, r = pedir("POST", "/comprobar", {"password": CLAVE}, token=token)
-comprobar("/comprobar: el circuito NUEVO tambien sale a internet con la IP del servidor",
-          st == 200 and r.get("ok") is True and r.get("ip_observada") == salida1
-          and r.get("circuito", []) == circuito2,
+comprobar("/comprobar: el circuito ORIGINAL sigue saliendo con la IP del servidor",
+          st == 200 and r.get("ok") is True and r.get("ip_observada") == salida1,
           f"observada={r.get('ip_observada')} circuito={r.get('circuito')}")
 # disconnect
 st, r = pedir("POST", "/disconnect", token=token)

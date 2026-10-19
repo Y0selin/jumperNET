@@ -1,0 +1,34 @@
+<h2>La idea en una frase</h2>
+<p>JumperNET es un <b>circuito de anonimato de varios saltos</b> montado sobre contenedores Docker reales: tu tráfico entra por un proxy autenticado (SOCKS5 en el puerto 1080 o HTTP con Basic auth en el 1081), salta por <b>tres o más nodos elegidos al azar</b> que solo reenvían bytes sin entenderlos, va <b>cifrado capa tras capa</b> entre el primer salto y el último (JENC: ChaCha20-Poly1305) y sale a internet con <b>la IP del nodo de salida</b>. La web de destino nunca ve la tuya.</p>
+
+<h2>Qué NO es</h2>
+<ul>
+<li><b>No es la red Tor pública:</b> los saltos son nodos de laboratorio que corren en el servidor del proyecto… y desde la Fase 9 también <b>tus propios equipos</b> (los «nodos externos», ver post dedicado).</li>
+<li><b>No es mágico:</b> si el nodo de salida estuviera comprometido, ese punto conocería el destino; por eso los nodos no registran contenido y solo se permiten los puertos 80/443 y se bloquean IPs privadas y metadata de la nube.</li>
+<li><b>No es para acelerar juegos:</b> añade saltos reales y, con ellos, latencia real (se mide con TCP connect y se enseña en <span class="mono">/nodos</span>).</li>
+</ul>
+
+<h2>Por qué está hecho así</h2>
+<p>El diseño copia la estrategia de Tor a escala de laboratorio por una razón didáctica y práctica: separar <b>quién eres</b> (la entrada, que sí te autentica) de <b>a dónde vas</b> (la salida, que solo ve un destino). Entre ambas, nudos intermediarios que reenvían ciegamente. Si alguien inspecciona la conexión entrada→primer salto, solo descubre cifrado; si inspecciona la salida, solo descubre el destino final de un circuito con una marca efímera de conexión.</p>
+
+<h2>Las tres caras de la misma red</h2>
+<ul>
+<li><b>Panel web</b> (GitHub Pages + API): la torre de control. Cuentas con plan y rol, interruptor de conexión, lista de nodos con latencia y <b>eliminación de zombis</b> (gracias al sondeo), comprobación real de IP y descargas.</li>
+<li><b>Navegador JumperNET</b>: un Chromium dedicado (Electron) que ya viene conectado: lo abres, activas el chip «PROXY» y TODO (páginas, fetch, WebSockets) sale por el circuito, con «⟳ Nuevo circuito» estilo Tor y ventana que <b>nunca se abre recortada</b>.</li>
+<li><b>Extensión</b>: la alternativa ligera para tu navegador de siempre (Chrome/Edge/Brave/Firefox): fija el proxy del navegador a la entrada HTTP y responde sola al 407 con tus credenciales.</li>
+</ul>
+
+<h2>Nombre: JumperNET, no JumperNAT</h2>
+<p>El proyecto se llamó JumperNAT en su fase de laboratorio por el parecido con un NAT de tres puertos. El nombre correcto es <b>JumperNET</b>: no hay traducción de direcciones, hay <b>red de saltos</b>. Todo el producto (extensión, navegador, panel y esta documentación) usa ya JumperNET.</p>
+
+<h2>Cómo se prueba que funciona</h2>
+<p>Cada afirmación de esta documentación está respaldada por una prueba que puedes repetir. La más directa, desde tu propia máquina (la ruta de Tor pero con TU red):</p>
+<pre><code>curl --socks5-hostname jumpernet.duckdns.org:1080 \
+     --proxy-user 'tu@correo:TU_CLAVE' \
+     https://api.ipify.org</code></pre>
+<p>Si devuelve la IP de salida (y no la tuya), el circuito está vivo. En modo <span class="mono">externos</span> (tu equipo como salida) devuelve además la IP pública de TU casa:</p>
+<pre><code>curl -sS -X POST https://jumpernet.duckdns.org/api/connect \
+     -H "Authorization: Bearer $TOKEN" \
+     -H 'Content-Type: application/json' \
+     -d '{"modo":"externos"}' | jq .exit_ip</code></pre>
+<p>Esa es la filosofía del proyecto: nada de promesas, <b>IP a la vista</b>.</p>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { nodos, miNodo } from "../lib/api.js";
+import { nodos, miNodo, editarMe } from "../lib/api.js";
 import { Stat } from "./Piezas.jsx";
 
 /* Nodos: la foto completa de la red — todos los saltos registrados, su estado
@@ -15,6 +15,23 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
   const [orden, setOrden] = useState("nombre");     // nombre | latencia | conexiones
   const [bloque, setBloque] = useState("todos");    // todos|vivos|circuito|peer|externos|infra
   const [busca, setBusca] = useState("");
+  const [cambiando, setCambiando] = useState(false);
+
+  /* OPT-IN del salto: tu nodo personal (peer_u<id>) se registra al abrir esta
+     pestaña, pero NUNCA salta hasta que aceptas ser salto de la red. Aquí
+     se muestra el estado y el botón de aceptar/revocar. */
+  const miPeer = lista.find((n) => n.nombre === `peer_u${yo?.id}`);
+  async function cambiarSalto(acepta) {
+    setCambiando(true);
+    try {
+      await editarMe({ salto_publico: acepta });
+      aviso(acepta
+        ? "✓ Aceptado: tu equipo ya puede saltar cuando su servicio peer esté encendido"
+        : "✓ Revocado: tu equipo ya no salta por el circuito de nadie");
+      await trae();
+    } catch (e) { aviso(e.message, "error"); }
+    finally { setCambiando(false); }
+  }
 
   /* Privacidad de la vista: un usuario NORMAL solo ve los nodos DE SU CIRCUITO
      (dónde pega el tráfico). Moderadores y administradores ven la red completa.
@@ -95,6 +112,50 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
         </div>
       )}
 
+      {!compacta && yo?.id && (
+        <div className="tarjeta" style={{
+          borderColor: miPeer?.salto_publico ? "rgb(from var(--acento-1) r g b / .5)" : undefined,
+        }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 340px", minWidth: 0 }}>
+              <h2 className="seccion" style={{ marginBottom: 6 }}>
+                Mi equipo como salto {miPeer?.salto_publico && <span className="chip vivo" style={{ marginLeft: 8 }}>aceptado</span>}
+              </h2>
+              <p className="nota" style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55 }}>
+                Tu equipo está registrado en la red como <b className="mono">peer_u{yo?.id}</b>
+                {miPeer && <> · estado <b>{miPeer.estado}</b> · dirección <b className="mono">{miPeer.direccion}</b></>}.
+                Por defecto <b>no salta por el circuito de nadie</b>. Si lo aceptas, tu equipo
+                entra al pool de saltos externos y el tráfico de otros usuarios puede salir
+                por tu IP — igual que una relay pública de Tor — pero SOLO cuando tengas tu
+                servicio peer encendido (<span className="mono">nodo_personal.py</span>) y su
+                puerto abierto en el router: el servidor lo valida con un sondeo TCP real
+                antes de usarlo. Puedes revocarlo aquí mismo cuando quieras.
+              </p>
+              {!miPeer && (
+                <p className="nota" style={{ marginTop: 6, fontSize: 11.5 }}>
+                  Tu nodo personal aparecerá aquí cuando conectes la red (o mantengas esta pestaña abierta).
+                </p>
+              )}
+              {miPeer?.salto_publico && !miPeer.hoppable && (
+                <p className="nota" style={{ marginTop: 6, fontSize: 11.5, color: "#ffb454" }}>
+                  Aceptado, pero el servidor no ve tu servicio peer: lanza <span className="mono">nodo_personal.py</span>
+                  en tu equipo y abre su puerto en el router para que el sondeo TCP lo valide.
+                </p>
+              )}
+            </div>
+            <button
+              className={`btn ${miPeer?.salto_publico ? "" : "primario"}`}
+              style={{ flex: "0 0 auto", marginTop: 4 }}
+              disabled={cambiando}
+              onClick={() => cambiarSalto(!miPeer?.salto_publico)}
+              title={miPeer?.salto_publico ? "Revocar: tu equipo deja de saltar al instante" : "Aceptar que tu equipo sea salto de la red"}
+            >
+              {cambiando ? <span className="spin" /> : (miPeer?.salto_publico ? "⨯ no ser salto" : "✓ acepto ser salto")}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="tarjeta">
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
           <h2 className="seccion" style={{ marginBottom: 0 }}>{esGestion ? "Todos los nodos" : "Tus nodos"}</h2>
@@ -153,8 +214,9 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
         <p className="nota" style={{ marginTop: 12, fontSize: 12 }}>
           Lista DINÁMICA de la red: los nodos entran al conectarse (heartbeat) y quedan
           registrados para siempre; si dejan de latir se muestran como <b>desconectados</b>.
-          Los equipos de usuarios (marcados «personal») saltan por tu circuito solo si su
-          dueño tiene su servicio peer encendido. Latencia TCP connect real medida por el servidor.
+          Los equipos de usuarios (marcados «personal») <b>no saltan hasta que su dueño acepta
+          ser salto</b> (tarjeta «Mi equipo como salto») y, además, tienen el servicio peer
+          encendido y validado por sondeo TCP. Latencia TCP connect real medida por el servidor.
         </p>
       </div>
     </div>

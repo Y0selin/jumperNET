@@ -1,0 +1,43 @@
+<h2>Mapa completo del despliegue</h2>
+<p>Todo corre en <b>un solo VPS</b> (Oracle Cloud, Ubuntu) orquestado con docker-compose dentro de una red docker propia (<span class="mono">red_jumper</span>). El único puerto público es el <b>443</b> (Caddy); los SOCKS5/HTTP de entrada están publicados aparte para los clientes.</p>
+
+<h3>Servicios (docker-compose.yml)</h3>
+<table>
+<tr><th>Servicio</th><th>Imagen</th><th>Puertos</th><th>Función</th></tr>
+<tr><td class="mono">caddy</td><td class="mono">caddy:2.8-alpine</td><td>80, 443</td><td>TLS de Let's Encrypt + proxy a la API y al WordPress de docs (strip de <span class="mono">/docs/</span>).</td></tr>
+<tr><td class="mono">api</td><td class="mono">jumpernat/api</td><td>127.0.0.1:8000</td><td>Plano de control (FastAPI): usuarios, nodos, circuitos, planes, admin. SOLO local/interna.</td></tr>
+<tr><td class="mono">entrada</td><td class="mono">jumpernat/entrada</td><td>1080</td><td>Proxy SOCKS5 autenticado (RFC 1928/1929) con validación contra la API y bloqueo de destinos.</td></tr>
+<tr><td class="mono">entrada-http</td><td class="mono">jumpernat/entrada-http</td><td>1081</td><td>Proxy HTTP-CONNECT con Basic auth (lo usa la extension y el «modo simple»).</td></tr>
+<tr><td class="mono">nodo1..nodo6</td><td class="mono">jumpernat/nodo</td><td>9000 (interno)</td><td>Saltos de reenvío ciego (Fase 1). Reenvían bytes, no entienden nada.</td></tr>
+<tr><td class="mono">wp / wp_db</td><td class="mono">wordpress</td><td>vía Caddy</td><td>Esta documentación (WordPress con tema child propio).</td></tr>
+<tr><td class="mono">web-destino</td><td>build ./web</td><td>interno</td><td>Destino de pruebas (la vista «eco» del circuito).</td></tr>
+<tr><td class="mono">cliente-test</td><td>build ./tests</td><td>—</td><td>Contenedor efímero donde corren las pruebas e2e (fase2/3/5/8/9).</td></tr>
+</table>
+
+<h3>Límites de recursos (anti-OOM del cgroup)</h3>
+<pre><code>mem_limit: 96m, cpus: "0.25"          # cada nodo de reenvío
+mem_limit: 256m                        # api (argon2 necesita RAM real)</code></pre>
+
+<h2>Flujo byte a byte de una petición</h2>
+<ol>
+<li>Tu cliente habla SOCKS5 con <span class="mono">entrada:1080</span> (o HTTP CONNECT con Basic auth en 1081). GSSAPI y «sin autenticación» se rechazan SIEMPRE: la validación de credenciales hace el resto.</li>
+<li><span class="mono">entrada</span> llama internamente a la API (<span class="mono">POST /interno/socks_auth</span>, solo red docker) con tus credenciales: la API verifica argon2 y devuelve tu círculo actual (lista de saltos).</li>
+<li>La entrada VALIDA el destino además aquí (defensa en profundidad): solo puertos 80/443, bloqueo de IPs privadas/docker/link-local y metadata 169.254.169.254 de Oracle.</li>
+<li>Conecta al primer salto con <span class="mono">&quot;nodo2,nodo5,destino:host:puerto&quot;\n</span>: Fase 1 en claro entre contenedores de la misma red… y si <span class="mono">CLAVE_SALTOS</span> está activa, tu petición ya viaja como PRIMER registro JENC (Fase 8): los nodos intermedios solo ven ruido ChaCha20-Poly1305.</li>
+<li>Cada nodo lee la ruta restante, lo recorta a la dir de extrema y reenvía ciegamente ambos sentidos.</li>
+<li>El exit descifra JENC (detección automática por prefijo), manda la magia de reconstrucción y abre el TCP a destino real: la web ve <b>IP del exit</b>.</li>
+<li>La respuesta vuelve por el mismo camino; hacia el cliente los datos van re-cifrados registro a registro si el circuito es JENC bidireccional.</li>
+</ol>
+
+<h2>El plano de control separado del plano de datos</h2>
+<p>La API (control) NUNCA está en el camino de los datos. Flujos: «cuenta y circuito» (HTTPS→Caddy→API) frente a «bytes de navegación» (SOCKS 1080→nodos→salida). Esto permite: reiniciar la API sin cortar tú tráfico; validar nodos sin tocar reenvíos; y que la API no vea ni un byte de web.</p>
+
+<h2>Registro de nodos: 'infra' frente 'usuario'</h2>
+<p>un ping a la API cada 10 s (<span class="mono">POST /nodos/heartbeat</span> con INTERNAL_TOKEN). Desde Fase 9 los equipos de usuarios también latan (con PEER_TOKEN y nombre <span class="mono">peer_*</span>) y quedan marcados <span class="mono">tipo=usuario</span>: la fila queda <b>visible para siempre</b> (persistencia upsert por nombre determinista <span class="mono">peer_u&lt;id&gt;</span>) y y el estado vivo/caído lo decide el latido más el <b>sondeo TCP</b> del validador de fondo. <span class="mono">/nodos</span> enseña <span class="mono">ms, responde, saltable, tipo</span> por nodo.</p>
+
+<h2>Dónde vive cada cosa</h2>
+<ul>
+<li><span class="mono">~/jumpernat</span> en el VPS: servicios, tests, docker-compose, docsrc, descargas y .env con las claves.</li>
+<li><span class="mono">/data/jumpernat.db</span>: SQLite del estado (usuarios, nodos, planes). Sin histórico de destinos (regla 4 del proyecto).</li>
+<li>Panel en GitHub Pages (estático) que habla HTTPS con la API via Caddy <span class="mono">/api</span>.</li>
+</ul>

@@ -5,7 +5,10 @@
 #       bash tests/ip_publica_real.sh desde tu propia maquina: cambia la IP
 #       de verdad al salir por el circuito)
 set -u
-cd ~/jumpernat || exit 1
+# raíz del proyecto: la carpeta padre de tests/ — funciona igual con sudo o
+# invocado desde cualquier sitio (antes: 'cd ~/jumpernat' rompía bajo sudo)
+RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$RAIZ" || exit 1
 
 FALLOS=0
 CONT=0
@@ -246,6 +249,14 @@ dec_circuito_con_peer() {
   # usuario de prueba: rota hasta que el circuito incluya el peer
   T=$(curl -s -X POST 127.0.0.1:8000/login -H 'Content-Type: application/json' \
     -d "{\"email\":\"$SOCKS_USER\",\"password\":\"$SOCKS_PASS\"}" | python3 -c 'import json,sys;print(json.load(sys.stdin)["token"])')
+  # el cooldown de /rotate es por plan (free = 24 h). Para EMPUJAR rotaciones
+  # de pruebas, la cuenta pasa a moderador (rol sin cooldown, comportamiento
+  # documentado en la doc de seguridad) — es un usuario SOLO de pruebas.
+  docker exec jumpernat-api-1 python3 -c "
+import os, sqlite3
+c = sqlite3.connect(os.environ.get('DB_PATH', '/data/jumpernat.db'))
+c.execute(\"UPDATE usuarios SET rol='moderador' WHERE email=?\", ('$SOCKS_USER',))
+c.commit()"
   for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
     isl=$(curl -s -X POST 127.0.0.1:8000/rotate -H "Authorization: Bearer $T")
     echo "$isl" | grep -q 'peer_prueba' && break
@@ -283,6 +294,16 @@ repara_circuito_muerto() {
       -d "{\"email\":\"$USER_R\",\"password\":\"$PASS_R\"}" | python3 -c 'import json,sys;print(json.load(sys.stdin)["token"])')
   fi
   [ -n "$T" ] || { echo "  no pude crear el usuario de reparacion"; return 1; }
+  # limpieza defensiva: (a) si la cuenta quedó conectada de una ejecución
+  # previa, /connect devolvería 409; (b) el peer_prueba del 9.2 ya no existe
+  # (docker rm -f) pero su fila puede seguir "fresca" (TTL_OK 45 s) y la
+  # reparación podría elegirlo como sustituto -> hop muerto otra vez.
+  curl -s -o /dev/null -X POST -H "Authorization: Bearer $T" 127.0.0.1:8000/disconnect
+  docker exec jumpernat-api-1 python3 -c "
+import os, sqlite3
+c = sqlite3.connect(os.environ.get('DB_PATH', '/data/jumpernat.db'))
+c.execute(\"DELETE FROM nodos WHERE nombre='peer_prueba'\")
+c.commit()" >/dev/null
   code=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $T" 127.0.0.1:8000/connect)
   [ "$code" = "200" ] || { echo "  /connect devolvio $code"; return 1; }
   # escribo DIRECTO en la BD un circuito cadaver (hop inexistente)
@@ -341,6 +362,20 @@ modo_externos_e2e() {
   sleep 3
 
   # sesión del usuario de pruebas: NO restar saltos del pool de infra
+  # PERO sí limpiar las filas de peers FALSOS (listeners accept-and-drop de
+  # fase9_externos.py): si siguen frescas, el sorteo externo los elige y la
+  # petición muere en un listener que solo acepta y suelta (Empty reply).
+  docker exec jumpernat-api-1 python3 -c "
+import os, sqlite3
+c = sqlite3.connect(os.environ.get('DB_PATH', '/data/jumpernat.db'))
+c.execute(\"DELETE FROM nodos WHERE nombre IN ('peer_prueba','peer_prueba_ext')\")
+c.commit()" >/dev/null
+  # y darle a la cuenta de pruebas rol moderador: rotate sin cooldown tampoco aquí
+  docker exec jumpernat-api-1 python3 -c "
+import os, sqlite3
+c = sqlite3.connect(os.environ.get('DB_PATH', '/data/jumpernat.db'))
+c.execute(\"UPDATE usuarios SET rol='moderador' WHERE email=?\", ('$SOCKS_USER',))
+c.commit()" >/dev/null
   T=$(curl -s -X POST 127.0.0.1:8000/login -H 'Content-Type: application/json' \
     -d "{\"email\":\"$SOCKS_USER\",\"password\":\"$SOCKS_PASS\"}" | python3 -c 'import json,sys;print(json.load(sys.stdin)["token"])')
   [ -n "$T" ] || { echo "login de $SOCKS_USER fallo"; docker rm -f peer_ext1 >/dev/null 2>&1; return 1; }

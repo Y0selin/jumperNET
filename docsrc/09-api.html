@@ -1,0 +1,60 @@
+<h2>Referencia completa de la API</h2>
+<p>Plano de control en FastAPI. En producción solo escucha <span class="mono">127.0.0.1:8000</span> y se accede vía Caddy: <span class="mono">https://jumpernet.duckdns.org/api/…</span>. Todo JSON; la autenticación de usuario es por token JWT en la cabecera <span class="mono">Authorization: Bearer …</span> (caduca en 2 h). Los tokens de red van en <span class="mono">X-Interno</span>.</p>
+
+<h3>Cuentas</h3>
+<table>
+<tr><th>Endpoint</th><th>Qué hace</th><th>Errores</th></tr>
+<tr><td class="mono">POST /register</td><td>Crea cuenta {email, password≥8}. Anti-spam 3/IP cada 5 min.</td><td>422 email/clave, 409 ya existe, 403 límite global (500), 429 spam</td></tr>
+<tr><td class="mono">POST /login</td><td>Devuelve {token, expira_en}. 5 intentos/min por IP; 5 fallos de cuenta = bloqueo 5 min. Respuesta genérica si el email no existe.</td><td>401, 429</td></tr>
+<tr><td class="mono">GET /me</td><td>Todo tu estado: cuenta, plan, rol, modo, activo, circuito, ip_salida, exit_ip, ultimo_cambio. Refresca ip_real si viene de Caddy.</td><td>401</td></tr>
+<tr><td class="mono">PATCH /me</td><td>Edita alias (24), lema (80) y foto (dataURL png/jpeg/webp ≤200 KB). Vacío = quitar el campo.</td><td>400/422</td></tr>
+<tr><td class="mono">DELETE /me</td><td>Borra la cuenta (y deja de latir tu peer). Sin histórico: la fila desaparece.</td><td>401</td></tr>
+</table>
+
+<h3>Conexión al circuito</h3>
+<table>
+<tr><th>Endpoint</th><th>Qué hace</th><th>Notas</th></tr>
+<tr><td class="mono">POST /connect</td><td>Activa tu circuito. Cuerpo opcional: <span class="mono">{"saltos":3..7,"modo":"todos|externos"}</span>. Registra tu <span class="mono">peer_u&lt;id&gt;</span> desde la primera conexión (aunque falle la elección).</td><td>409 si ya activo; 422 plan sin elección de saltos o modo inválido; 503 sin nodos saltables</td></tr>
+<tr><td class="mono">POST /disconnect</td><td>Apaga (circuito=NULL, activo=0).</td><td>409 si no activo</td></tr>
+<tr><td class="mono">POST /rotate</td><td>Rota TODO el circuito respetando tu modo preferido. Cooldown por plan (free 24 h / pro 10 h; admin y moderador sin cooldown).</td><td>409 si no activo; 429 con horas restantes; 503 sin nodos</td></tr>
+</table>
+
+<h3>Nodos y red</h3>
+<table>
+<tr><th>Endpoint</th><th>Qué hace</th></tr>
+<tr><td class="mono">GET /nodos</td><td>Lista completa: nombre, direccion, tipo (infra|usuario), estado, ms (latencia TCP), responde, sin_ok_s, saltable, alias, dueno. El sendero del validador (Fase 9) es el juez del estado.</td></tr>
+<tr><td class="mono">GET /nodosvivos</td><td>Solo los saltables ahora mismo (con ms). Complemento directo del frontend.</td></tr>
+<tr><td class="mono">POST /nodos/heartbeat</td><td>Latido: INTERNAL_TOKEN (infra) o PEER_TOKEN (peer_* de usuario). Upsert por nombre; marca tipo según prefijo.</td></tr>
+<tr><td class="mono">POST /nodos/usuario</td><td>Latido del equipo del usuario (peer_u&lt;id&gt;) con su servicio opcional host:puerto. Con puerto real = saltable posible; :0 = solo visible.</td></tr>
+<tr><td class="mono">POST /circuito</td><td>Endpoint de PRUEBA de la elección: <span class="mono">?saltos=3..7&amp;modo=externos</span> → circuito solo de peers de usuarios. No cambia tu cuenta.</td></tr>
+<tr><td class="mono">GET /salida</td><td>La IP pública de salida medida desde el propio VPS (referencia para Drugs «¿es la mía?»).</td></tr>
+<tr><td class="mono">POST /comprobar</td><td>Prueba E2E real: pide a internet TU IP pasando por tu circuito (la «comprobación» del panel). Guarda el resultado en tu fila.</td></tr>
+<tr><td class="mono">GET /geo</td><td>Geolocalización simplificada de nodos para el mapa (sin dependencias de terceros).</td></tr>
+</table>
+
+<h3>Interno y admin</h3>
+<table>
+<tr><th>Endpoint</th><th>Qué hace</th></tr>
+<tr><td class="mono">POST /interno/socks_auth</td><td>SOLO red docker: valida email/contraseña (argon2) y devuelve el circuito vigente. Es lo que llaman entrada/entrada-http.</td></tr>
+<tr><td class="mono">GET /admin/usuarios</td><td>Listado completo de cuentas (admin/moderador).</td></tr>
+<tr><td class="mono">DELETE /admin/usuarios/{id}</td><td>Borrado administrativo.</td></tr>
+<tr><td class="mono">DELETE /admin/nodos/{nombre}</td><td>Expulsa un nodo de la lista.</td></tr>
+<tr><td class="mono">GET /admin/dashboard</td><td>Métricas: usuarios, nodos por tipo, conectados, planes.</td></tr>
+<tr><td class="mono">POST /admin/semilla</td><td>Planes/roles de TESTING (marcar pro/empresarial/moderador) para las pruebas.</td></tr>
+</table>
+
+<h3>Ejemplos curl de la vida real</h3>
+<pre><code># login
+TOKEN=$(curl -sS https://jumpernet.duckdns.org/api/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"tu@correo","password":"TU_CLAVE"}' | jq -r .token)
+
+# conectar en modo SOLO EXTERNOS (tu equipo como salto)
+curl -sS -X POST https://jumpernet.duckdns.org/api/connect \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"modo":"externos"}' | jq '{circuito, ip_salida, exit_ip}'
+
+# tu peer anuncia servicio (requiere PEER_TOKEN del .env)
+curl -sS -X POST http://jumpernet.duckdns.org/api/nodos/heartbeat \
+  -H 'X-Interno: $PEER_TOKEN' -H 'Content-Type: application/json' \
+  -d '{"nombre":"peer_umio","direccion":"mi-ip-publica:9000"}'</code></pre>

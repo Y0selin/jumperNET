@@ -271,9 +271,62 @@ ipcMain.handle("jn:abrirExterno", (_e, url) => require("electron").shell.openExt
 
 /* ═════════════════════════════════════════════════ ventana + esquema jn:// */
 
+/* Los bounds del último cierre se recuerdan (por pantalla), pero SIEMPRE
+   recortados al área visible del monitor donde caiga la ventana: así nunca
+   arrastra una ventana más alta que la pantalla (el «navegador cortado
+   por la mitad» al reabrirla en otro equipo o monitor menor). */
+const BOUNDS_FICHERO = path.join(app.getPath("userData"), "bounds.json");
+function cargaBounds() {
+  try { return JSON.parse(fs.readFileSync(BOUNDS_FICHERO, "utf8")); } catch { return null; }
+}
+function guardaBounds() {
+  if (!ventana || ventana.isDestroyed() || ventana.isMinimized()) return;
+  try {
+    fs.mkdirSync(path.dirname(BOUNDS_FICHERO), { recursive: true });
+    fs.writeFileSync(BOUNDS_FICHERO, JSON.stringify({ ...ventana.getBounds(), maximizada: ventana.isMaximized() }));
+  } catch { /* sin disco no pasa nada: solo los bounds del próximo arranque */ }
+}
+/* Recorta un rectángulo dentro del área de trabajo de la pantalla que contenga
+   la mayor parte del rectángulo (o la primaria si está fuera de todas). */
+function recortaAlArea(bounds) {
+  const { screen } = require("electron");
+  const displays = screen.getAllDisplays();
+  let elegida = screen.getPrimaryDisplay();
+  let mejor = -1;
+  if (typeof bounds.x === "number" && typeof bounds.y === "number") {
+    for (const d of displays) {
+      const a = d.workArea;
+      const xSol = Math.max(0, Math.min(bounds.x + bounds.width, a.x + a.width) - Math.max(bounds.x, a.x));
+      const ySol = Math.max(0, Math.min(bounds.y + bounds.height, a.y + a.height) - Math.max(bounds.y, a.y));
+      const solape = xSol * ySol;
+      if (solape > mejor) { mejor = solape; elegida = d; }
+    }
+  } else {
+    // primer arranque o bounds parciales: recorta el tamaño respecto a la
+    // primaria y deja x/y a undefined para que Electron centre la ventana
+    const a = elegida.workArea;
+    const ancho = Math.min(bounds.width, a.width);
+    const alto = Math.min(bounds.height, a.height);
+    return { width: Math.round(ancho), height: Math.round(alto) };
+  }
+  const a = elegida.workArea;
+  const ancho = Math.min(bounds.width, a.width);
+  const alto = Math.min(bounds.height, a.height);
+  // si quedara fuera, pégala a la esquina interior más cercana
+  const x = Math.max(a.x, Math.min(bounds.x, a.x + a.width - ancho));
+  const y = Math.max(a.y, Math.min(bounds.y, a.y + a.height - alto));
+  return { x: Math.round(x), y: Math.round(y), width: Math.round(ancho), height: Math.round(alto) };
+}
+
 function crearVentana() {
+  const base = { width: 1200, height: 820, minWidth: 640, minHeight: 480 };
+  const guardados = cargaBounds();
+  let letras = base;
+  if (guardados) letras = { ...base, ...guardados, maximizada: undefined };
+  letras = recortaAlArea(letras);
   ventana = new BrowserWindow({
-    width: 1200, height: 820, minWidth: 720, minHeight: 540,
+    ...letras,
+    useContentSize: false,
     backgroundColor: "#0d0d14",
     icon: path.join(__dirname, "recursos", "jumpernat.png"),
     title: "JumperNET Browser",
@@ -286,12 +339,38 @@ function crearVentana() {
       backgroundThrottling: false, // pestañas al fondo siguen reintentando
     },
   });
+  if (guardados && guardados.maximizada) ventana.maximize();
   ventana.loadFile(path.join(__dirname, "ventana", "index.html"));
+  /* si el usuario arrastra la ventana a un monitor menor, re-encajarla e
+     informar al shell para que los webviews se re-alineen (self-heal).
+     Con debounce: «move» dispara a ráfaga durante el arrastre. */
+  let temporizadorEncaje = null;
+  ventana.on("move", () => {
+    clearTimeout(temporizadorEncaje);
+    temporizadorEncaje = setTimeout(encajarASuPantalla, 250);
+  });
+  ventana.on("enter-full-screen", () => setTimeout(reajustaDeNuevo, 200));
+  ventana.on("leave-full-screen", () => setTimeout(reajustaDeNuevo, 200));
+  ventana.on("unmaximize", () => setTimeout(reajustaDeNuevo, 120));
+  ventana.on("maximize", () => setTimeout(reajustaDeNuevo, 120));
+  ventana.on("resize", guardaBounds);
+  ventana.on("move", guardaBounds);
+  ventana.on("close", guardaBounds);
   /* ventanas emergentes (popups) de webs → pestaña nueva, nunca ventana nueva */
   ventana.webContents.setWindowOpenHandler(({ url }) => {
     ventana.webContents.send("jn:pestaña", url);
     return { action: "deny" };
   });
+
+  function encajarASuPantalla() {
+    try {
+      const b = ventana.getBounds();
+      const nuevo = recortaAlArea(b);
+      if (nuevo.width !== b.width || nuevo.height !== b.height) ventana.setBounds(nuevo);
+      ventana.webContents.send("jn:reencuadre");
+    } catch { /* nada */ }
+  }
+  function reajustaDeNuevo() { encajarASuPantalla(); }
 }
 
 function escHtml(v) {

@@ -1,0 +1,57 @@
+<h2>Despliegue y operación</h2>
+<p>Todo vive en <span class="mono">~/jumpernat</span> del VPS y se controla con docker-compose. En esta sección: la pila completa, TLS, el WordPress de documentación, los artefactos del navegador y las rutinas de operación.</p>
+
+<h3>La pila (docker-compose.yml)</h3>
+<pre><code>sudo docker compose ps      # caddy, api, entrada, entrada-http,
+                            # nodo1..nodo6, wp, wp_db
+sudo docker compose up -d --build api   # reconstruir solo la API</code></pre>
+<ul>
+<li><span class="mono">.env</span>: INTERNAL_TOKEN, PEER_TOKEN, JWT_SECRET, CLAVE_SALTOS, DB_PATH… (fuera de git; plantilla en <span class="mono">.env.example</span>).</li>
+<li>Volúmenes: <span class="mono">data/jumpernat.db</span> (API), base del wp_db, <span class="mono">descargas/</span> (binarios del navegador que se sirven por el panel), <span class="mono">docsrc/</span> (fuentes de esta documentación).</li>
+<li>La API escucha SOLO en 127.0.0.1:8000; el mundo entra por Caddy.</li>
+</ul>
+
+<h3>TLS y rutas (Caddy 2.8)</h3>
+<ul>
+<li><span class="mono">jumpernet.duckdns.org</span>: certificado automático de Let's Encrypt (test 4.1 verifica el handshake real).</li>
+<li><span class="mono">/api/*</span> → API (strip del prefijo, headers de proxiado con X-Forwarded-For).</li>
+<li><span class="mono">/docs/*</span> → WordPress interno (strip de <span class="mono">/docs/</span>; WP_HOME/WP_SITEURL fijados con la subruta).</li>
+<li>SOCKS5 (1080) y HTTP (1081) publicados directo (no pasan por Caddy: son protocolos de bytes, no HTTP).</li>
+</ul>
+
+<h3>El WordPress de documentación</h3>
+<pre><code># contenedores wp + wp_db en la misma red interna
+sudo docker exec jumpernat-wp-1 php /tmp/wp.phar --allow-root \
+     --path=/var/www/html post list --fields=ID,post_name
+
+# el contenido fuente vive en /tmp/docsrc (dentro del contenedor wp):
+# 00-indice … 12-changelog. Reconstruir todo:
+sudo bash ~/build_blog5.sh     # (borra posts/crea publicados/ajusta portada)</code></pre>
+<ul>
+<li>Credenciales admin en el fichero privado del repo (cámbialas desde wp-admin).</li>
+<li>La portada es una PÁGINA (show_on_front=page) con el índice en orden de lectura.</li>
+</ul>
+
+<h3>Artefactos del navegador (release)</h3>
+<ul>
+<li>Cada build produce 5 ficheros en <span class="mono">deploy/navegador/salida/</span>: <span class="mono">JumperNET Browser Setup 1.0.0.exe</span> (NSIS), <span class="mono">JumperNET Browser 1.0.0.exe</span> (portable, se sube como <span class="mono">jumpernet-navegador-portable.exe</span>), <span class="mono">jumpernet-navegador-windows.zip</span>, <span class="mono">JumperNET-1.0.0.AppImage</span> y <span class="mono">jumpernet-navegador-linux.zip</span>.</li>
+<li>Se suben con rsync a <span class="mono">~/jumpernat/descargas/</span> y el panel los ofrece en «Descargas» (con <span class="mono">LEEME-navegador.txt</span> y <span class="mono">notas-release.md</span>).</li>
+<li>Verificación de integridad tras subir: md5 local vs remoto (obligatorio antes de dar por terminado un release).</li>
+</ul>
+
+<h3>Backups y límites</h3>
+<ul>
+<li>Backup del estado: <span class="mono">sqlite3 data/jumpernat.db ".backup backups/$(date +%s).db"</span> (carpeta backups/ con snapshots por timestamp).</li>
+<li>Límites de cada contenedor: nodos 96m/0.25 cpu; API 256m (argon2 necesita RAM). La web estática del panel va aparte (GitHub Pages), no carga el VPS.</li>
+<li>MariaDB: buffer pool fijado 48M (la carrera de arranque y el wp-config con escapes del heredoc dieron la clásica «Error establishing a database connection» intermitente — ver diario).</li>
+</ul>
+
+<h3>Rutinas útiles</h3>
+<pre><code># suite completa (16 pasos) - si falla, revisa los /tmp/runall_*.log previos
+sudo bash tests/run_all.sh
+
+# reiniciar una pieza ya rebuilt
+sudo docker compose up -d --build api
+
+# mirar la validación de nodos en vivo (Fase 9)
+curl -s http://127.0.0.1:8000/nodos | jq '.[] | {nombre,tipo,ms,saltable}'</code></pre>

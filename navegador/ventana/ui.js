@@ -225,6 +225,11 @@ function reajustaWebviews() {
    Llamada directa + red de seguridad intervalada. */
 window.addEventListener("resize", reajustaWebviews);
 setInterval(reajustaWebviews, 1000);   // de-todos modos: cada segundo, barato
+/* el proceso principal avisa cuando la ventana cambia de monitor / se re-encaja */
+/* el proceso principal avisa cuando la ventana cambia de monitor / se re-encaja */
+if (window.jn && typeof window.jn.avisoReencuadre === "function") {
+  window.jn.avisoReencuadre(() => { reajustaWebviews(); setTimeout(reajustaWebviews, 120); });
+}
 
 /* ═══════════════════════════════════════════════════════════ arranque ══ */
 

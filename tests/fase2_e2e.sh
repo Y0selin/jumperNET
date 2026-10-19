@@ -2,7 +2,9 @@
 # Prueba end-to-end de la Fase 2: obtiene un circuito de la API y ejecuta
 # una peticion HTTP a traves de el. Evidencia para docs/pruebas/.
 set -e
-cd ~/jumpernat
+# raíz del proyecto desde la localización del script (funciona bajo sudo,
+# donde ~/ deja de ser la home del VPS y /root/jumpernat no existe)
+cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 C=$(curl -s -X POST http://127.0.0.1:8000/circuito)
 J=$(echo "$C" | python3 -c 'import json,sys;c=json.load(sys.stdin);print(",".join(c["saltos"]))')

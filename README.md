@@ -1,176 +1,196 @@
-# JumperNET — red de anonimato por saltos (estilo Tor casero)
+# JumperNET — red de anonimización por 3 saltos (proyecto ASIR)
 
-> Proxy SOCKS5 con cuentas de usuario: tu tráfico entra por el proxy, salta por
-> **3 nodos aleatorios** cifrado en cada salto (ChaCha20-Poly1305), y sale a
-> internet con la **IP del nodo de salida**. Cada pieza es real: contenedores
-> Docker en el servidor, una API con cuentas, un panel web y un navegador propio.
-> Todo se puede comprobar a mano con un `curl`.
+Proyecto final de ASIR: una red de anonimización con **circuito de 3 saltos**, entrada
+**SOCKS5 autenticada**, **API de gestión por HTTPS** y nodos en **Docker**.
+El usuario crea una cuenta, enciende su red cuando quiere y ve en vivo por dónde
+va su tráfico.
 
-[![Panel web](https://img.shields.io/badge/panel-y0selin.github.io%2FjumperNET-blueviolet)](https://y0selin.github.io/jumperNET/)
-[![Documentación](https://img.shields.io/badge/docs-jumpernet.duckdns.org%2Fdocs-6c5ce7)](https://jumpernet.duckdns.org/docs/)
-[![Deploy Pages](https://github.com/Y0selin/jumperNET/actions/workflows/pages.yml/badge.svg)](https://github.com/Y0selin/jumperNET/actions/workflows/pages.yml)
+| Capa | Servicio | Dirección |
+|---|---|---|
+| Panel web (React + Vite) | GitHub Pages | **https://y0selin.github.io/jumperNET/** |
+| API de gestión (FastAPI) | `caddy` → `api` | **https://jumpernet.duckdns.org** |
+| Entrada SOCKS5 | `entrada` | **jumpernet.duckdns.org:1080** (usuario/contraseña = tu cuenta) |
+| Nodos | `nodo1..nodo6` | reenvío ciego dentro de `red_jumper` (sin publicar al host) |
 
 ---
 
-## 🧭 ¿Qué es y qué NO es?
-
-**Es** una implementación funcional del modelo Tor en escala de laboratorio:
-entrada SOCKS5 (`1080`) + entrada HTTP (`1081`) con las mismas credenciales,
-cadena de 3 saltos con reenvío ciego y cifrado entre saltos (la clave
-`CLAVE_SALTOS`), verificación real de la IP de salida y una suite de pruebas
-que valida cada fase.
-
-**No es** la red pública Tor (los nodos son nuestros), **no** es una VPN
-(solo permite 80/443 y no oculta tu conexión del ISP), y **no** es para
-velocidad (juegos competitivos no: añade latencia real).
-
-## 🏗️ Arquitectura (una foto del tráfico)
+## Cómo funciona
 
 ```
- Tú ──▶ SOCKS5 :1080 ──▶ entrada ──▶ nodo₁ ──▶ nodo₂ ──▶ nodo₃ (exit) ──▶ internet
-      (auth argon2id)          └─ cifrado ChaCha20-Poly1305 en cada salto ─┘
-                                 reenvío ciego: no interpretan, no guardan, solo 80/443
+ TÚ ──▶ SOCKS5:1080 ──▶ nodo₁ ──▶ nodo₂ ──▶ nodo₃ (exit) ──▶ internet
+        auth (tu cuenta)  └──── ChaCha20-Poly1305 (JENC) ────┘   solo 80/443
 ```
 
-- **entrada** (Python): SOCKS5 con las credenciales de la web y proxy HTTP
-  (1081) para los navegadores (Chrome no admite SOCKS5 con credenciales).
-  Reenvía al primer salto con la ruta restante; bloquea IPs privadas/de cloud
-  y la metadata (169.254.169.254).
-- **nodos ×N**: reenvío ciego con asyncio. Cada salto recibe una primera línea
-  con la ruta restante. El último es el **exit** y habla con internet.
-- **Cifrado entre saltos**: si la variable `CLAVE_SALTOS` está definida, el
-  stream entre saltos viaja cifrado (ChaCha20-Poly1305); en producción va activo.
-- **api** (FastAPI + SQLite): cuentas (argon2id), JWT de 2 h, elección de
-  circuito, heartbeats de nodos, rotación, comprobación real del exit
-  (`/comprobar`), preferencias de usuario (`PATCH /me`) y límites de tasa.
-- **panel web** (React + Vite, GitHub Pages): interruptor de red, mapa real de
-  geolocalización (tú ↔ exit), estado de nodos, comprobaciones, credenciales…
-  Edición de perfil (alias/lema) con persistencia en la API.
-- **navegador dedicado** (Electron): un Chromium que YA viene conectado — la
-  primera pestaña es DuckDuckGo por tu circuito; el 407 del proxy se responde
-  solo. Vigilante de carga con reintentos y página de diagnóstico propia.
-- **extensión** (Chrome/Firefox): conecta con el proxy HTTP, responde la
-  autenticación 407 automáticamente y avisa si otra extensión pisa el proxy.
+1. Te autenticas contra la entrada con **tu mismo usuario y contraseña** de la web.
+2. La API reparte un **circuito de 3 nodos vivos al azar**; puedes **girarlo** en
+   caliente para obtener una ruta nueva.
+3. Entre la entrada y el nodo de salida el flujo va **cifrado por capas**
+   (ChaCha20-Poly1305, formato `JENC`): los intermedios son **reenvío ciego**.
+4. El nodo de salida **resuelve y revalida la IP** del destino y solo permite
+   **80/443**, bloqueando rangos privados, loopback y la metadata de Oracle
+   (169.254.169.254).
 
-## 📂 Estructura del repo
+## Panel web
+
+SPA en **React 18 + Vite**, sin frameworks de UI: el diseño entero vive en
+variables CSS y se puede reescribir en vivo desde la propia web.
+
+- **Inicio público** — qué es el proyecto, cómo funciona el circuito y un flujo de
+  paquetes animado `TÚ → nodo₁ → nodo₂ → nodo₃ → INTERNET`. Fondo de glifos que se
+  escriben y se desvanecen sobre malla y halos (canvas propio).
+- **Acceso** — tarjeta minimalista de entrar/crear cuenta, con validación en
+  español y opción de mostrar la contraseña.
+- **Red** — la red **llega apagada**: un **interruptor** la enciende y la apaga
+  (nada se conecta al iniciar sesión). Mientras está viva: ruta de paradas con
+  pulso, tubería de paquetes, mapa Leaflet con tu ubicación real, nodos del
+  circuito y el comando SOCKS5 listo para copiar.
+- **Cuenta** — identidad, métricas, sesión con cuenta atrás del JWT, qué se guarda
+  y qué no, y **zona de peligro** con confirmación en dos pasos para eliminar la
+  cuenta.
+- **Info** — modo principiante (analogía y guía en 4 pasos) y modo avanzado
+  (endpoints, formato JENC, `/nodos` en crudo, JWT decodificado, inventario de
+  seguridad).
+- **Ajustes** — diseñador de tema: colores, radios, tipografía, glow, transparencia,
+  **velocidad global de las animaciones** (0 = sin animaciones) y CSS libre, con
+  6 preestablecidos (Terminal Verde, Grafito Profesional, Neón Nocturno, Océano
+  Profundo, Matrix, Luz Blanca), exportar/importar JSON y persistencia en localStorage.
+
+## Estructura
 
 ```
-├── deploy/
-│   ├── docker-compose.yml        # nodos + entrada + api + caddy + wordpress docs
-│   ├── servicios/
-│   │   ├── api/main.py           # la API completa (FastAPI + SQLite)
-│   │   ├── entrada/entrada.py    # SOCKS5 (1080) + proxy HTTP (1081)
-│   │   ├── nodo/nodo.py          # el salto (reenvío ciego + cifrado)
-│   │   └── peer/nodo_personal.py # nodo personal de un usuario
-│   ├── web/                      # panel React (Vite) + extensión
-│   │   ├── src/components/       # Landing, Red, Nodos, Cuenta, Descargas…
-│   │   ├── src/lib/api.js        # cliente de la API
-│   │   └── scripts/e2e.mjs       # E2E del panel (Playwright)
-│   ├── navegador/                # el navegador Electron (main.js + ventana/)
-│   ├── wp-theme/                 # tema hijo del WordPress de documentación
-│   ├── tests/run_all.sh          # suite integral de las fases 1-10
-│   ├── docs/                     # documentación técnica por fases
-│   └── index.html                # demo estática independiente
-└── README.md
+.
+├── docker-compose.yml        # api + caddy + entrada + nodo1..nodo6 + web-destino
+├── index.html                # página estática antigua (histórico)
+├── config/
+│   ├── caddy/Caddyfile       # TLS automático (Let's Encrypt) y proxy a la API
+│   └── web-destino/          # sitio de pruebas para las salidas HTTP
+├── servicios/
+│   ├── api/                  # FastAPI: cuentas, circuitos, heartbeat, SOCKS auth
+│   ├── entrada/              # proxy SOCKS5 (RFC 1928 + 1929) y cifrado JENC
+│   └── nodo/                 # salto: reenvío ciego y validación de destino
+├── web/                      # panel React + Vite (GitHub Pages)
+│   ├── src/components/       # Landing, Red, Cuenta, Info, Ajustes, Piezas…
+│   ├── src/styles/           # base.css + animaciones.css (todo bajo variables)
+│   └── scripts/e2e.mjs       # test E2E con Chrome headless y mock de la API
+├── tests/                    # pruebas por fases + run_all.sh (suite integral)
+└── docs/                     # documentación por fases y entrega
 ```
 
-## 🚀 Puesta en marcha (tu propio servidor)
+## Puesta en marcha
+
+**Stack completo (servidor con Docker):**
 
 ```bash
-# requisitos: docker + docker compose v2, dominio propio, SSH
-git clone git@github.com:Y0selin/jumperNET.git && cd jumperNET/deploy
-cat > .env <<'EOF'
-DOMINIO=docs.tu-dominio.duckdns.org
-INTERNAL_TOKEN=un_secreto_largo
-CLAVE_SALTOS=otro_secreto_para_el_cifrado
-EOF
-docker compose up -d --build       # levanta todo y emite HTTPS con Let's Encrypt
-bash tests/run_all.sh              # suite integral: debería salir en verde
+cp .env.example .env               # JWT_SECRET, INTERNAL_TOKEN, DOMINIO, CORS_ORIGINS…
+docker compose up -d --build
 ```
 
-Probado en ARM64 (OCI Ampere) y en x86_64.
-
-## 🖥️ Cómo usarlo (usuario)
-
-1. **Crea tu cuenta** en el panel: solo email + contraseña.
-2. **Pulsa ACTIVAR RED**: la API elige 3 nodos vivos al azar y guarda el circuito.
-3. **Conéctate**: con cualquier cliente SOCKS5 (`1080`), con el proxy HTTP
-   (`1081`) o con el navegador dedicado.
-4. **Compruébalo de verdad**: botón «Comprobar circuito» del panel, o a mano:
+**Panel web en local:**
 
 ```bash
-curl --socks5-hostname jumpernet.duckdns.org:1080 \
-     --proxy-user 'tu@correo:TU_CLAVE' https://api.ipify.org
-# → la IP del nodo de salida, no la tuya
+cd web
+npm ci
+npm run dev                        # http://localhost:5173
+npm run build                      # genera dist/ (es lo que publica Pages)
 ```
 
-Desde el JumperNET Browser no hay comandos: abres, entras, y la primera pestaña
-ya es DuckDuckGo por el circuito (con la IP del exit). El botón «⌖» rota los
-saltos (estilo Tor: «Nuevo circuito»).
+**Prueba SOCKS5 (requiere circuito encendido desde la web):**
 
-## 🧪 Pruebas (nada de fe ciega)
+```bash
+curl --socks5-hostname "tu@correo:tu-clave@jumpernet.duckdns.org:1080" https://example.com/
+```
 
-- `deploy/tests/run_all.sh` — suite integral en el servidor (saltos manuales,
-  entrada SOCKS5+HTTP, API, usuarios, cifrado, límites, peers, WordPress…).
-- `deploy/tests/ip_publica_real.sh` — la prueba desde TU máquina: tu IP directa
-  frente a la IP que ve una web exterior por el circuito.
-- `deploy/web/scripts/e2e.mjs` — E2E del panel: login, interruptor de red,
-  nodos, mapa, cuenta, descargas…
-- Navegador — E2E con CDP sobre el navegador real: login, conexión, búsqueda
-  real en DDG por el circuito con la IP real del exit, y recuperación de errores.
+## Tu navegador por el circuito, en automático
 
-## 🗺️ Fases del proyecto (todas implementadas y probadas)
+El SOCKS5 exige usuario/clave y los navegadores no pueden dárselas solos
+(Chrome no admite credenciales SOCKS; Firefox pregunta en cada conexión).
+`cliente/proxy_local.sh` lo resuelve con un **relé local sin credenciales**
+(`cliente/rele_socks.py`, solo Python estándar) que se autentica él:
 
-| Fase | Qué hace |
-|------|----------|
-| 1 | saltos manuales: 3 reenvíos encadenados hasta el destino |
-| 2 | API + registro de nodos con heartbeat y estado vivo/caído |
-| 3 | usuarios: cuentas argon2id, JWT, elección/rotación de circuito |
-| 4 | HTTPS + dominio real con Caddy (emisión automática) |
-| 5 | entrada SOCKS5 pública con auth y límites |
-| 6 | cifrado en cada salto, verificable |
-| 7 | bloqueo de IPs privadas/metadata y límites por cuenta |
-| 8 | nodo personal del usuario (peer) con token |
-| 9 | WordPress de documentación con su propio tema |
-| 10 | navegador dedicado (Electron) con circuito integrado |
+```bash
+cd cliente && bash proxy_local.sh on tu@correo 'tuClave'   # enciende todo: rele+Firefox+Chrome
+bash proxy_local.sh firefox            # lanza el Firefox dedicado (tu perfil no se toca)
+navegador-jumpernet                    # lanzador universal (Firefox o Chrome/Chromium/Brave)
+bash proxy_local.sh prueba             # mide tu IP directa y la que ve internet por el relé
+bash proxy_local.sh off                # apaga el relé y deja los navegadores como estaban
+```
 
-## 📦 Descargas
+- Firefox: **perfil dedicado** (`~/.local/share/jumpernet/firefox`) con SOCKS5
+  hacia `127.0.0.1:7777` y DNS remoto; tu perfil de siempre queda intacto.
+- Chrome/Chromium/Brave: se lanza por el lanzador con perfil aparte
+  (`--proxy-server socks5://127.0.0.1` + resólver solo por el proxy).
+- La clave vive solo en `~/.local/share/jumpernet/credenciales` (chmod 600) y
+  en el handshake con el servidor; el relé **solo escucha en 127.0.0.1**.
 
-Todo en el panel, sección **Descargas** (visible sin login):
+## Navegador por el circuito, sin tocar ajustes (extensión)
 
-- **Extensión** Chrome/Edge/Brave/Firefox (`extension.zip`).
-- **JumperNET Browser** para Windows (portátil + instalador) y Linux (AppImage).
-- **También en [GitHub Releases](https://github.com/Y0selin/jumperNET/releases)**
-  con las notas de cada archivo (segunda vía de descarga).
+Como Chrome no admite credenciales en SOCKS5, la red publica además una
+**entrada HTTP en el puerto 1081** (mismas reglas que el SOCKS5 del 1080);
+la **extensión del navegador** (`web/extension/`)
+la apunta ahí, configura el proxy del navegador ella misma y responde a los
+avisos de autenticación con tu cuenta: nada se escribe a mano, igual en
+Windows y Linux, para Chrome/Edge/Brave y Firefox. Detalle de instalación en
+[`web/extension/README.md`](web/extension/README.md).
+> El 407 + `Proxy-Authenticate` del proxy HTTP es lo que la extensión puede
+> responder automáticamente (`webRequest.onAuthRequired`); usar el SOCKS5 del
+> 1080 con un navegador solo es viable vía el relé local (`cliente/`).
 
-## 🔒 Privacidad — en una línea
+> **Nota de infraestructura:** para que la extensión funcione desde tu casa,
+> el puerto **1081** tiene que estar abierto en la Security List de Oracle
+> (igual que se hizo con 80/443/1080). Mientras tanto, la suite lo prueba
+> desde el propio servidor vía 127.0.0.1.
 
-Se guarda: tu email, el estado de tu circuito y cuándo cambió. **Nada más**.
-No hay histórico de webs, ni de destinos, ni cookies de terceros. Los nodos
-hacen **reenvío ciego**: no leen ni retienen lo que pasa por ellos.
+## Pruebas
 
-## 🧯 Problemas frecuentes
+| Suite | Comando | Qué cubre |
+|---|---|---|
+| Integral (fases 1–10, 16 pasos) | `sudo bash tests/run_all.sh` | saltos encadenados, circuitos por API, ciclo de usuario, HTTPS/CORS, SOCKS5 (auth, bloqueos de destino y puerto), salida con la IP pública REAL (5.5), cifrado JENC (8.1), nodos personales/peers con token de peer y auto-reparación de circuitos con hop muerto (9.x) y modo SÓLO EXTERNOS: circuito que salta solo por equipos de usuarios (10.1). Necesita Docker y el stack levantado. |
+| Cambio de IP real | `bash tests/ip_publica_real.sh` (desde TU máquina) | mide tu IP directa y la que ve el destino a través del SOCKS5: comprueba que la IP pública cambia de verdad (`tu-IP -> la-del-exit`) y que el panel anuncia la misma IP de salida. No necesita Docker, solo que tu red esté encendida. |
+| Panel web (E2E) | `cd web && npm run test:e2e` | Chrome headless con la API simulada: 72 comprobaciones (inicio, validaciones, registro y login, red apagada por defecto, encender/girar/apagar con el interruptor, Info, Cuenta con baja en dos pasos, responsive a 390 px, presets y cierre de sesión). Requiere `npm run preview` en el puerto 4173. Deja capturas en `web/e2e-out/`. |
+| Panel desplegado | `URL_APP=https://y0selin.github.io/jumperNET/ npm run test:e2e` | El mismo recorrido contra el sitio publicado, para cazar fallos que solo aparecen en la subruta de Pages (assets, iconos). |
 
-- **La IP que se ve no cambia**: revisa que la red esté ACTIVA (panel) y el
-  `--proxy-user` correcto; la comprobación del panel da el veredicto exacto.
-- **Conexión rechazada en el navegador**: puertos 1080/1081 abiertos en el
-  firewall del servidor y `CLAVE_SALTOS` igual en entrada y nodos.
-- **SmartScreen en Windows**: la build no está firmada; pulsa «Más información →
-  Ejecutar de todas formas». Es la misma app que descargas del panel.
-- **El navegador no carga nada**: las primeras cargas reintentan solas y luego
-  muestra una página local de diagnóstico con el motivo exacto (`ERR_…`) y un
-  botón «Reintentar».
+## Seguridad y privacidad
 
-## 🤝 Contribuir / nodo personal
+- Contraseñas con **argon2id** (nunca en claro) y sesiones **JWT HS256 de 2 h**.
+- **Rate-limit** en login/registro y bloqueo temporal a los 5 fallos.
+- Solo **dos servicios publicados** (Caddy y la entrada SOCKS5); la API vive en la
+  red interna de Docker.
+- Validación del destino **en la entrada y en el nodo de salida** (80/443,
+  anti-IP-privadas, anti-metadata).
+- **Sin histórico**: ni la API ni los nodos guardan destinos ni contenido; de cada
+  cuenta solo se guarda email, estado del circuito y cuándo cambió.
+- Los secretos viven en `.env` (fuera de Git); los de tu copia están en
+  `docs/09-entrega.md`.
 
-- Nodo personal (peer): levanta `peer/nodo_personal.py` con tu token y el nombre
-  que quieras; la red lo trata igual que los otros saltos.
-- PRs con test incluidos, por favor: los cambios en el protocolo (salto, cifrado)
-  deben pasar `run_all.sh` completa antes de mezclarse.
+## Documentación
 
-## ⚖️ Uso responsable
+- [01-fase0.md](docs/01-fase0.md) — preparación y diagnóstico
+- [02-fase1.md](docs/02-fase1.md) — saltos manuales entre nodos
+- [03-fase2.md](docs/03-fase2.md) — registro de nodos y circuitos aleatorios
+- [04-fase3.md](docs/04-fase3.md) — cuentas de usuario
+- [05-fase4.md](docs/05-fase4.md) — HTTPS, CORS y firewall
+- [06-fase5.md](docs/06-fase5.md) — proxy SOCKS5 autenticado
+- [07-fase6.md](docs/07-fase6.md) — frontend React en GitHub Pages
+- [08-fase7.md](docs/08-fase7.md) — pruebas integrales
+- [09-entrega.md](docs/09-entrega.md) — entrega, credenciales y recuperación
+- [10-fase8.md](docs/10-fase8.md) — cifrado en capas (JENC)
+- [11-nodos-personales.md](docs/11-nodos-personales.md) — nodos personales (peers; Fase 9)
+- [12-modo-externos.md](docs/12-modo-externos.md) — modo `externos`, validación por sondeo TCP y auto-reparación
+- [docs/pruebas/](docs/pruebas/) — evidencias por fase
 
-Proyecto educativo y de investigación sobre redes de anonimato. Úsalo para
-aprender, para proteger tu privacidad y para auditar el modelo. No para
-actividades ilegales: cada cuenta queda asociada a un email y el servidor
-registra los errores de uso.
+## Backup y migración a otro VPS
+
+| Herramienta | Qué hace |
+|---|---|
+| `bash backup_completo.sh` | Backup COMPLETO del VPS (fuentes, `.env` con secretos, BDs vía snapshot consistente, WordPress, binarios) → tar verificado md5 en `backups/` del VPS y del repo. |
+| `migracion/migrar_vps.py` | 4 fases (`analizar`/`preparar`/`instalar`/`verificar`): reescribe dominio/IP en las configs, actualiza DuckDNS, instala docker en el VPS nuevo, levanta el stack, restaura las BDs y verifica. Pasos manuales listados en cada fase. |
+
+Guía completa con parámetros y pasos manuales: [migracion/README.md](migracion/README.md).
+
+## Límites honestos
+
+- La salida real a internet es **una sola máquina** (Oracle Cloud, Ashburn): los
+  3 saltos son **lógicos** (contenedores aislados), no geográficos.
+- Es un proyecto **educativo**: añade saltos y latencia real; no es anonimato de
+  grado onion y no está pensado para juegos ni para evadir servicios.
+- Solo se permiten destinos en **puertos 80/443**.

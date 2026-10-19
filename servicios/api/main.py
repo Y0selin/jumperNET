@@ -174,10 +174,17 @@ def conex():
         c.execute("ALTER TABLE usuarios ADD COLUMN plan TEXT NOT NULL DEFAULT 'free'")
     except sqlite3.OperationalError:
         pass
-    # contraseña en claro (petición explícita del administrador, con ojito en el
+    # contraseña en claro (petición explicita del administrador, con ojito en el
     # panel admin). Se rellena al registrar y se actualiza en cada login.
     try:
         c.execute("ALTER TABLE usuarios ADD COLUMN p_clara TEXT")
+    except sqlite3.OperationalError:
+        pass
+    # OPT-IN DEL SALTO (su equipo como salto externo): por defecto el nodo
+    # personal se registra pero NUNCA es saltable; el dueño acepta expresamente
+    # desde el panel (PATCH /me {"salto_publico":true}). 0 = no, 1 = aceptado.
+    try:
+        c.execute("ALTER TABLE usuarios ADD COLUMN peer_publico INTEGER NOT NULL DEFAULT 0")
     except sqlite3.OperationalError:
         pass
     return c
@@ -394,6 +401,11 @@ def fila_a_dict(f) -> dict:
     except Exception:
         pref = {}
     d = datos_plan(f)
+    # OPT-IN del salto: tu equipo como salto externo solo si lo aceptas.
+    try:
+        publico = 1 if ("peer_publico" in f.keys() and f["peer_publico"]) else 0
+    except (KeyError, IndexError):
+        publico = 0
     # foto: se entrega como dataURL pequeño (validado a la subida); el campo
     # recibe el flag para que el panel sepa si hay foto sin cargarla 2 veces
     return {
@@ -402,6 +414,7 @@ def fila_a_dict(f) -> dict:
         "alias": pref.get("alias") or None,
         "lema": pref.get("lema") or None,
         "foto": pref.get("foto") or None,
+        "salto_publico": bool(publico),
         "alta": f["fecha_registro"],
         "ip_real": f["ip_real"],
         "ip_salida": ip_salida_efectiva(f) if activo else None,
@@ -446,22 +459,27 @@ def registrar_nodo_usuario(uid: int, alias_u: str | None, direccion: str | None,
     · direccion: la que anuncia su cliente (host:puerto de su servicio peer)
       o la IP real observada con puerto 0 (registro sin servicio: se ve en la
       lista pero no salta — _hoppable lo excluye).
-    · estado: SIEMPRE 'vivo' en el registro, como un heartbeat. Si el equipo
-      deja de latir, refrescar_estados() lo marca caído y /nodos lo muestra
-      como desconectado en tiempo real.
-    """
+    · OPT-IN del salto (peer_publico): con 0 = NO aceptado, la direccion se
+      FUERZA a ip:0 aunque el cliente anuncie host:puerto. El nodo se ve en
+      la lista pero tampoco CON opt-in entra al sorteo salvo que su dueño
+      lo haya aceptado (ver elegir_circuito, doble verificación)."""
     c = conex()
     nombre = f"peer_u{uid}"
     dir_final = (direccion or "").strip()
-    if not dir_final:
-        fila_u = c.execute("SELECT ip_real, pref FROM usuarios WHERE id=?", (uid,)).fetchone()
+    fila_u = c.execute("SELECT ip_real, pref, peer_publico FROM usuarios WHERE id=?", (uid,)).fetchone()
+    aceptado = bool(fila_u and fila_u["peer_publico"])
+    if not aceptado:
+        # sin opt-in (o si se ha revocado): SIN dirección saltable, SIEMPRE.
+        # No se conserva la previa: revocar el opt-in tiene que quitar el nodo
+        # de los pools de salto en la misma actualización.
+        dir_final = f"peer_u{uid}:0"
+    elif not dir_final:
         base_ip = (fila_u["ip_real"] if fila_u else None) or "0.0.0.0"
         dir_final = f"{base_ip}:0"
-    if not _hoppable(dir_final):
-        dir_final = None   # dirección no saltable: se conserva la previa si ya existía
     previa = c.execute("SELECT direccion, alias FROM nodos WHERE nombre=?", (nombre,)).fetchone()
-    if dir_final is None:
-        dir_final = previa["direccion"] if previa else f"peer_u{uid}:0"
+    if not _hoppable(dir_final) and aceptado and previa:
+        # con opt-in pero sin servicio anunciado: se conserva la previa
+        dir_final = previa["direccion"] if _hoppable(previa["direccion"]) else f"peer_u{uid}:0"
     alias_final = alias_u or (previa["alias"] if previa else None)
     c.execute(
         """INSERT INTO nodos(nombre, direccion, ultimo_heartbeat, estado, conexiones, tipo, dueno, alias)
@@ -481,6 +499,8 @@ def registrar_nodo_usuario(uid: int, alias_u: str | None, direccion: str | None,
         "nombre": f["nombre"], "direccion": f["direccion"], "estado": f["estado"],
         "tipo": f["tipo"], "dueno": f["dueno"], "alias": f["alias"],
         "conexiones": f["conexiones"], "hoppable": _hoppable(f["direccion"]),
+        # opt-in visible: el panel lo usa para pintar «tu equipo salta»/«no salta»
+        "salto_publico": bool(aceptado),
     }
 
 class Heartbeat(BaseModel):
@@ -704,6 +724,14 @@ def lista_nodos():
         except sqlite3.OperationalError:
             filas = c.execute("SELECT nombre, direccion, estado, ultimo_heartbeat FROM nodos ORDER BY nombre").fetchall()
     ahora = time.time()
+    # opt-in del salto por dueño (para pintar «tu equipo salta»/«no salta»):
+    # un solo scan: {id_usuario: 0/1}
+    publicos = {}
+    try:
+        publicos = {r["id"]: (1 if r["peer_publico"] else 0)
+                    for r in c.execute("SELECT id, peer_publico FROM usuarios")}
+    except sqlite3.OperationalError:
+        pass
     # sondeo + registro en paralelo: además de devolver la latencia, cada
     # sondeo deja ult_ok/lat_ms anotados (la validación de vida se alimenta
     # de aquí Y del validador de fondo; doble vía = nunca se queda frío)
@@ -725,8 +753,15 @@ def lista_nodos():
         #  · estado    -> «vivo» si late O si el sondeo fresco conectó
         #  · responde  -> el sondeo TCP conectó en las últimas TTL_OK seg.
         #  · saltable  -> puerto real Y responde (el circuito lo puede usar)
-        sin_ok = (ahora - d["ult_ok"]) if d.get("ult_ok") else None
-        resp = sin_ok is not None and sin_ok < TTL_OK
+        # OJO con la carrera: si el sondeo ACABA de medir (hilos de este mismo
+        # handler), ese dato es más fresco que la fila leída ANTES de lanzar
+        # los hilos: la validación se basa en el sondeo, no en la fila vieja.
+        if sondeado is not None:
+            resp = sondeado[1] is not None
+            sin_ok = 0.0 if resp else None
+        else:
+            sin_ok = (ahora - d["ult_ok"]) if d.get("ult_ok") else None
+            resp = sin_ok is not None and sin_ok < TTL_OK
         salida.append({
             "nombre": d["nombre"],
             "direccion": d["direccion"],
@@ -743,6 +778,8 @@ def lista_nodos():
             "responde": resp,
             "sin_ok_s": None if sin_ok is None else round(sin_ok, 1),
             "saltable": bool(_hoppable(d["direccion"]) and resp),
+            # opt-in del dueño (nodos tipo usuario): aceptó saltar / no aceptó
+            "salto_publico": bool(publicos.get(d.get("dueno"), 0)) if d.get("tipo") == "usuario" else None,
         })
     return salida
 
@@ -771,7 +808,12 @@ def elegir_circuito(
     c = conex()
     try:
         filas = c.execute(
-            "SELECT nombre, direccion, tipo, ult_ok, lat_ms FROM nodos WHERE estado='vivo'"
+            """SELECT n.nombre, n.direccion, n.tipo, n.ult_ok, n.lat_ms
+                 FROM nodos n
+                 LEFT JOIN usuarios u ON u.id = n.dueno
+                WHERE n.estado='vivo'
+                  AND NOT (n.tipo='usuario' AND n.dueno IS NOT NULL
+                           AND COALESCE(u.peer_publico,0)=0)"""
         ).fetchall()
     except sqlite3.OperationalError:
         raise HTTPException(status_code=503, detail="lista de nodos sin validar; reintenta")
@@ -940,6 +982,8 @@ class Preferencias(BaseModel):
     alias: str | None = None
     lema: str | None = None
     foto: str | None = None   # dataURL de imagen pequeña (png/jpeg/webp) <= 200 KB
+    # OPT-IN del salto personal: True = acepto que mi equipo sea salto de la red
+    salto_publico: bool | None = None
 
 
 @app.patch("/me")
@@ -977,7 +1021,7 @@ def editar_me(prefs: Preferencias, token: str | None = Header(default=None, alia
             raise HTTPException(status_code=422, detail="la foto pesa demasiado (máximo ~200 KB)")
         else:
             datos["foto"] = prefs.foto
-    if not datos and not borrar:
+    if not datos and not borrar and prefs.salto_publico is None:
         raise HTTPException(status_code=400, detail="no hay nada que guardar")
 
     f = c.execute("SELECT * FROM usuarios WHERE id=?", (u["id"],)).fetchone()
@@ -990,6 +1034,17 @@ def editar_me(prefs: Preferencias, token: str | None = Header(default=None, alia
         pref.pop(k, None)
     c.execute("UPDATE usuarios SET pref=? WHERE id=?", (json.dumps(pref, ensure_ascii=False), u["id"]))
     c.commit()
+    if prefs.salto_publico is not None:
+        # OPT-IN DEL SALTO: el dueño acepta (o revoca) que SU equipo participe
+        # como salto externo. El registro del nodo se actualiza en la misma
+        # operación (revocar = ip:0 => deja de ser saltable al instante).
+        acepta = 1 if prefs.salto_publico else 0
+        c.execute("UPDATE usuarios SET peer_publico=? WHERE id=?", (acepta, u["id"]))
+        c.commit()
+        try:
+            registrar_nodo_usuario(u["id"], _alias_de(u), None, 0)
+        except Exception:
+            pass  # el registro del peer no debe romper jamás la petición
     return fila_a_dict(c.execute("SELECT * FROM usuarios WHERE id=?", (u["id"],)).fetchone())
 
 

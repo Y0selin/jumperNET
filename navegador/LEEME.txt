@@ -37,6 +37,11 @@ INSTALAR EN LINUX
   · (En algunas distros instala libfuse2: sudo apt install libfuse2)
 
 Detalles técnicos
+  · Ventana SIEMPRE completa: al abrir y al reabrir se recuerda el tamaño de
+    la última sesión PERO recortado al monitor donde caiga (bounds.json en
+    tu carpeta de datos). Nunca verás el navegador «cortado por la mitad»
+    aunque cambies de equipo o de monitor; si arrastras la ventana a otro
+    monitor el shell re-alinea las pestañas solas (self-heal).
   · Proxy: entrada HTTP del circuito con Basic auth; el 407 se responde
     dentro del navegador sin ventanas (app.on("login")).
   · El proxy se aplica a las DOS sesiones (default + persist:jn): ni una

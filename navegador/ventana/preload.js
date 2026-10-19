@@ -12,4 +12,5 @@ contextBridge.exposeInMainWorld("jn", {
   abrirExterno: (url) => ipcRenderer.invoke("jn:abrirExterno", url),
   alEstado: (cb) => ipcRenderer.on("jn:estado", (_e, s) => cb(s)),
   alPestaña: (cb) => ipcRenderer.on("jn:pestaña", (_e, url) => cb(url)),
+  avisoReencuadre: (cb) => ipcRenderer.on("jn:reencuadre", () => cb()),
 });

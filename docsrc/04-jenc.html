@@ -1,0 +1,32 @@
+<h2>JENC: el cifrado «justo» de los saltos</h2>
+<p>JENC es el esquema de cifrado en capas del proyecto (JumperNET Encrypted Channels): usa <b>ChaCha20-Poly1305</b> con una clave compartida <span class="mono">CLAVE_SALTOS</span> y cifra <b>registro a registro</b>, no el stream entero. El resultado: los nodos intermedios reenvían bloques pequeños de ruido autenticado sin entender nada, y solo el nodo de salida (y TU extremo) pueden leer los datos.</p>
+
+<h2>Cómo funciona, en tres pasos</h2>
+<ol>
+<li><b>El cliente cifra primero.</b> La entrada SOCKS5/HTTP cifra la petición inicial (el <span class="mono">CONNECT destino:puerto</span> o el <span class="mono">GET HTTP/1.1</span> del modo HTTP plano) como PRIMER registro JENC y la mete en el mismo flujo que reenvía al primer salto. Los nodos ven: [registro cifrado][resto cifrado].</li>
+<li><b>Reenvío ciego.</b> Los nodos de la fase 1 no descifran: leen la ruta restante en claro (que va en la línea de control del circuito) y reenvían bytes de un lado a otro, incluidos los registros JENC.</li>
+<li><b>El exit descifra (detección automática).</b> El nodo de salida intenta descifrar el prefijo del stream; si la «magia» JENC está presente, descifra y manda la respuesta también cifrada. El destino final recibe HTTP normal.</li>
+</ol>
+
+<h2>Detalles técnicos que suelen preguntarse</h2>
+<ul>
+<li><b>Negotación automática:</b> el exit detecta el prefijo JENC con la clave; si no está configurada o el cliente no cifró, el circuito funciona en claro (no rompemos nada al apagar JENC).</li>
+<li><b>Bidireccional:</b> la respuesta del destino hacia el cliente se re-cifra registro a registro en el mismo sentido inverso: el intermediario jamás ve contenido en claro.</li>
+<li><b>¿Por qué ChaCha20 y no AES?</b> rapidez sin instrucciones AES-NI y construcción AEAD en una sola primitiva (cifrado + MAC integrado). Es la misma elección de WireGuard.</li>
+<li><b>¿Dónde vive la clave?</b> en <span class="mono">.env</span> del VPS (<span class="mono">CLAVE_SALTOS</span>); sin ella, el circuito funciona sin cifrar (y los tests de la fase 8 cambian automáticamente de modo).</li>
+</ul>
+
+<h2>El bug que nació con JENC y cómo se resolvió (verificado)</h2>
+<p><b>Síntoma:</b> «En el modo HTTP plano, <span class="mono">curl http://web-destino</span> devolvía «Empty reply», mientras HTTPS funcionaba».</p>
+<ul>
+<li><b>Causa de raíz:</b> en la entrada HTTP la petición GET se escribía EN CLARO antes de la magia; el exit leía el prefijo <span class="mono">GET ...</span>, no reconocía JENC y el stream quedaba partido (log: <span class="mono">el exit no respondio en modo JENC</span>).</li>
+<li><b>Solución:</b> la petición inicial viaja ahora como PRIMER registro JENC dentro del mismo flujo (ver paso 1). Comprobado: http y https responden 200 por el circuito con JENC activo (test 8.1 de <span class="mono">run_all.sh</span>).</li>
+</ul>
+
+<h2>La prueba e2e (paso 8.1)</h2>
+<pre><code># dentro de cliente-test, con un usuario real y CLAVE_SALTOS activa
+#  · se registra un usuario, /connect, y descarga web-destino por SOCKS5
+#  · la salida contiene la marca de web-destino => el circuito JENC
+#    DESCIFRO al final con éxito y devolvió la página
+curl --socks5-hostname entrada:1080 --proxy-user 'u:clave' \
+     http://web-destino/marca</code></pre>

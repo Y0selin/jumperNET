@@ -23,23 +23,31 @@ esa persona**, no la del servidor — exactamente lo que hace el exit de TOR.
   VPS), separado del token interno de sistemas: un amigo nunca se entera de
   los secretos de la infraestructura y solo puede registrar nodos cuyo nombre
   empiece por `peer_`.
-- La API incluye cualquier nodo con heartbeat reciente en los circuitos
-  aleatorios (`elegir_circuito` no distingue: todo vivo, todo seguro).
-- Si tu equipo deja de mandar heartbeat (35 s), sale del pool automáticamente.
+- La API solo mete en los circuitos nodos **validados con un sondeo TCP real**:
+  el latido demuestra que el equipo está encendido; el **juez** del estado es el
+  sondeo (`validar_nodos()`), que mide `lat_ms` y anota `ult_ok` cada 15 s.
+  Un nodo es *saltable* solo si su servicio respondió dentro de `TTL_OK` (≥45 s).
+- Si tu equipo deja de mandar heartbeat (35 s) o su servicio deja de responder
+  al sondeo, sale del pool automáticamente.
 - El panel lo marca con la etiqueta **personal** en la pestaña Nodos.
 - Si el exit es tu equipo, la IP que ve internet es TU IP de casa: mientras
   participa en la red estás aceptando que trafico salga desde tu conexión
   (y que un salto pase por tu equipo). Cuando quieras, cierra el nodo y
   pasarás a "fuera del pool" en 35 s.
-- Falta por soportar: CLAVE_SALTOS (cifrado de saltos) dentro de los nodos
-  personales requiere `cryptography` en el equipo del peer; el programa lo
-  avisa y no arranca si no está instalado.
+- `nodo_personal.py` ya soporta CLAVE_SALTOS (cifrado de saltos) en los nodos
+  personales; requiere `cryptography` en el equipo del peer y el programa lo
+  avisa y no arranca sin él.
+- El **modo `externos`** (Fase 9): circuito que salta SOLO por equipos de
+  usuarios — ver [12-modo-externos.md](12-modo-externos.md).
 
 ## Pruebas (tests/run_all.sh)
 
 * **9.1** registro de peer con token de PEER: nombre sin `peer_` rechazado
   (401), token correcto aceptado y aparece vivo en `/nodos`.
 * **9.2** un peer real (`peer_prueba`, lanzado como nodo del sistema con el
-  mismo programa) entra al pool; se rota una sesión de usuario hasta que el
-  circuito lo incluye, y una petición atraviesa el salto personal de
-  forma realista hasta `web-destino`.
+  mismo programa) entra al pool; la sesión de pruebas rota en modo **moderador**
+  (sin cooldown de plan) hasta que el circuito lo incluye, y una petición
+  atraviesa el salto personal de forma realista hasta `web-destino`.
+* **9.3** auto-reparación: se envenena el circuito guardado con un hop muerto
+  (`peer_muerto`) y SOCKS5/HTTP siguen funcionando: la entrada descarta el hop
+  muerto, sirve la petición y limpia la BD sin que el usuario toque nada.

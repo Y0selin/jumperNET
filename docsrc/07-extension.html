@@ -1,0 +1,32 @@
+<h2>La alternativa ligera: tu navegador de siempre</h2>
+<p>La extensión (Chrome/Edge/Brave/Firefox — Manifest V3) convierte el navegador que ya usas en un cliente del circuito: fija el proxy HTTP de la entrada (puerto 1081) y responde SOLO al desafío 407 con tus credenciales, sin ventanas de login ni pestañas que se abren solas.</p>
+
+<h3>Qué hace exactamente</h3>
+<ul>
+<li><b>Fijar el proxy:</b> configura <span class="mono">browser.proxy.settings</span> (o <span class="mono">chrome.proxy.settings</span> con detección canónica de Firefox: en Chrome ≥131 existe el alias <span class="mono">browser</span> y es la fuente del bug 1 del diario) apuntando a <span class="mono">jumpernet.duckdns.org:1081</span> para TODOS los esquemas.</li>
+<li><b>Responder al 407:</b> escucha <span class="mono">onAuthRequired</span> y devuelve <span class="mono">email + contraseña</span> guardados en el storage local de la extensión. Si no hay credenciales, cancela la petición (nunca proxy abierto).</li>
+<li><b>Estado visible:</b> popup con disco ACTIVO/ACTIVADO, la IP que ve internet (petición a ipify a través del proxy como comprobación real) y un botón de configurar cuenta.</li>
+</ul>
+
+<h2>El vigía anti-secuestro</h2>
+<p>Un navegador (u otra extensión) puede intentar cambiar el proxy por detrás (un «secuestro»). El vigía es un vigilante interno siempre en marcha:</p>
+<ol>
+<li>Comprueba periódicamente que el ajuste del proxy sigue apuntando a la entrada de JumperNET.</li>
+<li>Si otro lo cambia, lo reposiciona con la configuración correcta y marca un aviso en el popup («proxy restaurado»). Si falla 3 veces seguidas, deja el aviso fijo para que lo veas.</li>
+<li>Nada envía fuera: el vigía solo vigila SU propio navegador.</li>
+</ol>
+
+<h2>Problemas reales resueltos (resumen del diario)</h2>
+<ul>
+<li><b>«Veo mi IP real con la red encendida»</b> — causa doble: (a) ajuste Firefox-erróneo aplicado en Chrome ≥131 por el alias <span class="mono">browser</span>; solución: detección canónica del motor (Firefox frente a Chromium) en vez de fiarse del alias;
+<li><b>Doble salida en claro:</b> el ajuste se aplica a pestañas «regular» y también a contextos aislados (iframes, workers): antes un worker podía salir en claro.</li>
+<li><b>Mapa con «API key required»</b> (en el panel heredado): los tiles de Carto devuelven 200 con una imagen de error, así que el detector <span class="mono">tileerror</span> no disparaba. El mapa del panel se pinta con GeoJSON vectorial local (<span class="mono">mundo.json</span>): cero tiles, cero claves, cero terceros.</li>
+</ul>
+
+<h2>Instalación</h2>
+<ol>
+<li>Descarga el zip desde el panel (pestaña «Descargas») y descomprimelo.</li>
+<li><span class="mono">chrome://extensions</span> → modo desarrollador → «Cargar descomprimido» → carpeta de la extensión.</li>
+<li>En Firefox: <span class="mono">about:debugging</span> → «Este Firefox» → «Cargar complemento temporal».</li>
+<li>Pulsa el icono, guarda tu cuenta y verás en verde la IP de salida cuando la red esté activa.</li>
+</ol>

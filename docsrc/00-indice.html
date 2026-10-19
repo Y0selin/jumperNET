@@ -1,0 +1,30 @@
+<h2>Bienvenido a la documentación de JumperNET</h2>
+<p>Este sitio documenta <b>absolutamente todo</b> sobre la red de anonimato por saltos: la idea, la arquitectura pieza a pieza, el cifrado registro a registro, cada endpoint de la API, el navegador y su extension, el mecanismo de <b>nodos externos de usuarios</b> y su modo de prueba <span class="mono">externos</span>, y el diario completo de <b>problemas reales con su solución</b> (incluido el «navegador cortado por la mitad», la reparación automática de circuitos con saltos caídos y el modo solo-externos).</p>
+<p>Nada aquí es teórico: cada afirmación tiene detrás una prueba automatizada (15 paso en <span class="mono">tests/run_all.sh</span>) o un comando que puedes repetir tú mismo.</p>
+
+<h3>Leer en orden (de básico a avanzado)</h3>
+<ol>
+<li><a href="/docs/que-es-jumpernet/">Qué es JumperNET y por qué existe</a> — la idea, las tres caras de la red y la filosofía «IP a la vista, no promesas».</li>
+<li><a href="/docs/arquitectura-completa/">Arquitectura completa</a> — cada contenedor, cada puerto y el flujo byte a byte de una petición real.</li>
+<li><a href="/docs/seguridad/">Seguridad</a> — qué se guarda, qué se cifra, qué se bloquea, límites, rate limiting y roles.</li>
+<li><a href="/docs/cifrado-de-los-saltos-jenc/">El cifrado de los saltos (JENC)</a> — ChaCha20-Poly1305 en capas, negociación automática y HTTP plano.</li>
+<li><a href="/docs/guia-primeros-pasos/">Guía: primeros pasos</a> — cuenta, panel, SOCKS5/HTTP, extension y navegador, paso a paso.</li>
+<li><a href="/docs/navegador-jumpernet/">El navegador JumperNET</a> — diseño interno del Chromium dedicado, chip PROXY, self-heal y el fix del «corte a medias».</li>
+<li><a href="/docs/extension-del-navegador/">La extensión del navegador</a> — el vigía anti-secuestro, sus bugs y su solución.</li>
+<li><a href="/docs/nodos-externos-fase9/">Nodos externos (Fase 9)</a> — tu equipo como salto real: peer_u*, sondeo TCP, modo <span class="mono">externos</span>.</li>
+<li><a href="/docs/problemas-y-soluciones/">Problemas y soluciones</a> — el diario de incidencias reales de la red, con causa de raíz y remedio.</li>
+<li><a href="/docs/referencia-api/">Referencia de la API</a> — todos los endpoints, parámetros, códigos y ejemplos curl.</li>
+<li><a href="/docs/despliegue-y-operacion/">Despliegue y operación</a> — docker-compose, Caddy, WordPress de docs, artefactos del navegador y backups.</li>
+<li><a href="/docs/changelog/">Changelog: el diario de cambios</a> — que se cambió, cuando y qué prueba lo demuestra.</li>
+</ol>
+
+<h3>La suite de pruebas (lo que avala cada página)</h3>
+<pre><code>sudo bash tests/run_all.sh      # en el VPS: 16 pasos encadenados
+# 1.x saltos manuales · 2.x circuitos de la API · 3.x ciclo de usuario
+# 4.x HTTPS con Let's Encrypt · 5.x SOCKS5/HTTP desde internet
+# 8.x JENC extremo a extremo · 9.x nodos personales + auto-reparación
+# 10.x modo SOLO EXTERNOS (peers de usuarios)</code></pre>
+<p>Si <span class="mono">run_all</span> termina en <span class="mono">✅ TODAS LAS PRUEBAS SUPERADAS</span>, lo escrito aquí es literalmente verdad.</p>
+
+<h3>Convención de este sitio</h3>
+<p>el panel vive en <span class="mono">y0selin.github.io/jumperNET</span> y esta documentación en <span class="mono">jumpernet.duckdns.org/docs/</span> son los dos únicos sitios que NO forman parte de la red: el resto (API, entrada SOCKS5/HTTP, nodos, exit y el WordPress mismo) corre todo en el mismo VPS, aislado por contenedores y una red docker única.</p>

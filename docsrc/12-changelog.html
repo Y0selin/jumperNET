@@ -1,0 +1,44 @@
+<h2>Changelog: qué se cambió, cuándo y qué prueba lo demuestra</h2>
+<p>Este artículo es el «diario de obras» del proyecto: cada cambio material con su fecha, su motivo y la prueba que lo avala. Complementa el artículo 8 (problemas y soluciones) mirándolo desde el lado del producto.</p>
+
+<h2>1.0.x → 1.0 (estable de la Fase 7)</h2>
+<ul>
+<li><b>Panel web</b> (GitHub Pages): cuenta con plan/rol, interruptor, nodos con validación, comprobación de IP, mapa GeoJSON sin terceros, descargas.</li>
+<li><b>Red:</b> SOCKS5 (1080) y HTTP (1081) autenticados; 6 nodos de reenvío ciego; exit con bloqueo de privados/metadata.</li>
+<li><b>JENC:</b> ChaCha20-Poly1305 registro a registro en AMBOS sentidos, con detección automática en el exit. Test 8.1 en run_all.sh.</li>
+</ul>
+
+<h2>1.0 — Nodos personales (Fase 9)</h2>
+<ul>
+<li><b>peer_u&lt;id&gt;:</b> registro determinista y persistente del equipo del usuario en <span class="mono">/nodos</span> con <span class="mono">tipo=usuario</span>; heartbeat con PEER_TOKEN; <span class="mono">conexiones</span> por nodo.</li>
+<li><b>Validación con hechos:</b> validador de fondo cada 15 s (sondeo TCP concurrente), <span class="mono">lat_ms</span> y <span class="mono">ult_ok</span> por nodo, TTL_OK ≥45 s; «saltable» = puerto real + sondeo OK. Fin de los «vivos zombis».</li>
+<li><b>Modo externos:</b> <span class="mono">/connect {"modo":"externos"}</span> y <span class="mono">/rotate</span> respetan el modo; pool solo-peers con flexible (≥1 salto); <span class="mono">exit_ip</span> = IP pública anunciada del peer. Test 10.1 + fase9_externos.py.</li>
+<li><b>Auto-reparación:</b> si tu circuito guardado referencia un hop caído, la conexión SIGUE funcionando: la entrada repara el circuito (descarta el hop muerto del resto de la ruta y sigue) y la BD queda limpia. Test 9.3 con un hop «peer_muerto» envenenado a mano.</li>
+</ul>
+
+<h2>1.0 — Navegador v2 + los dos grandes fixes</h2>
+<ul>
+<li><b>Shell v2:</b> pestañas, omnibox con búsqueda DDG, chip PROXY con 3 estados, panel de estado, errores amables con las razones exactas (<span class="mono">ERR_*</span>).</li>
+<li><b>FIX, pestaña cortada / self-heal:</b> <span class="mono">reajustaWebviews()</span> en varias capas (ResizeObserver + resize + activación de pestaña + intervalo 1 s + IPC «jn:reencuadre» desde el principal). Corrección clave: el ajuste es llamada directa, no <span class="mono">requestAnimationFrame</span> (el rAF no dispara con la ventana oculta: el fix «colgado» de la primera versión). El CSS <span class="mono">.velo[hidden]{display:none}</span> arregló el panel invisible (el <span class="mono">display:grid</span> ANULABA el hidden).</li>
+<li><b>FIX, ventana «cortada por la mitad»:</b> bounds en <span class="mono">bounds.json</span> (userData) + <span class="mono">recortaAlArea()</span> al área de trabajo del monitor con mayor solape (al abrir, al mover con debounce 250 ms, tras maximizar/salir de maximizar y full-screen). Probado con bounds envenenados: 1900×1500 pedidos en monitor 1280×1024 → ventana 1279×1023 y webview copia exacta (1279×933, borde inferior pegado).</li>
+<li><b>Artefactos:</b> 5 binarios re-build (Setup NSIS, portable, zip Windows, AppImage, zip Linux) y subidos a <span class="mono">~/jumpernat/descargas</span> con verificación md5 de los dos primeros.</li>
+</ul>
+
+<h2>1.0 — Panel web: exactitud de la red</h2>
+<ul>
+<li><b><span class="mono">/nodos</span> legible:</b> muestra por nodo <span class="mono">ms, responde, sin_ok_s, saltable, tipo, alias</span>; intermitentes corregidos: lectura coherente de <span class="mono">ult_ok</span> (sin <span class="mono">sin_ok_s</span> negativos) tras el sondeo (carrera de la fase de test 11).</li>
+<li><b>e2e web:</b> 114/114 en que la pestaña «Nodos» muestra el estado REAL validado y los modos de salto.</li>
+</ul>
+
+<h2>Tu plataforma de pruebas</h2>
+<ul>
+<li><b>run_all.sh robusto:</b> raíz resuelta desde el script (ya no <span class="mono">~/jumpernat</span> que rompía bajo sudo), logs temporales limpiados, 16 pasos incluyendo 9.x (peers) y 10.x (modo externos). Sin fallo×todo verde: «✅ TODAS LAS PRUEBAS (16/16)».</li>
+<li><b>fase9_externos.py:</b> peer de prueba con servicio propio escuchando validado REALMENTE por el sondeo; circuito externos sin infra; delete_me de limpieza.</li>
+<li><b>fase3_usuarios.py:</b> adaptado al cooldown por plan (429 con horas restantes es ahora comportamiento documentado).</li>
+</ul>
+
+<h2>Cartas de la documentación</h2>
+<ul>
+<li>Este WordPress ampliado a 12 artículos (con índice, changelog diario y el modo externos documentado de punta a punta).</li>
+<li>LEEME-navegador.txt actualizado con el fix de ventana (nunca se abre recortada) y el self-heal.</li>
+</ul>

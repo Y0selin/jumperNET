@@ -1,0 +1,52 @@
+<h2>Un Chromium dedicado a la red</h2>
+<p>El navegador JumperNET es un <b>Electron</b> (Chromium + shell propio) que nace ya apuntado al circuito: en lugar de configurar proxies a mano, pulsas el chip «PROXY» y TODO el tráfico de todas las pestañas sale por tus saltos, igual que Tor Browser pero sobre TU red. La versión 2 reescribió el shell (pestañas, omnibox, chip) y es la que se reparte en «Descargas» (instalador NSIS, portable, zip y AppImage).</p>
+
+<h3>Piezas internas</h3>
+<ul>
+<li><b><span class="mono">main.js</span> (proceso principal):</b> ventana, esquema <span class="mono">jn://</span> (inicio y log local servidos desde el disco, no de la red), gestión del proxy de sesión, respuesta al 407 (<span class="mono">app.on("login")</span>) sin ventanas extra, y el recuerdo de la geometría de la ventana.</li>
+<li><b><span class="mono">ventana/index.html + ui.js</span> (shell):</b> pestañas con <span class="mono">&lt;webview&gt;</span> (sesión <span class="mono">persist:jn</span> con backgroundThrottling=no), omnibox con búsqueda DDG (motor por defecto igual que Tor Browser), candado de estado, chip PROXY y panel de estado (cuenta, red, circuito, IP).</li>
+<li><b>Error amable:</b> si una pestaña falla tras 2 reintentos, se muestra una página local con el motivo EXACTO (<span class="mono">ERR_PROXY_*</span>, <span class="mono">ERR_CONNECTION…</span>) y una pista útil (rota el circuito, revisa el chip…).</li>
+</ul>
+
+<h2>El chip PROXY</h2>
+<ul>
+<li><b>Gris (apagado):</b> navegas directo; el chip solo vive en TU máquina.</li>
+<li><b>Ámbar (conectando):</b> se está aplicando el proxy a las DOS sesiones (por defecto y <span class="mono">persist:jn</span>): ni una pestaña en claro.</li>
+<li><b>Verde (ACTIVO):</b> todas las pestañas salen por el circuito; el estado también se ve en «⌖ Estado del circuito…» (menú ☰) con la IP que internet ve ahora mismo.</li>
+</ul>
+
+<h2>El proxy se aplica a TODAS las sesiones (bug 1 del diario)</h2>
+<p>El <span class="mono">&lt;webview&gt;</span> usa su propia sesión <span class="mono">persist:jn</span>: si el proxy solo se aplica a la sesión por defecto, las pestañas navegan directo aunque el chip diga ACTIVO (el «veo mi IP real» del diario). El main aplica la configuración a la vez en <span class="mono">defaultSession</span> y en la sesión del webview: el proxy no tiene excepciones.</p>
+
+<h2>Auto-alineación del webview (self-heal)</h2>
+<p>Un <span class="mono">&lt;webview&gt;</span> puede «desincronizarse» de su contenedor (la pestaña se pinta cortada si la ventana cambia antes del primer frame). El shell lo resuelve en varias capas:</p>
+<ol>
+<li><span class="mono">reajustaWebviews()</span> clava el webview al tamaño real de su contenedor (<span class="mono">clientWidth/Height</span>) con re-pegado de atributo para forzar que Chromium rehaga el layout interno.</li>
+<li>Se llama desde <b>ResizeObserver</b> del contenedor, desde el evento <span class="mono">resize</span> de la ventana, en cada activación de pestaña (con un <span class="mono">setTimeout(…,30)</span> por el caso de la recién activa), y una vez por segundo como red de seguridad.</li>
+<li>El proceso principal avisa por IPC (<span class="mono">jn:reencuadre</span>) cuando la ventana cambia de monitor o se re-encaja, y el shell re-alinea de nuevo (con micro-delay): está la prueba «envenenada» automatizada (webview a 600×300 → se re-alinea a 1000×610 tras el resize).</li>
+<li><b>Corrección importante:</b> el primer intento usaba <span class="mono">requestAnimationFrame(reajustaWebviews)</span> — y se quedaba COLGADO cuando la página no estaba renderizando (ventana oculta/minimizada, rAF no dispara). Ahora es llamada directa.</li>
+</ol>
+
+<h2>La ventana nunca se abre «cortada por la mitad» (bug 2 del diario)</h2>
+<p>Síntoma real del usuario: el navegador se veía recortado a media pantalla. Causa: la ventana se abría con un tamaño fijo (1200×820) y, si el monitor es más pequeño (portátil 1366×768) o los bounds guardados de otra sesión pertenecían a un monitor mayor, la ventana quedaba por debajo del área de trabajo y el «navegador se cortaba».</p>
+<p><b>Solución (v2.1), en main.js:</b></p>
+<ol>
+<li>Al cerrar se guardan los bounds en <span class="mono">bounds.json</span> (<span class="mono">userData</span>) junto con si estaba maximizada.</li>
+<li>Al abrir, <span class="mono">recortaAlArea()</span> elige el monitor con mayor solape y recorta el rectángulo a su <span class="mono">workArea</span> (y lo pega a la posición interior válida si estaba fuera). Primer arranque: solo se recorta el tamaño y Electron centra.</li>
+<li><b>Nunca</b> se abre con un tamaño mayor que el monitor: probado con bounds envenenados (1900×1500) en un monitor de 1280×1024 → la ventana abre en 1279×1023 con el webview copia exacta del contenedor (1279×933) y el borde inferior pegado al borde de la ventana.</li>
+<li>Si arrastras la ventana a un monitor menor, «move» con debounce (250 ms) re-encaja y avisa al shell (self-heal de las pestañas).</li>
+</ol>
+
+<h2>Comandos, depuración y log</h2>
+<ul>
+<li>«⟲ Reiniciar el navegador» (menú ☰ o <span class="mono">jn://log</span>): relanza la conexión del proxy desde cero.</li>
+<li>Registro interno (<span class="mono">⌄ Registro interno</span> o <span class="mono">jn://log</span>): evento a evento con el email enmascarado (nunca contraseñas).</li>
+<li><span class="mono">Depuración:</span> <span class="mono">--remote-debugging-port=9223</span> para pruebas automatizadas con CDP; la suite de e2e del navegador (incluye los envenenamientos y resizes) corre sobre ese socket.</li>
+</ul>
+
+<h2>Empaquetado</h2>
+<ul>
+<li><span class="mono">npm run paq-win</span> → instalador NSIS + portable + zip (jumpernet-navegador-windows.zip).</li>
+<li><span class="mono">npm run paq-linux</span> → AppImage + zip linux. Ambos con icono propio y sin firma (SmartScreen avisará: «Ejecutar de todas formas»).</li>
+<li>Los binarios viven en <span class="mono">~/jumpernat/descargas</span> del VPS y se sirven desde el panel (pestaña «Descargas» + <span class="mono">notas-release.md</span>).</li>
+</ul>

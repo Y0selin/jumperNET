@@ -1,0 +1,50 @@
+<h2>Nodos externos: TU equipo como salto real (Fase 9)</h2>
+<p>Hasta ahora el circuito saltaba solo por los contenedores docker del VPS. La Fase 9 añade lo importante: <b>los equipos de los usuarios</b> se unen a la red como nodos personales (peers), quedan registrados en <span class="mono">/nodos</span> y pueden entrar a los circuitos. Y, para probarlo con hechos, existe el <b>modo <span class="mono">externos</span></b>: el circuito salta SOLO por equipos de usuarios y sale a internet con la IP pública del nodo externo — no por la del VPS.</p>
+
+<h3>Cómo se une un equipo a la red</h3>
+<ol>
+<li><b>Registro determinista:</b> con tu primera conexión a la red (o un latido del cliente peer), la API crea tu nodo <span class="mono">peer_u&lt;id&gt;</span> (upsert por nombre: el mismo usuario SIEMPRE mapea a la misma fila; nunca desaparece de la lista).</li>
+<li><b>OPT-IN del salto (obligatorio):</b> tu nodo se registra pero <b>NO salta hasta que tú lo aceptes</b> desde el panel (pestaña «Nodos» → tarjeta «Mi equipo como salto» → «✓ acepto ser salto»). Hasta entonces la dirección se FUERZA a <span class="mono">ip:0</span> y el nodo queda fuera de todos los pools, aunque su cliente anuncie un servicio abierto. Puedes revocarlo cuando quieras y el efecto es inmediato (siguiente latido = vuelve a <span class="mono">:0</span>).</li>
+<li><b>Servicio opcional:</b> una vez aceptado el salto, si tu cliente anuncia <span class="mono">host:puerto</span> de un servicio peer abierto (el script <span class="mono">peer/nodo_personal.py</span> en tu máquina), ese puerto entra al pool de saltos. Sin servicio anunciado, el nodo va con <span class="mono">:0</span>: se ve en la lista pero NUNCA se elige (<span class="mono">_hoppable()</span> lo excluye).</li>
+<li><b>Doble verificación en el sorteo:</b> además del opt-in, <span class="mono">elegir_circuito()</span> filtra con JOIN sobre los usuarios: un nodo <span class="mono">tipo=usuario</span> cuyo dueño no aceptó (<span class="mono">peer_publico=0</span>) no entra jamás en un circuito, ni siquiera con dirección saltable antigua.</li>
+<li><b>Latido:</b> el equipo envía <span class="mono">POST /nodos/heartbeat</span> con <span class="mono">X-Interno: PEER_TOKEN</span> y nombre <span class="mono">peer_*</span> (los contenedores docker usan INTERNAL_TOKEN). Cada latido trae conexiones vivas que reenvía.</li>
+</ol>
+
+<h3>Válido no es latiendo: el sondeo TCP es el juez</h3>
+<p>El heartbeat solo demuestra que el equipo está encendido. La validación REAL (lo que el usuario pidió: «que lo valide mejor») es un <b>sondeo TCP de verdad</b>:</p>
+<ul>
+<li>Un hilo de fondo en la API sondea <b>cada 15 s</b> (concurrente, no en serie) todos los nodos con puerto real: connect real + medición de <span class="mono">lat_ms</span>.</li>
+<li>El resultado (registrado en <span class="mono">ult_ok</span>) es el único pasaporte: un nodo es <span class="mono">saltable</span> solo si su sondeo conectó dentro de <span class="mono">TTL_OK</span> (≥45 s).</li>
+<li>Sondeo bajo demanda: si el circuito necesita un nodo «frío», lo sondea AHÍ mismo antes de rechazarlo (sin 503 injustas).</li>
+<li><span class="mono">/nodos</span> muestra por nodo: <span class="mono">ms</span> (latencia), <span class="mono">responde</span> (sondeo fresco), <span class="mono">sin_ok_s</span> (segundos desde el último OK) y <span class="mono">saltable</span> (puerto real + respondió).</li>
+</ul>
+
+<h3>El modo <span class="mono">externos</span> (puestos para probar con hechos)</h3>
+<pre><code>POST /connect {"modo":"externos"}        # circuito 100% equipos de usuarios
+POST /rotate                              # respeta tu modo al rotar
+GET  /me  →  { "circuito": ["peer_u7","peer_u42"], "ip_salida": "90.169.x.x",
+                "exit_ip": "90.169.x.x" }</code></pre>
+<ul>
+<li><b>El pool se filtra:</b> los contenedores docker del VPS quedan FUERA (<span class="mono">tipo=usuario</span> solamente).</li>
+<li><b>Flexible:</b> si la red aún tiene pocos externos, se admite un circuito más corto (mínimo 1 salto) para poder probar el mecanismo igualmente. Sin flexible, 503 con el detalle del pool.</li>
+<li><b>La IP de salida es la del peer:</b> si el exit es un peer con IP pública anunciada, ESA ES la IP que ve internet (el peer está en su casa, no en el VPS): <span class="mono">ip_salida</span> y <span class="mono">exit_ip</span> lo muestran, y la comprobación del panel la confirma.</li>
+<li><b>Nunca tu propio equipo como salto:</b> el sorteo excluye <span class="mono">peer_u&lt;tu-id&gt;</span> del propio circuito.</li>
+</ul>
+
+<h3>Cómo se probó (todo automatizado)</h3>
+<pre><code># fase9_externos.py (corre en el contenedor cliente-test del VPS):
+#  1) /nodos trae ms/responde/saltable
+#  2) se lanza un peer de prueba con SERVICIO TCP ESCUCHANDO y
+#     se confirma: saltable=true (validado por el sondeo, no por latido)
+#  3) connect modo "todos"  → circuito normal (puede mezclar peers)
+#     connect modo "externos" → TODOS los saltos son peer_* (cero infra)
+#  4) el circuito sale A INTERNET por la IP pública del peer (/ipify)
+#  y la suite completa: paso 10.1 de tests/run_all.sh</code></pre>
+<p>Resultado verificado en producción: <span class="mono">peer de prueba VALIDADO por el sondeo TCP → saltable: True</span> y <span class="mono">circuito externos solo peers usuario ['peer_prueba_ext']</span> — y <span class="mono">ningún nodo infra colado en externos</span>.</p>
+
+<h3>Privacidad del peer externo</h3>
+<ul>
+<li>El peer no descifra NADA si JENC está activo: reenvía registros cifrados como cualquier nodo.</li>
+<li>La API no guarda histórico de qué circuito pasó por qué peer ni cuándo: solo la fila de estado actual del usuario.</li>
+<li>Tu nodo siempre está VISIBLE en <span class="mono">/nodos</span> con su alias (si lo pusiste): es el precio de entrar en la red compartida, como en Tor las relays públicas.</li>
+</ul>
