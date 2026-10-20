@@ -423,9 +423,11 @@ def first_word(linea: bytes) -> str:
 
 
 def canjea_jwt(jwt: str, api: str):
-    """El usuario pidió intuición: si lo pegado es el token de SESIÓN de la web
-    (JWT, empieza por «eyJ»), lo cambiamos aquí por el token de peer REAL
-    llamando a /peer_token con esa misma sesión. Devuelve (token, clave, broker)."""
+    """Si lo pegado es el token de SESIÓN de la web (JWT, empieza por «eyJ»),
+    lo cambiamos aquí por el token de peer REAL (y la clave, el broker y el
+    NOMBRE del nodo) llamando a /peer_token con esa misma sesión. Así el
+    usuario puede dejar «solo» el token que ya conoce: el agente saca el resto
+    de su cuenta. Devuelve (token, clave, broker, nombre)."""
     import json as _json
     import urllib.request
     req = urllib.request.Request(api + "/peer_token", headers={"Authorization": "Bearer " + jwt})
@@ -437,7 +439,8 @@ def canjea_jwt(jwt: str, api: str):
                          "pestaña Nodos → «Mi equipo como salto», y copia el comando completo.")
     if not isinstance(datos, dict) or not datos.get("peer_token"):
         raise SystemExit("la respuesta de /peer_token no vale: " + str(datos)[:90])
-    return datos["peer_token"], datos.get("clave_saltos") or "", datos.get("broker") or ""
+    return (datos["peer_token"], datos.get("clave_saltos") or "",
+            datos.get("broker") or "", datos.get("nombre") or "")
 
 
 def pid_path(nombre: str) -> str:
@@ -517,19 +520,12 @@ def main():
     args = [a for a in args if a != "-d"]
     if len(args) >= 1: token = args[0]
     if len(args) >= 2: nombre = args[1]
-    if not token or not nombre:
-        print("Copia el token y el nombre del panel web (pestaña Nodos → «Mi equipo como salto»).")
-        token = token or input("token de peer: ").strip()
-        nombre = nombre or input("nombre del nodo (peer_u<N>): ").strip()
-    if not (nombre.startswith("peer_") and token):
-        nota("argumentos no válidos: se necesita el token y el Nombre peer_u<N>")
-        return 2
-    # CANJ de token de SESIÓN: si lo pegado es el JWT de la web (empieza por
-    # «eyJ»), lo cambiamos aquí por el token de peer REAL con la propia API —
-    # así el token que el usuario ya conoce simplemente funciona.
-    if token.startswith("eyJ"):
+    # canje ANTES de validar el nombre: con el JWT de la web los dos datos
+    # (token real y nombre del nodo) salen de la respuesta de /peer_token
+    if token and token.startswith("eyJ"):
         nota(f"detectado token de SESIÓN (JWT): lo cambio por tu token de peer en {api}…")
-        token, clave_nueva, broker_canje = canjea_jwt(token, api)
+        token, clave_nueva, broker_canje, nombre_canje = canjea_jwt(token, api)
+        nombre = nombre or nombre_canje
         if not clave:
             clave = clave_nueva
         if broker_canje:
@@ -537,7 +533,20 @@ def main():
             broker = partes_br[0]
             if len(partes_br) > 1:
                 PTO_TUNEL = int(partes_br[1])
-        nota("cambio hecho: token de peer aceptado")
+        nota(f"cambio hecho: token de peer aceptado ({nombre})")
+    if not token or not nombre:
+        print("Falta el token: cópialo del panel web (pestaña Nodos → «Mi equipo como salto»)")
+        print("o pega el token de tu SESIÓN (el que empieza por eyJ) — el agente saca el resto solo.")
+        token = token or input("token de peer o de sesión: ").strip()
+        if token and token.startswith("eyJ") and not nombre:
+            token, clave_nueva, broker_canje, nombre_canje = canjea_jwt(token, api)
+            nombre = nombre or nombre_canje
+            if not clave:
+                clave = clave_nueva
+        nombre = nombre or input("nombre del nodo (peer_u<N>): ").strip()
+    if not (nombre and nombre.startswith("peer_")):
+        nota(f"nombre de nodo no válido ({nombre!r}): se necesita peer_u<N>")
+        return 2
     if plano:
         demonio()
     if pid_vivo(nombre):
