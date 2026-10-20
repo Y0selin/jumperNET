@@ -27,6 +27,19 @@ const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
 
+/* ────────────────────────── render SIEMPRE íntegro ────────────────────────
+ * El «85 % en blanco» (la parte superior pinta y el resto se queda blanco)
+ * es el bug clásico del COMPOSITOR con GPU de Windows: las regiones que no
+ * cambian no se repintan y la pestaña queda medio apagada. Sin aceleración
+ * Chromium compone por software: se ve SIEMPRE completo (el coste es el que
+ * esperables en un navegador que va por un circuito de 3 saltos). El canario
+ * JN_GPU=1 conserva la GPU en máquinas sanas. disable-partial-raster ata
+ * además el rasterizado parcial (la mancha blanca tras un resize). */
+if (process.env.JN_GPU !== "1") {
+  app.disableHardwareAcceleration();
+}
+app.commandLine.appendSwitch("disable-partial-raster");
+
 /* ------------------------------------------------------------------ config */
 
 const API_URL = "https://jumpernet.duckdns.org";
@@ -452,9 +465,23 @@ function crearVentana() {
   ventana.on("leave-full-screen", () => setTimeout(reajustaDeNuevo, 200));
   ventana.on("unmaximize", () => setTimeout(reajustaDeNuevo, 120));
   ventana.on("maximize", () => setTimeout(reajustaDeNuevo, 120));
+  ventana.on("restore", () => setTimeout(reajustaDeNuevo, 180));
   ventana.on("resize", guardaBounds);
   ventana.on("move", guardaBounds);
   ventana.on("close", guardaBounds);
+  /* self-heal del PINTADO (no del layout): tras redimensionar/minimizar,
+     Chromium puede dejar regiones sin repintar en máquinas con GPU errática
+     (el «85 % en blanco»). Con sin-Aceleración la GPU efectiva es software,
+     y el invalidate después del último resize fuerza el repintado completo. */
+  let temporizadorRepinta = null;
+  ventana.on("resize", () => {
+    clearTimeout(temporizadorRepinta);
+    temporizadorRepinta = setTimeout(() => {
+      try {
+        if (!ventana.isDestroyed() && !ventana.isMinimized()) ventana.webContents.invalidate();
+      } catch { /* nada */ }
+    }, 150);
+  });
   /* ventanas emergentes (popups) de webs → pestaña nueva, nunca ventana nueva */
   ventana.webContents.setWindowOpenHandler(({ url }) => {
     ventana.webContents.send("jn:pestaña", url);

@@ -194,7 +194,18 @@ async def atender_peer(reader: asyncio.StreamReader, writer: asyncio.StreamWrite
             writer.close()
             _log(f"{nombre}: sin opt-in de su dueño (salto no aceptado)")
             return
-        # cierra el túnel viejo del mismo peer (reconexión) y deja el nuevo
+        # cierra el túnel viejo del mismo peer SOLO si su pulso está viejo
+        # (reconexión real). Con un pulso reciente el túnel está VIVO y el que
+        # se presenta es un agente DUPLICADO (dos equipos con el mismo peer):
+        # se le rechaza en vez de patearse mutuamente cada reconnect (pelea
+        # abierta/abierta/cerrado en bucle que mata los DIAL en vuelo).
+        t_viejo = TUNELES.get(nombre)
+        if t_viejo and time.time() - t_viejo.get("pulse", 0) < 60:
+            writer.write(b"YAABIERTO\n")
+            await writer.drain()
+            writer.close()
+            _log(f"{nombre}: presentación duplicada rechazada (túnel vivo con pulso reciente)")
+            return
         await limpiar_peer(nombre)
         writer.write(b"OK\n")
         await writer.drain()

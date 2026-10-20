@@ -325,9 +325,19 @@ class Agente:
     def mensaje_broker(self, tipo: str):
         if tipo == "OK":
             nota(f"túnel de {self.nombre} aceptado (conexión saliente, cero puertos abiertos)")
+            self.nooptin_n = 0
         elif tipo == "NOOPTIN":
-            nota("tu dueño NO ha aceptado el salto: acepta «acepto ser salto» en el panel y vuelve a lanzar")
-            self.vivo = False
+            # EL dueño no ha aceptado (o la API del servidor falló y el broker
+            # no confirmó el opt-in: un rechazo NO es fatal seguro). Reintenta
+            # unas cuantas veces con margen; a la tercera asume opt-in real
+            # pendiente y se apaga con la instrucción del panel.
+            self.nooptin_n = getattr(self, "nooptin_n", 0) + 1
+            if self.nooptin_n >= 3:
+                nota("tu dueño NO ha aceptado el salto: acepta «acepto ser salto» en el panel y vuelve a lanzar")
+                self.vivo = False
+            else:
+                nota(f"NOOPTIN del broker (intento {self.nooptin_n}): reintento en 60 s")
+                time.sleep(60)
         elif tipo == "NO":
             nota("credenciales rechazadas por el broker (¿token correcto?)")
             self.vivo = False
@@ -344,6 +354,11 @@ class Agente:
                 time.sleep(backoff); backoff = min(30, backoff * 2); continue
             backoff = 1.0
             self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            # el timeout de connect no valía para el bucle: con 10 s y PING cada
+            # 25 s el recv saltaba 'timed out' y el agente reconectaba cada
+            # 10 s (matando los saltos en vuelo). El latido y el broker mantienen
+            # el túnel vivo: escucha sin límite.
+            self.sock.settimeout(None)
             try:
                 self.sock.sendall(f"TUNNEL {self.nombre} {self.token}\n".encode())
             except Exception as e:
@@ -494,6 +509,7 @@ def demonio():
 
 
 def main():
+    global PTO_TUNEL
     args = sys.argv[1:]
     broker, clave, api = BROKER_DEF, os.environ.get("JN_CLAVE", ""), API_DEF
     if "--broker" in args:

@@ -1514,12 +1514,15 @@ class Comprobacion(BaseModel):
 
 
 @app.get("/salida")
-def salida(token: str | None = Header(default=None, alias="Authorization")):
-    """IP publica de salida del servidor (medida de verdad y cacheada)."""
+def salir(token: str | None = Header(default=None, alias="Authorization")):
+    """IP que verá internet por tu circuito ACTIVO: la del EXIT REAL (su casa si
+    el exit es un peer con túnel, la del VPS si es infra o no se sabe). Era la
+    raíz del «veo la IP del VPS» del panel: medir_ip_publica() mide la salida
+    del SERVIDOR, no la del circuito del usuario."""
     u = _auth(token)
     circuitos = json.loads(u["circuito"]) if u["circuito"] else []
     return {
-        "ip_salida": medir_ip_publica(ttl=60),
+        "ip_salida": (exit_ip_de(circuitos[-1]) if circuitos else None) or medir_ip_publica(ttl=60),
         "nodo_exit": circuitos[-1] if circuitos else None,
         "activo": bool(u["activo"]),
     }

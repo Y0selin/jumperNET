@@ -253,6 +253,9 @@ function reajustaWebviews() {
       // re-pegar el atributo fuerza a Chromium a rehacer el layout interno
       try { v.setAttribute("style", v.getAttribute("style") || ""); } catch { /* nada */ }
     }
+    /* auto-ajuste: el repintado del guest (el 85 % en blanco tras un resize
+       en GPUs erráticas no se cura solo con el layout) */
+    try { if (typeof v.invalidate === "function") v.invalidate(); } catch { /* nada */ }
   });
 }
 /* OJO: SIN requestAnimationFrame. Cuando la ventana no está renderizando
