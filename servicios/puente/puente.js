@@ -37,12 +37,24 @@ const path = require("path");
 const API_URL = process.env.API_URL || "http://api:8000";
 const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN || "";
 const PEER_TOKEN = process.env.PEER_TOKEN || "";
-const CLAVE_SALTOS = process.env.CLAVE_SALTOS || "";  // SIEMPRE vacío: puente web = jamás exit
+// CLAVE_SALTOS: los agentes del puente son AGENTES COMPLETOS y pueden
+// ejecutar el EXIT (JENC: descifran el stream punt-a-punt). La salida que
+// ejecutan sale del VPS (IP pública del servidor) y la API lo etiqueta
+// Honestamente como exit_via='vps' — nunca como la casa del peer.
+const CLAVE_SALTOS = process.env.CLAVE_SALTOS || "";
 const BROKER = process.env.BROKER || "broker:9008";
 const RECONCILIO_MS = 20000;
 const RELANZAMINIMO_MS = 45000; // entre intentos fallidos del mismo peer
+const UNA_VEZ = process.argv.includes("--once");  // despliega-agentes.sh
 
 function log(m) { console.log("[puente " + new Date().toISOString().slice(11, 19) + "] " + m); }
+
+/* resumen del estado para --once (despliega-agentes.sh): qué pares tienen
+ * agente desplegado, en cola, o retirados por agente real de casa. */
+function resumen() {
+  const vivos = [...hijos.entries()].filter(([, i]) => i.proc && i.proc.exitCode === null).map(([n]) => n);
+  return { desplegados: vivos.length, lista: vivos };
+}
 
 const hijos = new Map(); // peer_u<id> -> {proc, ultimoIntento}
 const net = require("net");
@@ -129,7 +141,7 @@ function lanze(nombre) {
     nombre,
     PEER_TOKEN,
     "80,443",
-    "",               // SIN clave JENC: el puente web jamás des cifra ni sale
+    CLAVE_SALTOS,     // agente completo: puede ejecutar el EXIT (JENC)
   ], { stdio: ["ignore", "pipe", "pipe"] });
   proc.stdout.on("data", (d) => { const s = String(d).trim(); if (s) log(`${nombre}: ${s.split("\n").slice(-1)[0]}`); });
   proc.stderr.on("data", (d) => log(`${nombre} (stderr): ${String(d).slice(0, 160)}`));
@@ -197,4 +209,14 @@ async function run() {
 
 process.on("SIGTERM", () => { for (const i of hijos.values()) { try { i.proc.kill(); } catch {} } process.exit(0); });
 process.on("SIGINT", () => process.exit(0));
-run();
+
+if (UNA_VEZ) {
+  /* Modo del script despliega-agentes.sh: UNA pasada ahora mismo —
+   * lanza los agentes que falten, retira los revocados y saca resumen. */
+  reconcilar()
+    .then(() => new Promise((r) => setTimeout(r, 5000)))   // deja respirar a los spawns
+    .then(() => { console.log(JSON.stringify(resumen())); process.exit(0); })
+    .catch((e) => { console.error(String(e && e.message)); process.exit(1); });
+} else {
+  run();
+}

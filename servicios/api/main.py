@@ -357,13 +357,16 @@ def ip_salida_efectiva(f) -> str | None:
     return medida
 
 
-def ip_tunel_en_vivo(nombre_peer: str | None) -> str | None:
-    """IP pública real del salto por túnel: el BROKER la ve en su socket
-    (la conexión la abrió el peer desde su casa) y la responde al comando
-    SRC. Devuelve None si el túnel no está abierto o no hay broker — nunca
-    una IP inventada."""
+def origen_tunel(nombre_peer: str | None) -> tuple[str | None, str | None]:
+    """(ip_origen, via) del túnel del peer según el BROKER (comando SRC):
+    la IP que ve el broker en su socket es por donde SALDRIA el tráfico del
+    exit. via: 'agente' (IP pública = el agente corre en la casa del peer,
+    salida real desde su casa) o 'web' (IP privada = el agente vive en el
+    puente del VPS: la salida es con la IP pública del VPS, y así se dice —
+    nunca se disfraza la IP del contenedor como si fuese la del usuario).
+    Devuelve (None, None) si el túnel no está abierto o no hay broker."""
     if not nombre_peer or not BROKER_NODOS:
-        return None
+        return None, None
     try:
         host, puerto = BROKER_NODOS.rsplit(":", 1)
         with socket.create_connection((host, int(puerto)), timeout=2.5) as s:
@@ -377,10 +380,15 @@ def ip_tunel_en_vivo(nombre_peer: str | None) -> str | None:
                 resp += dato
         partes = resp.decode(errors="replace").strip().split()
         if len(partes) == 3 and partes[0] == "OK" and _es_ipv4(partes[2]):
-            return partes[2]
+            try:
+                ip = ipaddress.ip_address(partes[2])
+                via = "web" if (ip.is_private or ip.is_loopback or ip.is_link_local) else "agente"
+            except ValueError:
+                via = None
+            return partes[2], via
     except Exception:
         pass
-    return None
+    return None, None
 
 
 def exit_ip_de(nombre_nodo: str | None) -> str | None:
@@ -410,15 +418,20 @@ def exit_ip_de(nombre_nodo: str | None) -> str | None:
     if f is None or not f["direccion"]:
         return None
     if f["direccion"].startswith("tunel:"):
-        # 1) LA VERDAD EN TIEMPO REAL: la IP pública de origen del túnel que
-        #    ve el broker (por ahí sale el tráfico del exit). Si el dueño
-        #    latió desde otro sitio, users.ip_real estaría desfasada.
-        en_vivo = ip_tunel_en_vivo(nombre_nodo)
-        if en_vivo:
+        # 1) LA VERDAD EN TIEMPO REAL: por dónde sale ese exit AHORA según el
+        #    broker. Con agente de casa (IP pública) la salida es SU casa.
+        #    Con puente web (IP privada del VPS) el exit corre en el VPS y el
+        #    destino ve la IP PÚBLICA DEL VPS — y eso es lo que decimos:
+        #    nunca disfrazamos la IP del contenedor como la del usuario.
+        en_vivo, via_t = origen_tunel(nombre_nodo)
+        if via_t == "agente":
             return en_vivo
-        # 2) fallback: la IP del último latido/login del dueño
+        if via_t == "web":
+            return medir_ip_publica()
+        # 2) túnel cerrado ahora mismo: si el dueño tiene IP pública anotada
+        #    (agente de casa que latió), sería la salida cuando vuelva
         ip_real = f["ip_dueno"]
-        if ip_real:
+        if ip_real and (f.get("via") if "via" in f.keys() else None) == "agente":
             try:
                 ip = ipaddress.ip_address(ip_real)
                 if ip.version == 4 and not (ip.is_private or ip.is_loopback
@@ -427,7 +440,7 @@ def exit_ip_de(nombre_nodo: str | None) -> str | None:
                     return str(ip)
             except ValueError:
                 pass
-        return None  # sin IP del dueño: el fallback del caller mide la del VPS
+        return None  # sin salida clara: el fallback del caller mide la del VPS
     host = f["direccion"].rsplit(":", 1)[0]
     try:
         ip = ipaddress.ip_address(host)
@@ -504,14 +517,63 @@ def fila_a_dict(f) -> dict:
         "nodo_exit": (json.loads(f["circuito"])[-1] if f["circuito"] else None),
         "circuito": json.loads(f["circuito"]) if f["circuito"] else None,
         "activo": activo,
-        # Fase 9 — nodos externos: modo preferido de este usuario y la IP que
-        # ve internet por el nodo de salida ACTUAL (si el exit es un peer, es
-        # su IP de casa; si es infra, va con None y se enseña medir_ip_publica())
         "modo": (f["modo"] if "modo" in f.keys() else "todos") or "todos",
         "exit_ip": (exit_ip_de(json.loads(f["circuito"])[-1]) if f["circuito"] else None),
         "ultimo_cambio": f["ultimo_cambio"],
+        # DESPLIEGUE DEL AGENTE DE SOLTO (todo en el VPS): al aceptar el
+        # opt-in, el contenedor `puente` lanza el agente de ese peer en
+        # segundos; 'desplegado' es un HECHO (el túnel responde al sondeo).
+        # El panel enseña el mensaje de espera mientras no esté.
+        "salto_despliegue": _estado_salto_despliegue(f, bool(publico)),
+        # ¿Quién ejecuta la SALIDA del circuito activo? 'casa' = agente del
+        # peer en su equipo (sale con la IP de su casa); 'vps' = agente
+        # desplegado en el servidor o nodo de la red (sale con la IP pública
+        # del VPS). Nada de disfarces: el panel etiqueta la salida.
+        "exit_via": _exit_via(f, activo),
         **d,
     }
+
+
+def _estado_salto_despliegue(f, aceptado: bool) -> dict:
+    """Estado REAL del despliegue del agente de tu salto (peer_u<id>)."""
+    desplegado = False
+    if aceptado:
+        try:
+            c = conex()
+            fila_n = c.execute(
+                "SELECT ult_ok FROM nodos WHERE nombre=?", (f"peer_u{f['id']}",)
+            ).fetchone()
+            desplegado = bool(fila_n and fila_n["ult_ok"] and (time.time() - fila_n["ult_ok"]) < TTL_OK)
+        except Exception:
+            desplegado = False
+    return {
+        "aceptado": aceptado,
+        "desplegado": desplegado,
+        "mensaje": (
+            f"agente activo en el VPS: ya puedes ser salto"
+            if desplegado
+            else ("agente en cola de despliegue en el VPS: normalmente activo en menos de 40 segundos — espera a que el administrador despliegue el agente de tu nodo"
+                  if aceptado
+                  else "")
+        ),
+    }
+
+
+def _exit_via(f, activo: bool) -> str | None:
+    """'casa' | 'vps' | None: Quien ejecuta la salida del circuito ACTIVO.
+    Hecho con el mismo juez del broker (origen del túnel), no una promesa."""
+    if not activo:
+        return None
+    try:
+        nombre = json.loads(f["circuito"])[-1]
+    except Exception:
+        return None
+    if not nombre.startswith("peer_"):
+        return "vps"       # nodo de infra: siempre corre en el VPS
+    _ip, via_t = origen_tunel(nombre)
+    if via_t == "agente":
+        return "casa"
+    return "vps"
 
 
 # ---------------------------------------------------------------- nodos (Fase 2)
@@ -1027,17 +1089,16 @@ def elegir_circuito(
             detalle += f" en modo solo-externos; {no_responde} vistos sin responder"
         detalle += ")"
         raise HTTPException(status_code=503, detail=detalle)
-    # EXIT solo entre nodos capaces: infra + agentes reales. Los puentes web
-    # (via='web') reenvían pero no ejecutan la salida desde la casa del peer.
-    exitables = {nombre: d for nombre, d in pool.items() if via_nodos.get(nombre) != "web"}
-    if not exitables:
-        raise HTTPException(
-            status_code=503,
-            detail="no hay nodo de SALIDA (exit) disponible: los equipos unidos solo desde la web reenvían pero no salen; espera a un equipo con el agente encendido",
-        )
-    # el último salto SIEMPRE sale de los capaces; el resto del circuito,
-    # del pool completo (peers web incluidos)
-    exit_nombre = random.choice(list(exitables))
+    # EXIT: TODOS los nodos del pool tienen un agente vivo (infra en el VPS,
+    # agente de casa o agente desplegado en el puente del VPS — de hecho es
+    # un requisito del sondeo: la fila solo es saltable si su agente responde).
+    # Cuando hay agentes de CASA (via='agente'), el exit prefiere esos: la IP
+    # que ve internet es la del peer, la más valiosa. Si no, el agente del
+    # puente (via='web') ejecuta la salida desde el VPS (IP pública del
+    # servidor) y el panel lo etiqueta como tal: nunca se falsifica.
+    casa = [x for x in pool if via_nodos.get(x) == "agente"]
+    exitables = casa if casa else list(pool)
+    exit_nombre = random.choice(exitables)
     sin_exit = [x for x in pool if x != exit_nombre]
     if n == 1:
         elegidos = [exit_nombre]

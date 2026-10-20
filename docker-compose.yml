@@ -235,8 +235,10 @@ services:
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
       PEER_TOKEN: ${PEER_TOKEN:-}
       BROKER: broker:9008
-      # SIEMPRE vacío: el puente web jamás descifra (no puede ser exit)
-      CLAVE_SALTOS: ""
+      # Agentes COMPLETOS: pueden ejecutar el exit (JENC). La salida que
+      # ejecutan sale con la IP pública del VPS y la API la etiqueta así
+      # (exit_via='vps'); si un peer tiene agente propio en su casa, ese gana.
+      CLAVE_SALTOS: ${CLAVE_SALTOS:-}
     depends_on:
       - api
       - broker
