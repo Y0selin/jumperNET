@@ -1103,7 +1103,10 @@ def elegir_circuito(
     # queda nadie capaz, el error es honesto y pide el agente.
     casa = [x for x in pool if via_nodos.get(x) == "agente"]
     salida_infra = [x for x in pool if (via_nodos.get(x) or "infra") == "infra"]
-    exitables = casa + salida_infra
+    # PRIORIDAD DETERMINISTA: si hay agente de casa vivo, la salida es SIEMPRE
+    # de una casa (el usuario quiere ver la IP del peer externo, no la del VPS);
+    # solo retomamos un exit de infra si no queda ni un agente de casa.
+    exitables = casa if casa else salida_infra
     if not exitables:
         detalle = (
             f"hay {len(pool)} saltos vivos pero NINGUNO puede ejecutar la salida: "
