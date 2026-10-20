@@ -30,6 +30,7 @@ import threading
 import time
 
 BROKER_DEF = os.environ.get("JN_BROKER", "jumpernet.duckdns.org")
+API_DEF = os.environ.get("JN_API", "https://jumpernet.duckdns.org")
 PTO_TUNEL = 9008     # túnel de peers (sin puertos abiertos)
 PTO_NODOS = 9009     # DIAL entre peers / DIALN hacia la red interna
 PUERTOS_OK = {80, 443}
@@ -421,6 +422,24 @@ def first_word(linea: bytes) -> str:
     return linea.split(b" ", 1)[0].decode(errors="replace").strip()
 
 
+def canjea_jwt(jwt: str, api: str):
+    """El usuario pidió intuición: si lo pegado es el token de SESIÓN de la web
+    (JWT, empieza por «eyJ»), lo cambiamos aquí por el token de peer REAL
+    llamando a /peer_token con esa misma sesión. Devuelve (token, clave, broker)."""
+    import json as _json
+    import urllib.request
+    req = urllib.request.Request(api + "/peer_token", headers={"Authorization": "Bearer " + jwt})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            datos = _json.loads(r.read(16384))
+    except Exception as e:
+        raise SystemExit("no pude validar tu sesión (" + str(e)[:90] + "): entra en el panel, "
+                         "pestaña Nodos → «Mi equipo como salto», y copia el comando completo.")
+    if not isinstance(datos, dict) or not datos.get("peer_token"):
+        raise SystemExit("la respuesta de /peer_token no vale: " + str(datos)[:90])
+    return datos["peer_token"], datos.get("clave_saltos") or "", datos.get("broker") or ""
+
+
 def pid_path(nombre: str) -> str:
     base = os.environ.get("HOME") or os.environ.get("APPDATA") or "."
     return os.path.join(base, f".jn_agente_{nombre}.pid")
@@ -473,7 +492,7 @@ def demonio():
 
 def main():
     args = sys.argv[1:]
-    broker, clave = BROKER_DEF, os.environ.get("JN_CLAVE", "")
+    broker, clave, api = BROKER_DEF, os.environ.get("JN_CLAVE", ""), API_DEF
     if "--broker" in args:
         i = args.index("--broker")
         broker = args[i + 1] if i + 1 < len(args) else broker
@@ -481,6 +500,10 @@ def main():
     if "--clave" in args:
         i = args.index("--clave")
         clave = args[i + 1] if i + 1 < len(args) else clave
+        args = args[:i] + args[i + 2:]
+    if "--api" in args:
+        i = args.index("--api")
+        api = args[i + 1] if i + 1 < len(args) else api
         args = args[:i] + args[i + 2:]
     if "--help" in args or "-h" in args:
         print(__doc__); return 0
@@ -501,6 +524,20 @@ def main():
     if not (nombre.startswith("peer_") and token):
         nota("argumentos no válidos: se necesita el token y el Nombre peer_u<N>")
         return 2
+    # CANJ de token de SESIÓN: si lo pegado es el JWT de la web (empieza por
+    # «eyJ»), lo cambiamos aquí por el token de peer REAL con la propia API —
+    # así el token que el usuario ya conoce simplemente funciona.
+    if token.startswith("eyJ"):
+        nota(f"detectado token de SESIÓN (JWT): lo cambio por tu token de peer en {api}…")
+        token, clave_nueva, broker_canje = canjea_jwt(token, api)
+        if not clave:
+            clave = clave_nueva
+        if broker_canje:
+            partes_br = broker_canje.split(":")
+            broker = partes_br[0]
+            if len(partes_br) > 1:
+                PTO_TUNEL = int(partes_br[1])
+        nota("cambio hecho: token de peer aceptado")
     if plano:
         demonio()
     if pid_vivo(nombre):

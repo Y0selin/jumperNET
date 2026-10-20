@@ -14,19 +14,9 @@ function baseDescarga() {
   return origin + pathname.replace(/[^/]*$/, "") + "descargas/";
 }
 
-/* Comando exacto para el agente del usuario: con su token (y la clave de
-   saltos si la red usa JENC), listo para pegar en su consola. */
-function copiarComando(setTokenInfo) {
-  return () => peerToken()
-    .then((t) => {
-      const extra = t.clave_saltos ? ` --clave ${t.clave_saltos}` : "";
-      const cmdWin = `JumperNET-Agent.exe ${t.peer_token} ${t.nombre}${extra}`;
-      const cmdLin = `python3 agente_salida.py ${t.peer_token} ${t.nombre}${extra}`;
-      navigator.clipboard.writeText(`# Windows:\n${cmdWin}\n# Linux/Mac:\n${cmdLin}`)
-        .then(() => setTokenInfo("✓ comando copiado al portapapeles (con tu token)"))
-        .catch(() => setTokenInfo(`Windows:  ${cmdWin}\nLinux:    ${cmdLin}`));
-    })
-    .catch((e) => setTokenInfo("no pude pedir tu token: " + e.message));
+/* ¿Windows, para resaltar el botón recomendado? */
+function esWindows() {
+  return /windows/i.test(navigator.userAgent || "");
 }
 
 export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
@@ -38,7 +28,7 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
   const [orden, setOrden] = useState("nombre");     // nombre | latencia | conexiones
   const [bloque, setBloque] = useState("todos");    // todos|vivos|circuito|peer|externos|infra
   const [busca, setBusca] = useState("");
-  const [avisoToken, setAvisoToken] = useState(null);
+  const [tokInfo, setTokInfo] = useState(null);   // {peer_token, clave_saltos, nombre} para los comandos
   const [cambiando, setCambiando] = useState(false);
 
   /* OPT-IN del salto: tu nodo personal (peer_u<id>) se registra al abrir esta
@@ -80,6 +70,17 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
     const id = setInterval(() => trae(), segundos * 1000);
     return () => clearInterval(id);
   }, [auto, segundos]);
+
+  /* Comandos con el token REAL de tu cuenta (lo saco de TU sesión con
+     /peer_token): si no lo tengo todavía, lo pido una vez y lo cacheo. */
+  const necesitaComandos = !!miPeer?.salto_publico && yo?.salto_despliegue?.salto_via !== "agente" && yo?.id;
+  useEffect(() => {
+    if (!necesitaComandos || tokInfo) return;
+    peerToken().then(setTokInfo).catch((e) => setTokInfo({ error: e.message }));
+  }, [necesitaComandos, yo?.id]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const comandoWin = tokInfo && !tokInfo.error ? `JumperNET-Agent.exe ${tokInfo.peer_token} ${tokInfo.nombre}${tokInfo.clave_saltos ? " --clave " + tokInfo.clave_saltos : ""}` : null;
+  const comandoLin = tokInfo && !tokInfo.error ? `python3 agente_salida.py ${tokInfo.peer_token} ${tokInfo.nombre}${tokInfo.clave_saltos ? " --clave " + tokInfo.clave_saltos : ""}` : null;
 
   const circuito = yo?.circuito || [];
   const papel = (nombre) => {
@@ -179,30 +180,76 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
                   );
                 }
                 return (
-                  <ol className="nota" style={{ marginTop: 6, fontSize: 12, paddingLeft: 18, lineHeight: 1.6 }}>
-                    <li>descarga el agente para tu sistema:
-                      <a href={baseDescarga() + "JumperNET-Agent.exe"} download style={{ marginLeft: 6 }}>
-                        <b>Windows: JumperNET-Agent.exe</b></a> ·
-                      <a href={baseDescarga() + "agente_salida.py"} download style={{ marginLeft: 6 }}>
-                        <b>Linux/mac: agente_salida.py</b></a>
-                    </li>
-                    <li>ejecútalo en tu equipo (conexión solo SALIENTE al servidor,
-                      no abre ningún puerto):
-                      <code className="mono" style={{ display: "block", margin: "4px 0", fontSize: 11 }}>
-                        Windows: JumperNET-Agent.exe TU_TOKEN peer_u{yo?.id}</code>
-                      <code className="mono" style={{ display: "block", margin: "4px 0", fontSize: 11 }}>
-                        Linux:  python3 agente_salida.py TU_TOKEN peer_u{yo?.id}</code>
-                      <button className="btn" style={{ fontSize: 11, padding: "3px 10px" }}
-                        onClick={copiarComando(setAvisoToken)}>
-                        ⧉ copiar TU comando (viene con tu token)
-                      </button>
-                      {avisoToken && (
-                        <pre className="mono nota" style={{ whiteSpace: "pre-wrap", fontSize: 10.5, marginTop: 4 }}>{avisoToken}</pre>
+                  <div style={{ marginTop: 8, display: "grid", gap: 10 }}>
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                      <a href={baseDescarga() + "JumperNET-Agent.exe"} download
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none",
+                          padding: "10px 16px", borderRadius: 12, fontSize: 13, fontWeight: 600,
+                          border: esWindows() ? "2px solid var(--acento-1)" : "1px solid var(--borde)",
+                          background: esWindows() ? "rgb(from var(--acento-1) r g b / .16)" : "rgb(255 255 255 / .04)",
+                          color: esWindows() ? "var(--acento-1)" : "var(--texto)",
+                          boxShadow: esWindows() ? "0 0 18px rgb(from var(--acento-1) r g b / .25)" : "none",
+                        }}>
+                        ⬇ Windows (.exe)
+                      </a>
+                      <a href={baseDescarga() + "agente_salida.py"} download
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none",
+                          padding: "10px 16px", borderRadius: 12, fontSize: 13, fontWeight: 600,
+                          border: !esWindows() ? "2px solid var(--acento-1)" : "1px solid var(--borde)",
+                          background: !esWindows() ? "rgb(from var(--acento-1) r g b / .16)" : "rgb(255 255 255 / .04)",
+                          color: !esWindows() ? "var(--acento-1)" : "var(--texto)",
+                          boxShadow: !esWindows() ? "0 0 18px rgb(from var(--acento-1) r g b / .25)" : "none",
+                        }}>
+                        ⬇ Linux / Mac (.py)
+                      </a>
+                      <a href={baseDescarga() + "AGENTE_LEEME.md"} target="_blank" rel="noreferrer"
+                        style={{
+                          display: "inline-flex", alignItems: "center", textDecoration: "none",
+                          padding: "10px 14px", borderRadius: 12, fontSize: 13,
+                          border: "1px dashed var(--borde)", color: "var(--texto-suave)",
+                        }}>
+                        📖 manual (instalar y parar)
+                      </a>
+                    </div>
+                    <div>
+                      <p className="nota" style={{ margin: "0 0 6", fontSize: 12 }}>
+                        Tu comando <b>ya incluye tu token y la clave</b> — solo cambia el nombre del
+                        archivo si lo guardaste con otro, y pégalo en tu consola (conexión solo
+                        SALIENTE, sin abrir ningún puerto en el router):
+                      </p>
+                      {!tokInfo && (
+                        <div className="tarjeta nota" style={{ margin: 0, fontSize: 12 }}>pidiendo tu token…</div>
                       )}
-                    </li>
-                    <li>deja el agente en marcha: en unos segundos esta página mostrará
-                      el chip «salida desde tu casa» con la IP por la que podría salir</li>
-                  </ol>
+                      {tokInfo?.error && (
+                        <div className="tarjeta nota" style={{ margin: 0, fontSize: 12, color: "var(--acento-3)" }}>
+                          no pude pedir tu token ({tokInfo.error}): refresca la página con la sesión iniciada
+                        </div>
+                      )}
+                      {comandoWin && comandoLin && (
+                        <div className="tarjeta mono" style={{
+                          margin: 0, padding: "10px 12px", fontSize: 11.5, lineHeight: 1.6,
+                          background: "rgb(255 255 255 / .03)", overflowX: "auto",
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span className="nota" style={{ fontSize: 10.5 }}>Windows (PowerShell o cmd):</span>
+                            <button className="btn" style={{ fontSize: 10.5, padding: "2px 10px", marginLeft: "auto" }}
+                              onClick={() => navigator.clipboard.writeText(comandoWin).then(() => setTokInfo({ ...tokInfo, copiado: true }))}
+                            >{tokInfo.copiado ? "✓ copiado" : "⧉ copiar"}</button>
+                          </div>
+                          <code style={{ display: "block", whiteSpace: "pre-wrap" }}>{comandoWin}</code>
+                          <div className="nota" style={{ fontSize: 10.5, marginTop: 6 }}>Linux / Mac (terminal):</div>
+                          <code style={{ display: "block", whiteSpace: "pre-wrap" }}>{comandoLin}</code>
+                        </div>
+                      )}
+                      <p className="nota" style={{ margin: "6px 0 0", fontSize: 11.5 }}>
+                        Deja el agente en marcha: en unos segundos verás aquí el chip
+                        <b> «salida desde tu casa ✓»</b>. Para dejar de colaborar, cierra el agente
+                        (o revoca el salto) y tu nodo deja de ser salida al instante.
+                      </p>
+                    </div>
+                  </div>
                 );
               })()}
             </div>
