@@ -8,3 +8,7 @@ web/node_modules/
 web/extension/dist/
 web/dist/
 descargas/
+
+# excepción: las descargas oficiales del agente de salida SÍ van al repo (las sirve Pages)
+!web/public/descargas/
+!web/public/descargas/**

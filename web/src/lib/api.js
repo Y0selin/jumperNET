@@ -40,6 +40,10 @@ export async function rotar() { return (await api("POST", "/rotate", {})).datos;
 export async function desconectar_() { return (await api("POST", "/disconnect", {})).datos; }
 export async function nodosVivos() { return (await api("GET", "/nodosvivos")).datos; }
 
+/** Token de peer del usuario (lo usa su agente de salida en su equipo):
+    {peer_token, nombre:"peer_u<N>", clave_saltos, broker} */
+export async function peerToken() { return (await api("GET", "/peer_token")).datos; }
+
 /* ── panel admin / moderador ── */
 export async function adminUsuarios() { return (await api("GET", "/admin/usuarios")).datos; }
 export async function adminEditar(id, cambios) { return (await api("PATCH", `/admin/usuarios/${id}`, cambios)).datos; }

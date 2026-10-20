@@ -235,10 +235,10 @@ services:
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
       PEER_TOKEN: ${PEER_TOKEN:-}
       BROKER: broker:9008
-      # Agentes COMPLETOS: pueden ejecutar el exit (JENC). La salida que
-      # ejecutan sale con la IP pública del VPS y la API la etiqueta así
-      # (exit_via='vps'); si un peer tiene agente propio en su casa, ese gana.
-      CLAVE_SALTOS: ${CLAVE_SALTOS:-}
+      # SIN CLAVE_SALTOS a propósito: los agentes del puente solo REENVÍAN
+      # (via='web', salto intermedio, jamás exit). La salida de verdad corre
+      # en el equipo del usuario con el agente descargado de la web
+      # (JumperNET-Agent.exe / agente_salida.py, con su IP de casa).
     depends_on:
       - api
       - broker

@@ -535,27 +535,31 @@ def fila_a_dict(f) -> dict:
 
 
 def _estado_salto_despliegue(f, aceptado: bool) -> dict:
-    """Estado REAL del despliegue del agente de tu salto (peer_u<id>)."""
-    desplegado = False
+    """Estado REAL del salto del peer (peer_u<id>), con hechos del broker:
+      · 'agente'  → tu túnel llega desde tu casa (IP pública): tu equipo ya
+                    es SALIDA de verdad y otros pueden salir por él.
+      · 'web'     → el túnel lo sostiene el puente del VPS: sirve como salto
+                    INTERMEDIO pero tu IP no es la de salida.
+      · None      → no hay túnel aún: descarga y ejecuta el agente."""
+    salto_via = None
     if aceptado:
         try:
-            c = conex()
-            fila_n = c.execute(
-                "SELECT ult_ok FROM nodos WHERE nombre=?", (f"peer_u{f['id']}",)
-            ).fetchone()
-            desplegado = bool(fila_n and fila_n["ult_ok"] and (time.time() - fila_n["ult_ok"]) < TTL_OK)
+            _ip, salto_via = origen_tunel(f"peer_u{f['id']}")
         except Exception:
-            desplegado = False
+            salto_via = None
+    if salto_via == "agente":
+        mensaje = "agente activo en tu equipo: la salida de este nodo es la IP de tu casa — el panel la etiqueta como tal"
+    elif salto_via == "web":
+        mensaje = "túnel puenteado por el servidor: puedes ser salto INTERMEDIO, pero para la SALIDA por tu nodo descarga y ejecuta el agente en tu equipo"
+    elif aceptado:
+        mensaje = "descarga el agente de salida para tu sistema y ejecútalo en tu equipo (pestaña Nodos: instrucciones paso a paso para Windows y Linux) — sin él tu nodo no puede ejecutar la salida de los circuitos"
+    else:
+        mensaje = ""
     return {
         "aceptado": aceptado,
-        "desplegado": desplegado,
-        "mensaje": (
-            f"agente activo en el VPS: ya puedes ser salto"
-            if desplegado
-            else ("agente en cola de despliegue en el VPS: normalmente activo en menos de 40 segundos — espera a que el administrador despliegue el agente de tu nodo"
-                  if aceptado
-                  else "")
-        ),
+        "desplegado": salto_via in ("agente", "web"),
+        "salto_via": salto_via,
+        "mensaje": mensaje,
     }
 
 
@@ -1089,15 +1093,27 @@ def elegir_circuito(
             detalle += f" en modo solo-externos; {no_responde} vistos sin responder"
         detalle += ")"
         raise HTTPException(status_code=503, detail=detalle)
-    # EXIT: TODOS los nodos del pool tienen un agente vivo (infra en el VPS,
-    # agente de casa o agente desplegado en el puente del VPS — de hecho es
-    # un requisito del sondeo: la fila solo es saltable si su agente responde).
-    # Cuando hay agentes de CASA (via='agente'), el exit prefiere esos: la IP
-    # que ve internet es la del peer, la más valiosa. Si no, el agente del
-    # puente (via='web') ejecuta la salida desde el VPS (IP pública del
-    # servidor) y el panel lo etiqueta como tal: nunca se falsifica.
+    # EXIT: solo quien puede ejecutarlo de verdad. La salida sale SIEMPRE
+    # por un agente: los nodos infra (contenedores del VPS, con su cliente y
+    # clave de saltos) o los EQUIPOS con el agente corriendo en la casa del
+    # peer (via='agente': el broker ve su túnel llegar desde una IP pública).
+    # Un túnel 'web' (puenteado o pestaña del panel) solo reenvía: con JENC
+    # activo el stream saldría SIN descifrar y el destino no podría hablarle,
+    # así que JAMÁS puede ser el último salto. Si en modo solo-externos no
+    # queda nadie capaz, el error es honesto y pide el agente.
     casa = [x for x in pool if via_nodos.get(x) == "agente"]
-    exitables = casa if casa else list(pool)
+    salida_infra = [x for x in pool if (via_nodos.get(x) or "infra") == "infra"]
+    exitables = casa + salida_infra
+    if not exitables:
+        detalle = (
+            f"hay {len(pool)} saltos vivos pero NINGUNO puede ejecutar la salida: "
+            "solo salen circuitos cuyo último salto tiene el agente desplegado "
+            "en el equipo del dueño (agente de casa) o es infraestructura del "
+            "servidor. Para que un nodo externo sea salida, su dueño debe "
+            "descargar y ejecutar el agente de salida (pestaña Nodos → «Mi "
+            "equipo como salto», con paso a paso para Windows y Linux)"
+        )
+        raise HTTPException(status_code=503, detail=detalle)
     exit_nombre = random.choice(exitables)
     sin_exit = [x for x in pool if x != exit_nombre]
     if n == 1:

@@ -1,11 +1,34 @@
 import { useEffect, useMemo, useState } from "react";
-import { nodos, miNodo, editarMe } from "../lib/api.js";
+import { nodos, miNodo, editarMe, peerToken } from "../lib/api.js";
 import { Stat } from "./Piezas.jsx";
 
 /* Nodos: la foto completa de la red — todos los saltos registrados, su estado
    por heartbeat, la latencia medida de verdad (TCP connect) y cuántas
    conexiones está reenviando cada uno ahora mismo. Vista en TARJETAS o TABLA,
    se refresca solo y refleja en vivo el papel de cada nodo en tu circuito. */
+
+/* Base de las descargas del agente de salida: sirven del MISMO sitio que el
+   panel propio (GitHub Pages), carpeta «descargas» al lado del index. */
+function baseDescarga() {
+  const { origin, pathname } = window.location;
+  return origin + pathname.replace(/[^/]*$/, "") + "descargas/";
+}
+
+/* Comando exacto para el agente del usuario: con su token (y la clave de
+   saltos si la red usa JENC), listo para pegar en su consola. */
+function copiarComando(setTokenInfo) {
+  return () => peerToken()
+    .then((t) => {
+      const extra = t.clave_saltos ? ` --clave ${t.clave_saltos}` : "";
+      const cmdWin = `JumperNET-Agent.exe ${t.peer_token} ${t.nombre}${extra}`;
+      const cmdLin = `python3 agente_salida.py ${t.peer_token} ${t.nombre}${extra}`;
+      navigator.clipboard.writeText(`# Windows:\n${cmdWin}\n# Linux/Mac:\n${cmdLin}`)
+        .then(() => setTokenInfo("✓ comando copiado al portapapeles (con tu token)"))
+        .catch(() => setTokenInfo(`Windows:  ${cmdWin}\nLinux:    ${cmdLin}`));
+    })
+    .catch((e) => setTokenInfo("no pude pedir tu token: " + e.message));
+}
+
 export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
   const [lista, setLista] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -15,6 +38,7 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
   const [orden, setOrden] = useState("nombre");     // nombre | latencia | conexiones
   const [bloque, setBloque] = useState("todos");    // todos|vivos|circuito|peer|externos|infra
   const [busca, setBusca] = useState("");
+  const [avisoToken, setAvisoToken] = useState(null);
   const [cambiando, setCambiando] = useState(false);
 
   /* OPT-IN del salto: tu nodo personal (peer_u<id>) se registra al abrir esta
@@ -119,9 +143,15 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
             <div style={{ flex: "1 1 340px", minWidth: 0 }}>
               <h2 className="seccion" style={{ marginBottom: 6 }}>
                 Mi equipo como salto {miPeer?.salto_publico && (
-                  <span className={`chip ${yo?.salto_despliegue?.desplegado ? "vivo" : "mono"}`} style={{ marginLeft: 8 }}>
-                    {yo?.salto_despliegue?.desplegado ? "agente activo" : "agente en cola de despliegue…"}
-                  </span>
+                  (() => {
+                    const via = yo?.salto_despliegue?.salto_via;
+                    const chip = via === "agente"
+                      ? { clase: "vivo", texto: "salida desde tu casa ✓" }
+                      : via === "web"
+                        ? { clase: "mono", texto: "salto intermedio (puente del VPS)" }
+                        : { clase: "mono", texto: "esperando tu agente local…" };
+                    return <span className={`chip ${chip.clase}`} style={{ marginLeft: 8 }}>{chip.texto}</span>;
+                  })()
                 )}
               </h2>
               <p className="nota" style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55 }}>
@@ -138,21 +168,43 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
                   Tu nodo personal aparecerá aquí cuando conectes la red (o mantengas esta pestaña abierta).
                 </p>
               )}
-              {miPeer?.salto_publico && (
-                <>
-                  {yo?.salto_despliegue && !yo.salto_despliegue.desplegado && (
-                    <p className="nota" style={{ marginTop: 6, fontSize: 11.5, color: "var(--acento-3)" }}>
-                      ⏳ {yo.salto_despliegue.mensaje || "espera a que el administrador despliegue el agente de tu nodo: en cuanto esté, podrás salir por él"}
+              {miPeer?.salto_publico && (() => {
+                const st = yo?.salto_despliegue || {};
+                const via = st.salto_via;
+                if (via === "agente") {
+                  return (
+                    <p className="nota" style={{ marginTop: 6, fontSize: 12, color: "var(--acento-1)" }}>
+                      ✓ {st.mensaje}
                     </p>
-                  )}
-                  <p className="nota" style={{ marginTop: 6, fontSize: 11.5 }}>
-                    Aceptado: el agente de tu nodo vive en el servidor (no tienes que
-                    instalar ni ejecutar nada). Si además corres el navegador en tu equipo,
-                    tu agente local gana el relevo y la salida sale de tu casa estando
-                    etiquetada como tal.
-                  </p>
-                </>
-              )}
+                  );
+                }
+                return (
+                  <ol className="nota" style={{ marginTop: 6, fontSize: 12, paddingLeft: 18, lineHeight: 1.6 }}>
+                    <li>descarga el agente para tu sistema:
+                      <a href={baseDescarga() + "JumperNET-Agent.exe"} download style={{ marginLeft: 6 }}>
+                        <b>Windows: JumperNET-Agent.exe</b></a> ·
+                      <a href={baseDescarga() + "agente_salida.py"} download style={{ marginLeft: 6 }}>
+                        <b>Linux/mac: agente_salida.py</b></a>
+                    </li>
+                    <li>ejecútalo en tu equipo (conexión solo SALIENTE al servidor,
+                      no abre ningún puerto):
+                      <code className="mono" style={{ display: "block", margin: "4px 0", fontSize: 11 }}>
+                        Windows: JumperNET-Agent.exe TU_TOKEN peer_u{yo?.id}</code>
+                      <code className="mono" style={{ display: "block", margin: "4px 0", fontSize: 11 }}>
+                        Linux:  python3 agente_salida.py TU_TOKEN peer_u{yo?.id}</code>
+                      <button className="btn" style={{ fontSize: 11, padding: "3px 10px" }}
+                        onClick={copiarComando(setAvisoToken)}>
+                        ⧉ copiar TU comando (viene con tu token)
+                      </button>
+                      {avisoToken && (
+                        <pre className="mono nota" style={{ whiteSpace: "pre-wrap", fontSize: 10.5, marginTop: 4 }}>{avisoToken}</pre>
+                      )}
+                    </li>
+                    <li>deja el agente en marcha: en unos segundos esta página mostrará
+                      el chip «salida desde tu casa» con la IP por la que podría salir</li>
+                  </ol>
+                );
+              })()}
             </div>
             <button
               className={`btn ${miPeer?.salto_publico ? "" : "primario"}`}
@@ -313,6 +365,12 @@ function TarjetasNodos({ lista, yo, papel, cargando }) {
                 <span>⛓ {n.conexiones ?? 0} conexiones</span>
                 <span>↔ {n.direccion}</span>
                 {n.saltable && <span style={{ color: "var(--acento-1)" }}>⚡ saltable</span>}
+                {(n.tipo || "infra") === "usuario" && n.via === "agente" && (
+                  <span style={{ color: "var(--acento-1)" }} title="el túnel del peer llega desde una IP pública: el agente corre en su equipo y puede ejecutar la salida">🏠 salida desde su casa</span>
+                )}
+                {(n.tipo || "infra") === "usuario" && n.via === "web" && (
+                  <span title="el túnel lo sostiene el puente del VPS: pueden saltar POR ÉL como intermedio, pero no puede ejecutar la salida">⇄ salto sin salida</span>
+                )}
               </div>
             </div>
           </div>
