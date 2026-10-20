@@ -118,7 +118,11 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
           <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
             <div style={{ flex: "1 1 340px", minWidth: 0 }}>
               <h2 className="seccion" style={{ marginBottom: 6 }}>
-                Mi equipo como salto {miPeer?.salto_publico && <span className="chip vivo" style={{ marginLeft: 8 }}>aceptado</span>}
+                Mi equipo como salto {miPeer?.salto_publico && (
+                  <span className={`chip ${yo?.salto_despliegue?.desplegado ? "vivo" : "mono"}`} style={{ marginLeft: 8 }}>
+                    {yo?.salto_despliegue?.desplegado ? "agente activo" : "agente en cola de despliegue…"}
+                  </span>
+                )}
               </h2>
               <p className="nota" style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55 }}>
                 Tu equipo está registrado en la red como <b className="mono">peer_u{yo?.id}</b>
@@ -135,11 +139,19 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
                 </p>
               )}
               {miPeer?.salto_publico && (
-                <p className="nota" style={{ marginTop: 6, fontSize: 11.5 }}>
-                  Aceptado: el salto va por el túnel automático (el navegador lo lleva solo,
-                  cero puertos abiertos). Si usas otro equipo sin el navegador, lanza ahí
-                  <span className="mono"> nodo_personal.py --tunel</span> con tu cuenta.
-                </p>
+                <>
+                  {yo?.salto_despliegue && !yo.salto_despliegue.desplegado && (
+                    <p className="nota" style={{ marginTop: 6, fontSize: 11.5, color: "var(--acento-3)" }}>
+                      ⏳ {yo.salto_despliegue.mensaje || "espera a que el administrador despliegue el agente de tu nodo: en cuanto esté, podrás salir por él"}
+                    </p>
+                  )}
+                  <p className="nota" style={{ marginTop: 6, fontSize: 11.5 }}>
+                    Aceptado: el agente de tu nodo vive en el servidor (no tienes que
+                    instalar ni ejecutar nada). Si además corres el navegador en tu equipo,
+                    tu agente local gana el relevo y la salida sale de tu casa estando
+                    etiquetada como tal.
+                  </p>
+                </>
               )}
             </div>
             <button
