@@ -304,9 +304,15 @@ async def atender_nodo(reader: asyncio.StreamReader, writer: asyncio.StreamWrite
             return
         if cmd == "PING":
             # sondeo de vida que usa la API para validar nodos tunel:
-            # un túnel solo responde OK si está ABIERTO de verdad (en RAM)
-            vivo = nombre in TUNELES
-            writer.write((f"OK {nombre}\n" if vivo else f"ERR {nombre} fuera de linea\n").encode())
+            # un túnel solo responde OK si está ABIERTO de verdad (en RAM).
+            # Devuelve TAMBIÉN la IP de origen del túnel: privada (el puente
+            # web vive en el VPS) o pública (el agente corre en la casa del
+            # peer) — la API la usa para saber si ese peer puede ser EXIT
+            # (solo un agente ejecuta conexiones desde su propia casa).
+            t_p = TUNELES.get(nombre)
+            vivo = bool(t_p)
+            src = (t_p or {}).get("src") or "?"
+            writer.write((f"OK {nombre} {src}\n" if vivo else f"ERR {nombre} fuera de linea\n").encode())
             await writer.drain()
             writer.close()
             return

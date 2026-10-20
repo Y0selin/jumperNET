@@ -214,6 +214,35 @@ services:
       BROKER_HOST: broker
       BROKER_PORT_NODOS: "9009"
 
+  # Puente WEB (Fase 9-tunel, automatización total): por cada usuario que
+  # ACEPTA ser salto (opt-in) mantiene aquí el agente de túnel abierto hacia
+  # el broker — sin que el usuario instale o ejecute nada. Su fila queda
+  # saltable con latencia (via='web'): reenvía como salto intermedio; el
+  # EXIT siempre lo ejecuta un agente en la casa del peer (via='agente')
+  # o un nodo de la red.
+  puente:
+    build:
+      context: .
+      dockerfile: servicios/puente/Dockerfile
+    image: jumpernat/puente
+    restart: unless-stopped
+    # cada agente (spawn node) gasta ~45-55 MB: el límite tiene que crecer
+    # con el nº de amigos con opt-in (19 hoy ≈ 1 GB). El host tiene 24 GB.
+    mem_limit: 1280m
+    cpus: "0.5"
+    environment:
+      API_URL: http://api:8000
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      PEER_TOKEN: ${PEER_TOKEN:-}
+      BROKER: broker:9008
+      # SIEMPRE vacío: el puente web jamás descifra (no puede ser exit)
+      CLAVE_SALTOS: ""
+    depends_on:
+      - api
+      - broker
+    networks: [red_jumper]
+    <<: *limites
+
   web-destino:
     image: nginx:1.27-alpine
     restart: unless-stopped

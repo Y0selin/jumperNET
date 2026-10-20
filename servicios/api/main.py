@@ -158,6 +158,14 @@ def conex():
         c.execute("ALTER TABLE nodos ADD COLUMN ult_ok REAL")
     except sqlite3.OperationalError:
         pass
+    # via: QUIÉN sostiene el salto. 'infra' (contenedor del VPS), 'agente'
+    # (host:puerto del peer, o túnel desde su casa con el agente completo:
+    # puede ser EXIT) y 'web' (túnel puenteado por la pestaña del panel:
+    # reenvía pero no sale de la casa del peer, así que nunca exit).
+    try:
+        c.execute("ALTER TABLE nodos ADD COLUMN via TEXT")
+    except sqlite3.OperationalError:
+        pass
     # modo de saltos preferido: 'todos' (infra + equipos de usuarios) o
     # 'externos' (SOLO equipos de usuarios: prueba de que internet ve la IP
     # del peer y no la del VPS). Lo elige el usuario en su panel.
@@ -671,7 +679,7 @@ def medir_ms(direccion: str, timeout: float = 0.8) -> int | None:
     if cache and ahora - cache[0] < 8:
         return cache[1]
     if direccion.startswith("tunel:"):
-        ms = medir_ms_tunel(direccion.split(":", 1)[1], timeout)
+        ms, _via = medir_ms_tunel(direccion.split(":", 1)[1], timeout)
         _ms_nodos[direccion] = (ahora, ms)
         return ms
     ms = None
@@ -686,41 +694,68 @@ def medir_ms(direccion: str, timeout: float = 0.8) -> int | None:
     return ms
 
 
-def medir_ms_tunel(nombre_peer: str, timeout: float = 1.5) -> int | None:
-    """Latencia de un salto por TÚNEL: PING al broker (host:puerto en
-    BROKER_NODOS; dentro del compose, `broker:9009`). En ambientes sin broker
-    configurado devuelve None: el nodo túnel simplemente no pasa el sondeo
-    (comportamiento seguro, nunca un falso vivo)."""
+def medir_ms_tunel(nombre_peer: str, timeout: float = 1.5) -> tuple[int | None, str | None]:
+    """Latencia de un salto por TÚNEL, y de paso el TIPO de túnel (via).
+    PING al broker (host:puerto en BROKER_NODOS; dentro del compose,
+    `broker:9009`): solo responde OK si el túnel del peer está ABIERTO de
+    verdad en su RAM — el juez de vida de los saltos por túnel sigue siendo
+    un hecho, no una promesa del latido.
+    Devuelve (ms, via): via = 'agente' cuando el túnel sale de la casa del
+    peer (IP pública) y 'web' cuando el puente vive en el VPS (túnel hecho
+    por la propia pestaña del panel). En ambientes sin broker devuelve
+    (None, None): el túnel no pasa el sondeo (comportamiento seguro)."""
     try:
         host, puerto = BROKER_NODOS.rsplit(":", 1)
         t0 = time.perf_counter()
         with socket.create_connection((host, int(puerto)), timeout=timeout) as s:
             s.settimeout(timeout)
             s.sendall(f"PING {nombre_peer}\n".encode())
-            resp = b""  # una línea: OK <peer>\n / ERR <peer> fuera de linea\n
+            resp = b""  # una línea: OK <peer> <ip_origen>\n / ERR <peer> fuera de linea\n
             while b"\n" not in resp:
                 dato = s.recv(256)
                 if not dato:
                     break
                 resp += dato
         if resp.startswith(b"OK "):
-            return round((time.perf_counter() - t0) * 1000)
+            ms = round((time.perf_counter() - t0) * 1000)
+            via = None
+            try:
+                ip_src = resp.decode(errors="replace").split()[2]
+                # la IP de origen del túnel dice QUIÉN lo sostiene: pública
+                # (la casa del peer, agente completo) o privada (el puente
+                # WS del propio VPS: la pestaña del panel hace de agente).
+                via = "web" if ipaddress.ip_address(ip_src).is_private else "agente"
+            except Exception:
+                via = None
+            return ms, via
     except Exception:
         pass
-    return None
+    return None, None
+
+
+def medir_detalle(direccion: str) -> tuple[int | None, str | None]:
+    """(ms, via) de un nodo saltable. via: 'infra' (contenedor del VPS),
+    'agente' (host:puerto del peer, o túnel desde su casa) o 'web'
+    (túnel puenteado por la pestaña del panel: intermedio sí, exit no)."""
+    if direccion.startswith("tunel:"):
+        return medir_ms_tunel(direccion.split(":", 1)[1])
+    ms = medir_ms(direccion)
+    via = "agente" if direccion.startswith("peer_") else "infra"
+    return ms, via
 
 
 def sondear_y_apuntar(nombre: str, direccion: str) -> int | None:
-    """Sondea un nodo y deja el resultado anotado en su fila (lat_ms/ult_ok).
+    """Sondea un nodo y deja el resultado anotado en su fila (lat_ms/ult_ok/via).
     Si conecta, el nodo queda demostrado alcanzable aunque su latido
-    hubiese fallado: la juntura del estado 'vivo' (refrescar_estados)."""
-    ms = medir_ms(direccion)
+    hubiese fallado: la juntura del estado 'vivo' (refrescar_estados).
+    La columna via anota QUIÉN mantiene el salto (ver medir_detalle)."""
+    ms, via = medir_detalle(direccion)
     c = conex()
     ahora = time.time()
     if ms is not None:
         c.execute(
-            "UPDATE nodos SET lat_ms=?, ult_ok=?, estado='vivo' WHERE nombre=?",
-            (ms, ahora, nombre),
+            "UPDATE nodos SET lat_ms=?, ult_ok=?, estado='vivo', via=? WHERE nombre=?",
+            (ms, ahora, via, nombre),
         )
     else:
         c.execute("UPDATE nodos SET lat_ms=NULL WHERE nombre=?", (nombre,))
@@ -753,28 +788,27 @@ def validar_nodos() -> dict:
         for f in filas
         if f["direccion"] and _hoppable(f["direccion"])
     ]
+    medidas: dict[str, tuple[int | None, str | None]] = {}
     # sondeo concurrente: con N nodos, el coste es ~un timeout (0.8 s), no N*0.8
-    if hables:
-        medidas: dict[str, int | None] = {}
-        hilos = [
-            threading.Thread(target=lambda n, d: medidas.__setitem__(n, medir_ms(d)), args=(n, d))
-            for n, d in hables
-        ]
-        for t in hilos:
-            t.start()
-        for t in hilos:
-            t.join(timeout=2.5)
-        ahora = time.time()
-        for n, d in hables:
-            ms = medidas.get(n, medir_ms(d))
-            if ms is not None:
-                c.execute(
-                    "UPDATE nodos SET lat_ms=?, ult_ok=?, estado='vivo' WHERE nombre=?",
-                    (ms, ahora, n),
-                )
-            else:
-                c.execute("UPDATE nodos SET lat_ms=NULL WHERE nombre=?", (n,))
-        c.commit()
+    hilos = [
+        threading.Thread(target=lambda n, d: medidas.__setitem__(n, medir_detalle(d)), args=(n, d))
+        for n, d in hables
+    ]
+    for t in hilos:
+        t.start()
+    for t in hilos:
+        t.join(timeout=2.5)
+    ahora = time.time()
+    for n, d in hables:
+        ms, via = medidas.get(n, medir_detalle(d))
+        if ms is not None:
+            c.execute(
+                "UPDATE nodos SET lat_ms=?, ult_ok=?, estado='vivo', via=? WHERE nombre=?",
+                (ms, ahora, via, n),
+            )
+        else:
+            c.execute("UPDATE nodos SET lat_ms=NULL WHERE nombre=?", (n,))
+    c.commit()
     responden = 0
     try:
         responden = c.execute(
@@ -840,7 +874,7 @@ def nodos_usuario(
 def lista_nodos():
     refrescar_estados()
     c = conex()
-    columnas = "nombre, direccion, estado, ultimo_heartbeat, conexiones, tipo, dueno, alias, lat_ms, ult_ok"
+    columnas = "nombre, direccion, estado, ultimo_heartbeat, conexiones, tipo, dueno, alias, lat_ms, ult_ok, via"
     try:
         filas = c.execute(f"SELECT {columnas} FROM nodos ORDER BY nombre").fetchall()
     except sqlite3.OperationalError:
@@ -903,6 +937,10 @@ def lista_nodos():
             "responde": resp,
             "sin_ok_s": None if sin_ok is None else round(sin_ok, 1),
             "saltable": bool(_hoppable(d["direccion"]) and resp),
+            # QUIÉN sostiene el salto (infra/agente/web, ver medir_detalle):
+            # el panel lo usa para distinguir «sale de la casa del peer» de
+            # «reenvía vía puente web del VPS»
+            "via": d.get("via") if "via" in d.keys() else None,
             # opt-in del dueño (nodos tipo usuario): aceptó saltar / no aceptó
             "salto_publico": bool(publicos.get(d.get("dueno"), 0)) if d.get("tipo") == "usuario" else None,
         })
@@ -933,7 +971,7 @@ def elegir_circuito(
     c = conex()
     try:
         filas = c.execute(
-            """SELECT n.nombre, n.direccion, n.tipo, n.ult_ok, n.lat_ms
+            """SELECT n.nombre, n.direccion, n.tipo, n.ult_ok, n.lat_ms, n.via
                  FROM nodos n
                  LEFT JOIN usuarios u ON u.id = n.dueno
                 WHERE n.estado='vivo'
@@ -944,6 +982,7 @@ def elegir_circuito(
         raise HTTPException(status_code=503, detail="lista de nodos sin validar; reintenta")
     ahora = time.time()
     saltables = {}
+    via_nodos: dict[str, str | None] = {}
     no_responde = int(0)
     for f in filas:
         d = f["direccion"]
@@ -954,17 +993,23 @@ def elegir_circuito(
             # no ha sondeado nunca o está fría: sondea AHORA antes de
             # decidir (evita la 503 injusta porque el validador aún no
             # pasó por ese nodo)
-            ms = medir_ms(d)
+            ms, via_i = medir_detalle(d)
             ok_fresco = ms is not None
             if ms is not None:
                 c.execute(
-                    "UPDATE nodos SET lat_ms=?, ult_ok=?, estado='vivo' WHERE nombre=?",
-                    (ms, ahora, f["nombre"]),
+                    "UPDATE nodos SET lat_ms=?, ult_ok=?, estado='vivo', via=? WHERE nombre=?",
+                    (ms, ahora, via_i, f["nombre"]),
                 )
         if solo_externos and (f["tipo"] or "infra") != "usuario":
             continue
         if ok_fresco:
             saltables[f["nombre"]] = d
+            # via: QUIÉN sostiene el salto (medir_detalle). Un túnel 'web'
+            # (la pestaña del panel haciendo de agente) SOLO reenvía: no
+            # ejecuta conexiones desde la casa del peer, así que NO puede
+            # ser el último salto (exit): el destino vería otra IP que la
+            # del dueño del equipo y mentiría el «¿por dónde salgo?».
+            via_nodos[f["nombre"]] = f["via"] if "via" in f.keys() else None
         else:
             no_responde += 1
     c.commit()
@@ -982,7 +1027,22 @@ def elegir_circuito(
             detalle += f" en modo solo-externos; {no_responde} vistos sin responder"
         detalle += ")"
         raise HTTPException(status_code=503, detail=detalle)
-    elegidos = random.sample(list(pool), n)
+    # EXIT solo entre nodos capaces: infra + agentes reales. Los puentes web
+    # (via='web') reenvían pero no ejecutan la salida desde la casa del peer.
+    exitables = {nombre: d for nombre, d in pool.items() if via_nodos.get(nombre) != "web"}
+    if not exitables:
+        raise HTTPException(
+            status_code=503,
+            detail="no hay nodo de SALIDA (exit) disponible: los equipos unidos solo desde la web reenvían pero no salen; espera a un equipo con el agente encendido",
+        )
+    # el último salto SIEMPRE sale de los capaces; el resto del circuito,
+    # del pool completo (peers web incluidos)
+    exit_nombre = random.choice(list(exitables))
+    sin_exit = [x for x in pool if x != exit_nombre]
+    if n == 1:
+        elegidos = [exit_nombre]
+    else:
+        elegidos = random.sample(sin_exit, n - 1) + [exit_nombre]
     return {
         "saltos": elegidos,
         "ruta_restante": ",".join(pool[d] for d in elegidos[1:]),
@@ -1545,6 +1605,12 @@ def nodosvivos(token: str | None = Header(default=None, alias="Authorization")):
         "SELECT COUNT(*) AS n FROM nodos WHERE tipo='usuario' AND ult_ok >= ?",
         (ahora - TTL_OK,),
     ).fetchone()["n"])
+    # desglose del externo saltable: puente web del VPS (via='web', solo
+    # reenvía) frente a agente en la casa del usuario (puede ser exit)
+    web_vivos = int(c.execute(
+        "SELECT COUNT(*) AS n FROM nodos WHERE tipo='usuario' AND ult_ok >= ? AND via='web'",
+        (ahora - TTL_OK,),
+    ).fetchone()["n"])
     return {
         "total": infra + equipos,
         "infra": infra,
@@ -1552,6 +1618,8 @@ def nodosvivos(token: str | None = Header(default=None, alias="Authorization")):
         "nodos_usuario": usuarios_nodo,
         "validados": validados,               # responden a la sonda TCP ahora
         "externos_saltables": externos_saltables,  # equipos de usuario validados
+        "externos_puente_web": web_vivos,     # de ellos, sostenidos por el puente del VPS
+        "externos_con_agente": max(0, externos_saltables - web_vivos),  # exit posibles
         "validador": resumen,
         "cuando": time.time(),
     }
@@ -1726,6 +1794,19 @@ def admin_borrar(id_usuario: int, token: str | None = Header(default=None, alias
     c.execute("DELETE FROM usuarios WHERE id=?", (id_usuario,))
     c.commit()
     return {"ok": True, "borrado": f["email"]}
+
+
+@app.get("/interno/salto_web")
+def interno_salto_web(x_interno: str | None = Header(default=None)):
+    """Lista de usuarios con el OPT-IN del salto aceptado, para el PUENTE WEB
+    del VPS (servicios/puente): por cada uno el puente mantiene el agente de
+    túnel abierto y su fila de nodo saltable sin que el usuario descargue o
+    ejecute nada más. Solo red interna."""
+    if not INTERNAL_TOKEN or x_interno != INTERNAL_TOKEN:
+        raise HTTPException(status_code=401, detail="token no valido")
+    c = conex()
+    filas = c.execute("SELECT id, pref FROM usuarios WHERE peer_publico=1 ORDER BY id").fetchall()
+    return [{"id": f["id"], "alias": _alias_de(dict(f))} for f in filas]
 
 
 @app.get("/interno/peer_tunel")
