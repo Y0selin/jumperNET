@@ -100,13 +100,14 @@ def es_ip_privada(host: str) -> bool:
 # ══════════════════════════════════════════════ agente ═══════════════════════
 class Subcon:
     """Una sub-conexión: id del broker ↔ socket hacia el siguiente salto/destino."""
-    __slots__ = ("idc", "sock", "cola", "buf", "fase", "puede_jenc", "modo", "salio_jenc")
+    __slots__ = ("idc", "sock", "cola", "buf", "fase", "puede_jenc", "modo", "salio_jenc", "ruta_leida")
 
     def __init__(self, idc):
         self.idc = idc
         self.sock = None
         self.cola = []          # bytes del usuario que llegaron mientras conecta
         self.buf = b""
+        self.ruta_leida = False
         self.fase = "conectando"   # conectando | dial_gate | decide | plano | jenc
         self.puede_jenc = False
         self.modo = None        # 'jenc' | 'plano' (lo decide la magia del stream)
@@ -392,8 +393,11 @@ class Agente:
             return
         if tipo == "DATA" and idc in self.subs:
             sub = self.subs[idc]
-            if sub.fase in ("conectando", "decide") and sub.sock is None:
-                # PRIMER payload = línea de ruta (+ lo que venga detrás del frame)
+            if not sub.ruta_leida and sub.sock is None:
+                # PRIMER payload = línea de ruta (con o sin \n: pueden llegar en
+                # frames separados); los siguientes son el stream del usuario
+                # (magia JENC incluida) y van COLA hasta que el salto conecte
+                sub.ruta_leida = True
                 nl = payload.find(b"\n")
                 ruta, sobra = (payload, b"") if nl < 0 else (payload[:nl], payload[nl + 1:])
                 self.abre_salto(sub, ruta, sobra)
