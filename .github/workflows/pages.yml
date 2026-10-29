@@ -40,3 +40,5 @@ jobs:
           path: web/dist
       - id: deployment
         uses: actions/deploy-pages@v4
+
+# recompilación forzada tras restaurar el estado del VPS en GitHub
