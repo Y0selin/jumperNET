@@ -1,0 +1,117 @@
+<h2>El binario del agente de salida y el túnel inverso (9008)</h2>
+<p>La Fase 9 (nodos externos) tiene una pieza que merece documentación propia: el <b>binario</b> que tu equipo ejecuta para «aceptar ser saltado» por otros usuarios — <span class="mono">JumperNET-Agent.exe</span> en Windows — y el protocolo exacto que usa para conectarse <b>por el puerto 9008</b> del broker con su TOKEN (y, de paso, cómo esa conexión saliente enlaza con los saltos internos de la red). Esta página desmonta ese mecanismo de abajo arriba: qué puertos hay, qué frames viajan, quién autoriza a quién y qué pasa en tu equipo cuando otro usuario <i>sale</i> a internet a través de tu casa.</p>
+
+<h3>Los tres puertos que hay que no confundir</h3>
+<table>
+<tr><th>Puerto</th><th>Quién escucha</th><th>Sirve para</th></tr>
+<tr><td class="mono">9000</td><td>cada nodo de reenvío (nodo1..nodo6, <span class="mono">NODO_PORT</span>)</td><td>El salto clásico: el cliente del circuito conecta con la línea de ruta <span class="mono">nodo2:9000,nodo5:9000,destino host:puerto</span> y el nodo reenvía ciegamente. No se publica al mundo: vive dentro de la red docker.</td></tr>
+<tr><td class="mono">9008</td><td>broker, lado <b>peer</b> (<span class="mono">BROKER_PORT_PEERS</span>, publicado en el VPS como <span class="mono">0.0.0.0:9008</span>)</td><td>El túnel INVERSO: aquí se presenta el agente de salida de tu equipo con <span class="mono">TUNNEL peer_u&lt;N&gt; &lt;TOKEN&gt;</span>. Es la única conexión que tu casa inicia hacia el servidor.</td></tr>
+<tr><td class="mono">9009</td><td>broker, lado <b>nodo</b> (<span class="mono">BROKER_PORT_NODOS</span>, publicado como <span class="mono">0.0.0.0:9009</span>)</td><td>La red (el salto anterior del circuito) pide «ábreme una conexión POR el túnel de ese peer» con <span class="mono">DIAL/DIALN peer_u&lt;N&gt;</span>, sondea tu vida con <span class="mono">PING</span> y consulta la IP de origen con <span class="mono">SRC</span>.</td></tr>
+</table>
+<p><b>Ojo al «9000 interno»:</b> el 9000 NO es el puerto del túnel — es el de los nodos de reenvío de infraestructura. El túnel de tu equipo vive en el <b>9008</b> y las conexiones que la red pide por tu túnel entran por el <b>9009</b>. Los dos los atiende el mismo contenedor <span class="mono">broker</span> y comparten estado: su tabla en RAM <span class="mono">TUNELES[nombre]</span> guarda, por cada peer, el socket del túnel (la conexión 9008) y sus subconexiones abiertas.</p>
+
+<h3>Del opt-in al TOKEN: qué te da el panel</h3>
+<ol>
+<li>Pestaña <b>Nodos</b> → tarjeta «Mi equipo como salto» → botón <b>«✓ acepto ser salto»</b>. Sin este opt-in el broker rechazará el túnel con <span class="mono">NOOPTIN</span> (ver más abajo): ser salto pasa SIEMPRE por tu mano.</li>
+<li>La web pide a la API <span class="mono">GET /peer_token</span> con tu sesión JWT y guarda por usuario: <span class="mono">peer_token</span> (el TOKEN del peer), <span class="mono">nombre</span> = <span class="mono">peer_u&lt;tu-id&gt;</span>, <span class="mono">clave_saltos</span> (la clave JENC de los saltos) y <span class="mono">broker</span> = <span class="mono">jumpernet.duckdns.org:9008</span>.</li>
+<li>El panel genera tu comando con todo dentro — no hay nada que editar a mano:
+<pre><code># Windows
+JumperNET-Agent.exe &lt;peer_token&gt; peer_u&lt;N&gt; --clave &lt;clave_saltos&gt;
+# Linux/macOS (misma cosa, en Python)
+python3 agente_salida.py &lt;peer_token&gt; peer_u&lt;N&gt; --clave &lt;clave_saltos&gt;</code></pre></li>
+<li>Descarga: botón <b>⬇ Windows (.exe)</b> de esa tarjeta; se sirve desde <span class="mono">descargas/JumperNET-Agent.exe</span> (la URL pública del panel). El .exe es UNO solo: un binario Go (fuente en <span class="mono">agente/goagente/main.go</span>) sin dependencias, sin instalador y sin servicio del sistema.</li>
+</ol>
+<p>Detalle cómodo: si lo que pegas empieza por <span class="mono">eyJ</span>, el binario reconoce que es tu <b>token de SESIÓN</b> (JWT de la web) y lo canjea él mismo contra <span class="mono">GET /peer_token</span> (cabecera <span class="mono">Authorization: Bearer</span>), sacando de la respuesta el TOKEN de peer, la clave, el broker y hasta el nombre del nodo. «Pega cualquier token de la web» simplemente funciona.</p>
+
+<h3>La presentación en el 9008: una línea y el broker juzga</h3>
+<p>El agente abre UNA conexión TCP <b>saliente</b> a <span class="mono">jumpernet.duckdns.org:9008</span> y escribe:</p>
+<pre><code>TUNNEL peer_u&lt;N&gt; &lt;TOKEN&gt;\n</code></pre>
+<p>El broker (<span class="mono">servicios/broker/broker.py</span>, <span class="mono">atender_peer()</span>) hace tres verificaciones en orden y contesta con UNA palabra:</p>
+<table>
+<tr><th>Respuesta</th><th>Cuándo</th><th>Qué hace el agente</th></tr>
+<tr><td class="mono">OK</td><td>El TOKEN coincide con <span class="mono">PEER_TOKEN</span> del <span class="mono">.env</span> del servidor Y la API confirma el opt-in del dueño (el broker consulta <span class="mono">GET /interno/peer_tunel?nombre=peer_u&lt;N&gt;</span> — solo accesible en la red interna, con <span class="mono">X-Interno</span>).</td><td>Se queda con <span class="mono">PING</span> cada 25 s, a la espera de trabajo: el túnel queda registrado en RAM.</td></tr>
+<tr><td class="mono">NO</td><td>TOKEN rechazado (línea malformada o token incorrecto).</td><td>Se apaga: «credenciales rechazadas (¿token correcto?)».</td></tr>
+<tr><td class="mono">NOOPTIN</td><td>TOKEN válido, pero su dueño no ha aceptado (o ha revocado) el opt-in.</td><td>Se apaga indicando cómo aceptar el salto en el panel. Revocar el opt-in produce este rechazo al instante en la siguiente conexión.</td></tr>
+</table>
+<p>Desde ese momento ese socket del 9008 ES el canal de tu equipo con la red: <b>cero puertos abiertos en tu router</b> (la conexión la abriste TÚ hacia fuera y el keepalive la mantiene viva atravesando NAT), nada escuchando en tu máquina, y todos los frames de aquí en adelante viajan POR ese socket.</p>
+<ul>
+<li><span class="mono">PING → PONG</span> cada 25 s: keepalive para routers/NAT y anotación del pulso (el broker considera vivo el túnel mientras su socket está en RAM).</li>
+<li>Reconexión automática con backoff (1 s, duplicando hasta 30 s) si el socket se cae; al reconectar, el broker cierra el túnel viejo del mismo <span class="mono">peer_u&lt;N&gt;</span> — un peer, un túnel (el más reciente).</li>
+<li>Pidfile por usuario (<span class="mono">~/.jn_agente_peer_u&lt;N&gt;.pid</span>) para no arrancar dos agentes del mismo peer; <span class="mono">JumperNET-Agent.exe --stop</span> usa ese pidfile para matar al proceso en marcha.</li>
+</ul>
+
+<h3>Ser exit de otro usuario: el flujo completo Open → DATA</h3>
+<p>Supón el corazón del asunto: un usuario conecta y <span class="mono">elegir_circuito()</span> de la API elige tu equipo como último salto (los «agentes de casa» tienen <b>prioridad como exit</b>: su <span class="mono">via</span> es <span class="mono">agente</span>, así que la salida sale de verdad de tu casa y no del VPS). Lo que ocurre, frame a frame:</p>
+<ol>
+<li>El usuario abre sesión con la entrada SOCKS5 (1080) o HTTP (1081); la API valida sus credenciales y le entrega su circuito (puede mezclar saltos de infraestructura y tu túnel). La ruta que viaja con el cliente anota tu salto como <span class="mono">tunel:peer_u&lt;N&gt;</span>.</li>
+<li>El salto ANTERIOR del circuito (un nodo1..6, o la propia entrada, con <span class="mono">BROKER_HOST=broker</span> y <span class="mono">BROKER_PORT_NODOS=9009</span>) conecta al <b>9009</b> del broker y manda <span class="mono">DIAL peer_u&lt;N&gt;\n</span>. Desde un contenedor interno no exige token; un DIAL desde FUERA de la red docker sí tiene que acreditar el <span class="mono">PEER_TOKEN</span> (el 9009 está publicado; sin esa regla, cualquiera usaría tu túnel sin ser de la red).</li>
+<li>El broker registra una subconexión con id incremental (<span class="mono">c1, c2…</span>), la deja apuntando a la conexión del nodo que pidió la subconexión y manda por TU túnel un frame <span class="mono">OPEN c&lt;k&gt;</span>. Desde aquí su conexión con el nodo es tubería transparente.</li>
+<li>Tu binario recibe <span class="mono">OPEN c&lt;k&gt;</span> y después el PRIMER <span class="mono">DATA c&lt;k&gt; &lt;n&gt;</span>, cuyo payload es la LÍNEA DE RUTA: lo que queda por saltar (<span class="mono">host:puerto</span> si es exit, o <span class="mono">nodoY:9000,host:puerto</span> si aún toca nodos; los frames pueden fraccionarla — se acumula hasta el <span class="mono">\n</span>). Según lea:
+<ul>
+<li><b>Es exit:</b> conecta DIRECTAMENTE a ese destino desde tu casa (timeout 8 s) — con las reglas duras de la sección siguiente. Si aún quedara un salto más hacia otro PEER (<span class="mono">tunel:peer_u&lt;X&gt;</span>), tu agente hace él mismo el DIAL al broker:9009 con su TOKEN y encadena. Si el DNS fallara para un salto no-exit, cambia a <span class="mono">DIALN host:puerto &lt;TOKEN&gt;</span> por el 9009 y la conexión la abre el broker.</li>
+<li><b>Es salto intermedio</b> (dirección nodoY:9000): conecta ahí y reenvía la ruta restante, igual que un nodo de infraestructura.</li>
+</ul>
+De aquí en adelante TODA subconexión es bidireccional por frames <span class="mono">DATA</span>: los bytes del usuario llegan por el 9008 y tu agente los escribe a su socket real; lo que el destino contesta lo lee <span class="mono">eco()</span> y lo manda como <span class="mono">DATA c&lt;k&gt; &lt;len&gt;&lt;bytes&gt;</span> por el mismo túnel; el broker lo vierte en la conexión del nodo del paso 2.</li>
+<li>Los cierres viajan como <span class="mono">FIN c&lt;k&gt;</span> en los dos sentidos: cerrarse el socket del destino, apagarse tú o morir el túnel (apagándose tu binario, cortándose tu internet o tu router) destruye la subconexión y el salto entero. Para el usuario el circuito queda roto… pero la auto-reparación del <span class="mono">/interno/socks_auth</span> le re-elige un circuito vivo en su siguiente conexión: nadie se queda con un circuito cadáver.</li>
+</ol>
+
+<h3>Reglas del exit dentro de tu equipo (anti-LAN)</h3>
+<ul>
+<li><b>Solo puertos 80/443</b> como exit: la comprobación va ANTES de abrir el socket (<span class="mono">puertosOK</span>) y lo vale igualmente la entrada del servidor (defensa en profundidad).</li>
+<li><b>Jamás direcciones privadas ni loopback</b> como exit: <span class="mono">0.x</span>, <span class="mono">10.x</span>, <span class="mono">127.x</span>, <span class="mono">100.64–127.x</span>, <span class="mono">169.254.x</span>, <span class="mono">172.16–31.x</span>, <span class="mono">192.168.x</span> y <span class="mono">localhost</span>. Nadie sale a tu LAN, a tu router o a la metadata del VPS, ni siquiera con un nombre inventado. El denegado se anota: «exit denegado a host:puerto (política 80/443 y anti-privadas)».</li>
+<li>Tu equipo nunca se convierte en un proxy abierto del hogar: solo atiende las subconexiones que le llegan POR el túnel autenticado del broker, y cuando apaga el binario se acabó.</li>
+</ul>
+
+<h3>Cifrado en tu equipo: JENC con <span class="mono">--clave</span></h3>
+<p>Tu agente recibió <span class="mono">--clave &lt;clave_saltos&gt;</span>, la MISMA clave que usa el resto del circuito (la entrega <span class="mono">/peer_token</span> solo a tu usuario con su sesión). Con ella el equipo es un exit capaz de hablar JENC de extremo a extremo:</p>
+<pre><code># stream de entrada (del usuario hacia el exit)
+"JENC" + registros: &lt;len:u32be&gt;&lt;nonce:12&gt;&lt;ct+tag&gt;   (ChaCha20-Poly1305, clave = sha256(clave))
+len == 0 → terminador de cierre ordenado</code></pre>
+<ul>
+<li>El binario detecta la magia en los PRIMEROS 4 bytes del stream del usuario y pasa a modo <span class="mono">jenc</span>; si no la hay, va en <span class="mono">plano</span>.</li>
+<li>Las respuestas del destino salen re-cifradas registro a registro hacia el cliente (chunks de 16 KiB, nonce aleatorio de 12 bytes cada uno), y el PRIMER registro de respuesta vuelve a llevar la magia <span class="mono">JENC</span> para que quien reenvía registre el modo.</li>
+<li>Registro corrupto (etiqueta AEAD inválida) ⇒ la subconexión entera se cierra; sin clave, el binario reenvía a ciegas (jamás descifra: no sabe).</li>
+</ul>
+<p>Las TRES implementaciones (Python de referencia, el binario Go y la lib de producción del servidor) se cruzan con el modo oculto de pruebas <span class="mono">JumperNET-Agent.exe --jenc enc|dec &lt;clave&gt; &lt;nonce-hex&gt; &lt;hex&gt;</span>: misma entrada y misma clave ⇒ misma salida bit a bit.</p>
+
+<h3>Honestidad de la IP de salida: <span class="mono">PING</span> y <span class="mono">SRC</span> del 9009</h3>
+<p>La API necesita saber la IP por la que SALDRÍA el tráfico si tu equipo fuese exit: se pregunta al broker por el 9009 con <span class="mono">PING peer_u&lt;N&gt;</span> (sondeo de vida, también del validador de nodos) o <span class="mono">SRC</span>, y contesta:</p>
+<pre><code>OK peer_u&lt;N&gt; 90.169.x.x        # túnel en RAM + IP pública DE ORIGEN de la conexión 9008
+ERR peer_u&lt;N&gt; fuera de linea   # no hay túnel (agente apagado)</code></pre>
+<ul>
+<li>Si la IP es <b>pública</b>, el agente corre en la casa del peer: puede ser <b>exit</b>, y la IP que ve internet es ESA (así llenan <span class="mono">ip_salida</span> y la «¿por dónde salgo?» del panel datos VERDADEROS, no una copia desfasada del último login del dueño).</li>
+<li>Si es <b>privada</b> (los «agentes» del puente web que corren dentro del VPS, <span class="mono">via='web'</span>), solo pueden reenviar como salto intermedio — jamás exit: si saliesen, el destino vería la IP del VPS y el panel mentiría.</li>
+</ul>
+
+<h3>Uso por sistema operativo (Windows)</h3>
+<table>
+<tr><th>Acción</th><th>Cómo</th></tr>
+<tr><td>Ejecutar</td><td>Doble clic (pregunta el token la primera vez) o consola con tu comando del panel. Comprobación: verás «túnel de peer_u&lt;N&gt; aceptado (conexión saliente, cero puertos abiertos)».</td></tr>
+<tr><td>Dejarlo siempre</td><td>Programador de tareas → «Crear tarea» → desencadenador «Al iniciar sesión» → acción con el mismo ejecutable y argumentos de tu comando. Con «máximos privilegios» sigue tras cerrar sesión.</td></tr>
+<tr><td>Parar</td><td><span class="mono">Ctrl+C</span> en primer plano, <span class="mono">taskkill /F /IM JumperNET-Agent.exe</span> o <span class="mono">JumperNET-Agent.exe --stop</span>. Inmediato: <span class="mono">peer_u&lt;N&gt;</span> pasa a «caído» en segundos en el panel.</td></tr>
+<tr><td>Desinstalar</td><td>Borrar el .exe y no tocar más: sin servicios ni cambios de red del sistema. El pidfile queda en <span class="mono">%USERPROFILE%\.jn_agente_peer_u&lt;N&gt;.pid</span> — bórralo si sobra.</td></tr>
+</table>
+
+<h3>Cómo está montado en el VPS (comprobado en producción)</h3>
+<pre><code>sudo docker ps --format '{{.Names}}\t{{.Ports}}'
+# jumpernat-broker-1        0.0.0.0:9008-9009->9008-9009/tcp   ← los DOS puertos publicados
+# jumpernat-api-1           127.0.0.1:8000->8000               ← plano de control NUNCA expuesto
+# jumpernat-entrada-1       0.0.0.0:1080                       ← SOCKS5 autenticado
+# jumpernat-entrada-http-1  0.0.0.0:1081                       ← HTTP CONNECT (la extensión)
+sudo grep -n 'BROKER_PORT\|PEER_TOKEN' ~/jumpernat/docker-compose.yml
+# BROKER_PORT_PEERS: "9008" · BROKER_PORT_NODOS: "9009" · PEER_TOKEN: ${PEER_TOKEN:-}</code></pre>
+<ul>
+<li><span class="mono">PEER_TOKEN</span> y <span class="mono">CLAVE_SALTOS</span> viven en <span class="mono">~/jumpernat/.env</span> (fuera de git, plantilla <span class="mono">.env.example</span>): los secretos globales del servidor. El TOKEN de peer es per-usuario y viaja por <span class="mono">/peer_token</span> con tu sesión.</li>
+<li>Caddy (443) solo reparte HTTPS del panel/API/WordPress; el túnel 9008/9009 NO usa Caddy: los binarios de casa conectan directo al puerto del VPS (protocolo de bytes, no HTTP). El 9000 de reenvío no sale al mundo: solo la red docker interna.</li>
+<li>Verlo en vivo: <span class="mono">docker logs --tail 50 jumpernat-broker-1</span> — aparecerán «presentación OK: peer_u&lt;N&gt;», «túnel abierto/cerrado: peer_u&lt;N&gt; (sin puertos abiertos en su router)» y los <span class="mono">DIAL peer_u&lt;N&gt; → c&lt;k&gt; (subs vivos del peer: …)</span> de cada conexión que la red pidió por ahí.</li>
+</ul>
+
+<h3>Cómo se comprobó (la prueba de la Fase 9, por partes)</h3>
+<pre><code># La suite completa corre con tests/run_all.sh (paso 9.x y 10.x). La parte del
+# binario/túnel, verificada con hechos:
+# 1) relanzar el agente SIN opt-in                       → broker: NOOPTIN, el .exe se apaga
+# 2) pulsar «✓ acepto ser salto» y relanzar              → presentación OK + túnel vivo (PING/PONG)
+# 3) sondear el túnel por el 9009 (PING peer_u&lt;N&gt;)       → OK con la IP pública de la casa
+# 4) DIAL del circuito de producción                     → OPEN c&lt;k&gt; por el 9008 y TLS ida y vuelta real
+# 5) pegar el JWT de sesión al binario                   → canje por /peer_token: token+clave+nombre
+# 6) exit peer externo, /comprobar real por el circuito  → el destino ve la IP PÚBLICA de la casa, no la del VPS</code></pre>
