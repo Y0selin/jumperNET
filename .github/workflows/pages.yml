@@ -2,7 +2,7 @@ name: Desplegar web en GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [dev]
     paths: ["web/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
