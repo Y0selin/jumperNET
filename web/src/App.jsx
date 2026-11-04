@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import GlifosFondo from "./components/GlifosFondo.jsx";
 import Ajustes from "./components/Ajustes.jsx";
 import Info from "./components/Informacion.jsx";
-import Landing from "./components/Landing.jsx";
+import PortadaPremium from "./components/PortadaPremium.jsx";
 import Descargas from "./components/Descargas.jsx";
 import Autenticacion from "./components/Autenticacion.jsx";
 import Red from "./components/Red.jsx";
@@ -75,7 +75,11 @@ export default function App() {
   }
   function salir() { setToken(null); setYo(null); setTab("inicio"); aviso("sesión cerrada", "ok"); }
   function alEntrar() { me().then((d) => { setYo(d); setTab("red"); }).catch(() => aviso("no se pudo cargar tu cuenta", "error")); }
-  function irAuth(m = "login") { setAuthModo(m); setTab("auth"); }
+  function irAuth(m = "login") {
+    setAuthModo(m);
+    setTab("inicio");
+    window.setTimeout(() => document.getElementById("acceso")?.scrollIntoView({behavior:"smooth"}), 80);
+  }
   function ir(id) { setTab(id); setLateral(false); }
 
   const enSesion = !!yo && !!getToken();
@@ -95,6 +99,15 @@ export default function App() {
     </button>
   );
 
+  if (tab === "inicio" && !enSesion) {
+    return <>
+      <PortadaPremium enSesion={enSesion} alEntrar={alEntrar} aviso={aviso} ir={ir} />
+      <div style={{position:"fixed",bottom:18,right:18,zIndex:100,display:"grid",gap:8}}>
+        {toasts.map(t => <div key={t.id} className={`toast-viva ${t.tipo === "error" ? "error" : "ok"}`}>{t.texto}</div>)}
+      </div>
+    </>;
+  }
+
   return (
     <>
       <GlifosFondo />
@@ -103,11 +116,11 @@ export default function App() {
         {/* ───────── barra lateral ───────── */}
         <aside className={`lateral ${lateral ? "abierto" : ""}`}>
           <button className="lateral-marca" onClick={() => ir(enSesion ? "red" : "inicio")}>
-            <span className="logo-cubo flota">{">_"}</span>
+            <span className="logo-cubo flota">{">_JUMPERNET"}</span>
             <span className="nombre">Jumper<span>NAT</span><span className="cursor">_</span></span>
           </button>
 
-          <div className="lateral-cuerpo">
+          <div className="lateral-cuerpo">  
             <div className="lateral-grupo">
               <div className="lateral-titulo">// público</div>
               <button className={`lateral-btn ${tab === "inicio" ? "activa" : ""}`} onClick={() => ir("inicio")}>
@@ -187,7 +200,7 @@ export default function App() {
             </span>
           </header>          <main className="contenido">
             <div className="vista" key={tab}>
-            {tab === "inicio" && <Landing irAuth={irAuth} enSesion={enSesion} />}
+            {tab === "inicio" && <PortadaPremium ir={ir} enSesion={enSesion} alEntrar={alEntrar} aviso={aviso} />}
 
             {tab === "planes" && <Tarifas irAuth={irAuth} />}
 
