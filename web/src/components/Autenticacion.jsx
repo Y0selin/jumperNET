@@ -3,7 +3,7 @@ import { login, registrar, setToken } from "../lib/api.js";
 
 /* Acceso: una tarjeta limpia, validación en vivo y mensajes que de verdad
    ayudan. La explicación larga vive en la landing; aquí nada de adorno. */
-export default function Autenticacion({ alEntrar, aviso, modoInicial = "login", volver }) {
+export default function Autenticacion({ alEntrar, aviso, modoInicial = "login", volver, autoenfocar = true }) {
   const [modo, setModo] = useState(modoInicial); // «login» | «registro»
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
@@ -106,7 +106,7 @@ export default function Autenticacion({ alEntrar, aviso, modoInicial = "login", 
             <label className="nota mono" htmlFor="jn-email" style={{ display: "block", fontSize: 10.5, letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 5 }}>
               correo
             </label>
-            <input id="jn-email" className="campo" type="email" required autoComplete="username" autoFocus
+            <input id="jn-email" className="campo" type="email" required autoComplete="username" autoFocus={autoenfocar}
               aria-invalid={!!email && !emailValido}
               placeholder="tu@correo.com" value={email} onChange={(e) => setEmail(e.target.value)} />
             {!!email && !emailValido && modo === "registro" && (
