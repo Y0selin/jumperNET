@@ -6,7 +6,7 @@ import Tarifas from "./Tarifas.jsx";
 import TerminalVivo from "./TerminalVivo.jsx";
 import Revela from "./Revela.jsx";
 import { Tuberia, Escalon } from "./Piezas.jsx";
-import { nodosVivos } from "../lib/api.js";
+import { nodos as nodosApi } from "../lib/api.js";
 
 /* PortadaPremium: la cara pública del proyecto. Una sola página, con el
    acceso al final (#acceso) tal y como promete el diseño: los botones del
@@ -152,8 +152,19 @@ export default function PortadaPremium({ enSesion = false, alEntrar, aviso, ir }
 
   useEffect(() => {
     let vivo = true;
-    const pide = () => nodosVivos()
-      .then((d) => { if (vivo) { setVivos(d); setSinApi(false); } })
+    /* /nodos es público (no pide sesión), al contrario que /nodosvivos:
+       así el contador funciona para cualquiera que llegue a la portada. */
+    const pide = () => nodosApi()
+      .then((lista) => {
+        if (!vivo) return;
+        const vivos = (lista || []).filter((n) => n.estado === "vivo");
+        setVivos({
+          total: vivos.length,
+          infra: vivos.filter((n) => n.tipo !== "usuario").length,
+          equipos: vivos.filter((n) => n.tipo === "usuario").length,
+        });
+        setSinApi(false);
+      })
       .catch(() => { if (vivo) setSinApi(true); });
     pide();
     const t = setInterval(pide, 15000);
