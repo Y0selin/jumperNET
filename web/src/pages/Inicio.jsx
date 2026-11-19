@@ -68,6 +68,7 @@ function Cuenta({ hasta, sufijo = "", duracion = 1100 }) {
 }
 
 export default function Inicio() {
+  const hero = useRef(null);
   const [vivos, setVivos] = useState(null);
   const [sinApi, setSinApi] = useState(false);
   const [abierta, setAbierta] = useState(-1);
@@ -96,9 +97,25 @@ export default function Inicio() {
   const infra = vivos?.infra;
   const equipos = vivos?.equipos;
 
+  /* el escenario del hero se mueve un poco con el ratón */
+  function paralaje(e) {
+    const el = hero.current;
+    if (!el || e.pointerType === "touch") return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--px", ((e.clientX - r.left) / r.width - .5).toFixed(3));
+    el.style.setProperty("--py", ((e.clientY - r.top) / r.height - .5).toFixed(3));
+  }
+  function suelta() {
+    const el = hero.current;
+    if (!el) return;
+    el.style.setProperty("--px", "0");
+    el.style.setProperty("--py", "0");
+  }
+  const poneMusica = () => window.dispatchEvent(new Event("jumpernet-musica"));
+
   return (
     <>
-      <section className="hn-hero">
+      <section className="hn-hero" ref={hero} onPointerMove={paralaje} onPointerLeave={suelta}>
         <div className="hn-aurora" aria-hidden><i /><i /><i /></div>
 
         <div className="hn-hero-txt">
@@ -129,6 +146,11 @@ export default function Inicio() {
               <span className="hn-play-ico" aria-hidden>▶</span>
               <span>Ver el vídeo</span>
               <i className="mono">25 s</i>
+            </button>
+            <button className="hn-musica" type="button" onClick={poneMusica}
+              aria-label="Poner la música de la portada">
+              <span className="hn-musica-ico" aria-hidden>♪</span>
+              <span>Poner música</span>
             </button>
           </div>
 
@@ -237,8 +259,8 @@ export default function Inicio() {
           <span className="migas">el proyecto en 25 segundos</span>
           <h2 className="pp-h2">Así viaja tu tráfico, <span className="texto-gradiente">de principio a fin</span></h2>
           <p className="pp-sub2 nota">
-            Vídeo de portada sin sonido: qué pasa con tu IP, cómo se encadenan los tres saltos y
-            qué valida la salida. Se reproduce solo al llegar aquí.
+            El vídeo de portada lleva la música del proyecto y se reproduce solo al llegar aquí.
+            Actívala con el botón «activar música», o salta al capítulo que te interese.
           </p>
         </Revela>
         <Revela retardo={1}><VideoPortada /></Revela>

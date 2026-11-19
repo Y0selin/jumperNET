@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import GlifosFondo from "./components/GlifosFondo.jsx";
+import Logo from "./components/Logo.jsx";
+import BotonModo from "./components/BotonModo.jsx";
 import Ajustes from "./components/Ajustes.jsx";
 import Descargas from "./components/Descargas.jsx";
 import Red from "./components/Red.jsx";
@@ -18,6 +20,7 @@ import Acceso from "./pages/Acceso.jsx";
 import { useRuta, baseRuta, ir } from "./lib/router.js";
 import { me, setToken, getToken } from "./lib/api.js";
 import { aplicaTema, cargaTema } from "./lib/temas.js";
+import { aplicaModo, cargaModo } from "./lib/modo.js";
 
 const NAV_SESION = [
   { grupo: "red", items: [
@@ -52,7 +55,8 @@ export default function App() {
   const [lateral, setLateral] = useState(false);   // menú móvil del panel
   const [pegada, setPegada] = useState(false);     // topbar con scroll
 
-  useEffect(() => { aplicaTema(cargaTema()); }, []);
+  /* primero el tema guardado y después el modo: el modo manda en la paleta */
+  useEffect(() => { aplicaTema(cargaTema()); aplicaModo(cargaModo()); }, []);
   useEffect(() => { if (getToken()) me().then(setYo).catch(() => {}); }, []);
   useEffect(() => {
     const alScroll = () => setPegada(window.scrollY > 12);
@@ -152,7 +156,7 @@ export default function App() {
         {/* ───────── barra lateral ───────── */}
         <aside className={`lateral ${lateral ? "abierto" : ""}`}>
           <a className="lateral-marca" href="#/">
-            <span className="logo-cubo">JN</span>
+            <Logo tam={34} />
             <span className="nombre">Jumper<span>NAT</span><span className="cursor">_</span></span>
           </a>
 
@@ -213,6 +217,7 @@ export default function App() {
               <b>{yo?.alias || yo?.email?.split("@")[0] || "invitado"}</b>@jumpernat:<i>~/{tab}</i>$ {PROMPT[tab]}
             </span>
             <span style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+              <BotonModo compacto />
               <span className={`chip ${activo ? "vivo" : "muerto"}`}>{activo ? "RED ACTIVA" : "RED OFF"}</span>
               <button className="btn" onClick={() => { setTab("nodos"); setLateral(false); }} title="Ver todos los nodos">
                 ⛓ {yo?.circuito?.length ? `${yo.circuito.length}/3` : "0/3"}

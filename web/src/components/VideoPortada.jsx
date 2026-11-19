@@ -1,32 +1,64 @@
 import { useEffect, useRef, useState } from "react";
 
-/* Vídeo de portada: se reproduce solo (mudo) cuando entra en pantalla, se
-   pausa al salir y trae controles propios mínimos. El archivo lo genera
-   scripts/generar-video.mjs (WebM VP9) y vive en public/video/. */
+/* Vídeo de portada con música y capítulos.
+   Sigue reproduciéndose solo (mudo) al entrar en pantalla; el sonido se
+   activa con un clic —los navegadores no permiten otra cosa— y los
+   capítulos llevan a cada escena. El archivo lo genera
+   scripts/generar-video.mjs y vive en public/video/. */
 const BASE = import.meta.env.BASE_URL || "./";
+
+const CAPITULOS = [
+  { t: 0, n: "inicio" },
+  { t: 4.4, n: "el problema" },
+  { t: 9.6, n: "3 saltos" },
+  { t: 15.2, n: "la salida" },
+  { t: 19.4, n: "interruptor" },
+  { t: 22.6, n: "tu cuenta" },
+];
 
 export default function VideoPortada() {
   const caja = useRef(null);
   const video = useRef(null);
   const [jugando, setJugando] = useState(false);
   const [error, setError] = useState(false);
+  const [conAudio, setConAudio] = useState(false);
   const [dur, setDur] = useState(0);
   const [tiempo, setTiempo] = useState(0);
 
-  /* autoplay solo cuando el vídeo está a la vista */
+  /* autoplay mudo solo cuando el vídeo está a la vista.
+     Se insiste un par de veces: al llegar desde otra página el primer
+     play() puede coincidir con el cambio de scroll y quedarse en espera. */
   useEffect(() => {
     const v = video.current;
     if (!v) return;
+    v.muted = true;
+    v.defaultMuted = true;
+    let montado = true;
+    let enVista = false;
+    const intenta = () => {
+      if (!montado || !enVista) return;
+      v.muted = true;
+      v.play().then(() => { if (montado) setJugando(true); }).catch(() => {});
+    };
     if (typeof IntersectionObserver !== "function") {
-      v.play().then(() => setJugando(true)).catch(() => {});
+      enVista = true;
+      intenta();
       return;
     }
     const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) v.play().then(() => setJugando(true)).catch(() => {});
-      else { v.pause(); setJugando(false); }
-    }, { threshold: 0.35 });
+      enVista = e.isIntersecting;
+      if (enVista) {
+        intenta();
+        setTimeout(intenta, 500);
+        setTimeout(intenta, 1400);
+      } else {
+        v.pause();
+        setJugando(false);
+      }
+    }, { threshold: 0.12, rootMargin: "0px 0px -4% 0px" });
     obs.observe(caja.current);
-    return () => obs.disconnect();
+    if (v.readyState >= 2) intenta();
+    return () => { montado = false; obs.disconnect(); };
   }, []);
 
   useEffect(() => {
@@ -59,60 +91,101 @@ export default function VideoPortada() {
     const v = video.current;
     if (!v) return;
     v.currentTime = 0;
+    if (!conAudio) v.muted = true;
+    v.play().catch(() => {});
+  }
+  function alternaSonido() {
+    const v = video.current;
+    if (!v) return;
+    const nuevo = !conAudio;
+    v.muted = !nuevo;
+    if (nuevo) v.play().catch(() => {});
+    setConAudio(nuevo);
+  }
+  function salta(t) {
+    const v = video.current;
+    if (!v) return;
+    v.currentTime = t;
+    setTiempo(t);
     v.play().catch(() => {});
   }
 
   const pct = dur ? Math.min(100, (tiempo / dur) * 100) : 0;
+  const capActivo = CAPITULOS.reduce((a, c, i) => (tiempo + 0.15 >= c.t ? i : a), 0);
 
   return (
-    <figure ref={caja} className={`pp-video ${jugando ? "en-marcha" : ""}`}>
-      <video
-        ref={video}
-        className="pp-video-lienzo"
-        src={`${BASE}video/portada.webm`}
-        poster={`${BASE}video/portada.jpg`}
-        muted
-        loop
-        playsInline
-        preload="metadata"
-        onClick={alterna}
-        onError={() => setError(true)}
-        aria-label="Vídeo de portada: cómo funciona JumperNET en 25 segundos"
-      />
+    <div className="pp-video-bloque">
+      <figure ref={caja} className={`pp-video ${jugando ? "en-marcha" : ""} ${conAudio ? "con-audio" : ""}`}>
+        <video
+          ref={video}
+          className="pp-video-lienzo"
+          src={`${BASE}video/portada.webm`}
+          poster={`${BASE}video/portada.jpg`}
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          onClick={alterna}
+          onError={() => setError(true)}
+          aria-label="Vídeo de portada: cómo funciona JumperNET en 25 segundos, con música"
+        />
 
-      {!error && (
-        <>
-          <button
-            type="button"
-            className="pp-video-play"
-            onClick={alterna}
-            aria-label={jugando ? "Pausar el vídeo" : "Reproducir el vídeo"}
-          >
-            <span aria-hidden>{jugando ? "❚❚" : "▶"}</span>
-          </button>
+        {!error && (
+          <>
+            <button
+              type="button"
+              className="pp-video-play"
+              onClick={alterna}
+              aria-label={jugando ? "Pausar el vídeo" : "Reproducir el vídeo"}
+            >
+              <span aria-hidden>{jugando ? "❚❚" : "▶"}</span>
+            </button>
 
-          <figcaption className="pp-video-pie">
-            <span className="pp-video-tag mono">
-              <span className="punto-vivo" /> 25 s · sin sonido · texto en pantalla
-            </span>
-            <span className="pp-video-controles">
-              <button type="button" className="pp-video-btn" onClick={repetir} aria-label="Repetir el vídeo">↺ repetir</button>
-              <a className="pp-video-btn" href={`${BASE}video/portada.webm`} download>⬇ descargar</a>
-            </span>
-          </figcaption>
+            <button
+              type="button"
+              className="pp-video-sonido"
+              onClick={alternaSonido}
+              aria-pressed={conAudio}
+              aria-label={conAudio ? "Silenciar el vídeo" : "Activar la música del vídeo"}
+            >
+              <span aria-hidden>{conAudio ? "🔊" : "🔇"}</span>
+              {conAudio ? "con música" : "activar música"}
+            </button>
 
-          <div className={`pp-video-barra ${dur ? "" : "indeterminada"}`} aria-hidden>
-            <i style={dur ? { width: `${pct}%` } : undefined} />
+            <figcaption className="pp-video-pie">
+              <span className="pp-video-tag mono">
+                <span className="punto-vivo" /> 25 s · música de portada · texto en pantalla
+              </span>
+              <span className="pp-video-controles">
+                <button type="button" className="pp-video-btn" onClick={repetir} aria-label="Repetir el vídeo">↺ repetir</button>
+                <a className="pp-video-btn" href={`${BASE}video/portada.webm`} download>⬇ descargar</a>
+              </span>
+            </figcaption>
+
+            <div className={`pp-video-barra ${dur ? "" : "indeterminada"}`} aria-hidden>
+              <i style={dur ? { width: `${pct}%` } : undefined} />
+            </div>
+          </>
+        )}
+
+        {error && (
+          <div className="pp-video-fallo">
+            <b>Tu navegador no reproduce el vídeo (WebM)</b>
+            <span className="nota">Abajo tienes el circuito explicado paso a paso, sin vídeo.</span>
           </div>
-        </>
-      )}
+        )}
+      </figure>
 
-      {error && (
-        <div className="pp-video-fallo">
-          <b>Tu navegador no reproduce el vídeo (WebM)</b>
-          <span className="nota">Abajo tienes el circuito explicado paso a paso, sin vídeo.</span>
-        </div>
-      )}
-    </figure>
+      <nav className="pp-video-caps" aria-label="Capítulos del vídeo">
+        {CAPITULOS.map((c, i) => (
+          <button key={c.n} type="button"
+            className={`pp-video-cap ${capActivo === i ? "activa" : ""}`}
+            onClick={() => salta(c.t)}
+            aria-current={capActivo === i ? "true" : undefined}>
+            <i className="mono">{String(i + 1).padStart(2, "0")}</i>{c.n}
+          </button>
+        ))}
+      </nav>
+    </div>
   );
 }

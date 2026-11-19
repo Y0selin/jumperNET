@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Logo from "./Logo.jsx";
 import { login, registrar, setToken } from "../lib/api.js";
 
 /* Acceso: una tarjeta limpia, validación en vivo y mensajes que de verdad
@@ -97,7 +98,7 @@ export default function Autenticacion({ alEntrar, aviso, modoInicial = "login", 
             style={{ padding: 26 }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-              <div className="logo-cubo" style={{ width: 30, height: 30, fontSize: 11 }}>JN</div>
+              <Logo tam={30} />
               <div>
                 <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>
                   {modo === "login" ? "Entrar en tu panel" : "Crear tu cuenta"}

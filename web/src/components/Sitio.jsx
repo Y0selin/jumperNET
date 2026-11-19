@@ -1,5 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import GlifosFondo from "./GlifosFondo.jsx";
+import Logo from "./Logo.jsx";
+import BotonModo from "./BotonModo.jsx";
+import Reproductor from "./Reproductor.jsx";
 import { ENLACES } from "../lib/contenido.js";
 import { baseRuta } from "../lib/router.js";
 
@@ -24,7 +27,27 @@ export default function Sitio({ ruta, enSesion, children }) {
   const [pegada, setPegada] = useState(false);
   const [arriba, setArriba] = useState(false);
   const [progreso, setProgreso] = useState(0);
+  const luz = useRef(null);
   const activa = baseRuta(ruta);
+
+  /* una luz suave sigue al cursor por la página (solo con ratón) */
+  useEffect(() => {
+    if (typeof window.matchMedia === "function" && window.matchMedia("(hover: none)").matches) return;
+    let viva = false;
+    const mueve = (e) => {
+      const el = luz.current;
+      if (!el) return;
+      if (!viva) { viva = true; el.classList.add("viva"); }
+      el.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
+    };
+    const fuera = () => { viva = false; luz.current?.classList.remove("viva"); };
+    window.addEventListener("pointermove", mueve, { passive: true });
+    document.addEventListener("pointerleave", fuera);
+    return () => {
+      window.removeEventListener("pointermove", mueve);
+      document.removeEventListener("pointerleave", fuera);
+    };
+  }, []);
 
   useEffect(() => {
     const alScroll = () => {
@@ -58,10 +81,11 @@ export default function Sitio({ ruta, enSesion, children }) {
   return (
     <div className="pp sp">
       <GlifosFondo />
+      <div className="pp-luz" ref={luz} aria-hidden />
 
       <header className={`pp-nav ${pegada ? "pegada" : ""}`}>
         <a className="pp-marca" href="#/" aria-label="JumperNET, ir a la portada">
-          <span className="logo-cubo">JN</span>
+          <Logo tam={38} />
           <span className="pp-marca-txt">Jumper<span>NET</span><i className="cursor">_</i></span>
         </a>
 
@@ -72,6 +96,7 @@ export default function Sitio({ ruta, enSesion, children }) {
 
         <div className="pp-nav-acciones">
           <span className="pp-nav-estado mono"><i aria-hidden /> {enSesion ? "sesión activa" : "red educativa"}</span>
+          <BotonModo />
           {enSesion ? (
             <a className="btn primario" href="#/panel">Abrir panel <span aria-hidden>→</span></a>
           ) : (
@@ -105,10 +130,12 @@ export default function Sitio({ ruta, enSesion, children }) {
         </div>
       </nav>
 
+      <Reproductor />
+
       <footer className="sp-pie">
         <div className="sp-pie-arriba">
           <div className="sp-pie-marca">
-            <span className="logo-cubo">JN</span>
+            <Logo tam={34} />
             <div>
               <div className="pp-marca-txt">Jumper<span>NET</span></div>
               <div className="nota mono">red de anonimato por 3 saltos · proyecto educativo</div>

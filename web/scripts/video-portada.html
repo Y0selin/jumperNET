@@ -19,7 +19,7 @@ let ctx = real;
 const off = document.createElement("canvas");
 off.width = W; off.height = H;
 const octx = off.getContext("2d");
-const C = { ac: "#2ee88a", ac2: "#63d2ff", tx: "#eaf7f0", mu: "#8fa79b", wa: "#ffb86b", bad: "#ff6b6b" };
+const C = { ac: "#ff5a36", ac2: "#8b7bff", tx: "#f4f0e8", mu: "#a49dae", wa: "#ffb26b", bad: "#ff6b6b" };
 const MONO = 'ui-monospace, "DejaVu Sans Mono", monospace';
 const SANS = '"DejaVu Sans", "Liberation Sans", Arial, sans-serif';
 
@@ -46,8 +46,8 @@ function txt(s, x, y, o) {
 
 function tarjeta(x, y, w, h, r, borde) {
   rr(x, y, w, h, r == null ? 16 : r);
-  ctx.fillStyle = "rgba(11,21,18,.92)";
-  ctx.strokeStyle = borde || "rgba(46,232,138,.22)";
+  ctx.fillStyle = "rgba(18,13,24,.92)";
+  ctx.strokeStyle = borde || "rgba(255,90,54,.24)";
   ctx.lineWidth = 1.4;
   ctx.fill(); ctx.stroke();
 }
@@ -58,7 +58,7 @@ function chip(s, x, y, color, size) {
   ctx.font = '600 ' + size + 'px ' + MONO;
   const w = ctx.measureText(s).width + 24;
   rr(x, y - size / 2 - 8, w, size + 16, 999);
-  ctx.fillStyle = "rgba(46,232,138,.08)";
+  ctx.fillStyle = "rgba(255,90,54,.1)";
   ctx.strokeStyle = (color || C.ac) + "66";
   ctx.fill(); ctx.stroke();
   txt(s, x + 12, y + 1, { size: size, color: color || C.ac, font: MONO, ls: .4 });
@@ -68,10 +68,10 @@ function chip(s, x, y, color, size) {
 
 function fondo(t) {
   const g = ctx.createLinearGradient(0, 0, W, H);
-  g.addColorStop(0, "#06100b"); g.addColorStop(.55, "#07130e"); g.addColorStop(1, "#050a08");
+  g.addColorStop(0, "#0b0813"); g.addColorStop(.55, "#080610"); g.addColorStop(1, "#06050b");
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 
-  const halos = [[290, 160, 430, "46,232,138"], [1010, 540, 470, "99,210,255"]];
+  const halos = [[290, 160, 430, "255,90,54"], [1010, 540, 470, "139,123,255"]];
   for (const h of halos) {
     const rg = ctx.createRadialGradient(h[0], h[1], 0, h[0], h[1], h[2]);
     rg.addColorStop(0, "rgba(" + h[3] + ",.11)"); rg.addColorStop(1, "rgba(" + h[3] + ",0)");
@@ -79,7 +79,7 @@ function fondo(t) {
   }
 
   ctx.save();
-  ctx.strokeStyle = "rgba(46,232,138,.06)";
+  ctx.strokeStyle = "rgba(255,90,54,.07)";
   ctx.lineWidth = 1;
   const off = (t * 9) % 48;
   for (let x = -off; x < W; x += 48) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
@@ -89,7 +89,7 @@ function fondo(t) {
   for (let i = 0; i < 26; i++) {
     const sx = (i * 137.5 + t * (14 + (i % 4) * 5)) % W;
     const sy = (i * 89.3 + Math.sin(t * .55 + i) * 18 + (i * 53 % H) + H) % H;
-    ctx.fillStyle = "rgba(46,232,138," + (.05 + (i % 4) * .025) + ")";
+    ctx.fillStyle = "rgba(255,90,54," + (.05 + (i % 4) * .025) + ")";
     ctx.beginPath(); ctx.arc(sx, sy, 1.2 + (i % 3) * .5, 0, 7); ctx.fill();
   }
 
@@ -132,6 +132,27 @@ function paquete(x, y, color, etiqueta, escala) {
   ctx.restore();
 }
 
+/* marca: tres relés y un salto, el mismo dibujo que el logo de la web */
+function marca(x, y, escala, t) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(escala, escala);
+  const pulso = .5 + Math.sin((t || 0) * 2.2) * .5;
+  ctx.shadowColor = "rgba(255,90,54,.7)"; ctx.shadowBlur = 26 + pulso * 20;
+  rr(-62, -62, 124, 124, 30);
+  ctx.fillStyle = "rgba(20,12,26,.97)"; ctx.strokeStyle = "rgba(255,90,54,.8)"; ctx.lineWidth = 2.6;
+  ctx.fill(); ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = C.ac; ctx.lineWidth = 7; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.beginPath(); ctx.moveTo(-30, 28); ctx.lineTo(-8, 5); ctx.lineTo(13, 15); ctx.lineTo(33, -20); ctx.stroke();
+  [[-30, 28, 5, C.ac], [-8, 5, 4, "#ffb09a"], [13, 15, 3.6, "#ffb09a"], [33, -20, 5, C.ac2]].forEach(function (n) {
+    ctx.beginPath(); ctx.arc(n[0], n[1], n[2], 0, 7); ctx.fillStyle = n[3]; ctx.fill();
+  });
+  ctx.strokeStyle = C.ac2; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(24, -27); ctx.lineTo(35, -24); ctx.lineTo(32, -12); ctx.stroke();
+  ctx.restore();
+}
+
 /* ───────── escena 1: marca ───────── */
 function e1(t) {
   const a = easeOut(seg(t, 0, .9));
@@ -140,7 +161,7 @@ function e1(t) {
   const cx = W / 2;
 
   const hg = ctx.createRadialGradient(cx, 250, 0, cx, 250, 260);
-  hg.addColorStop(0, "rgba(46,232,138,.22)"); hg.addColorStop(1, "rgba(46,232,138,0)");
+  hg.addColorStop(0, "rgba(255,90,54,.22)"); hg.addColorStop(1, "rgba(255,90,54,0)");
   ctx.fillStyle = hg; ctx.fillRect(0, 0, W, H);
 
   ctx.save();
@@ -148,11 +169,7 @@ function e1(t) {
   const s = lerp(.72, 1, a);
   ctx.scale(s, s);
   ctx.rotate(-.04 + Math.sin(t * 1.6) * .01);
-  rr(-62, -62, 124, 124, 30);
-  ctx.fillStyle = "rgba(10,24,18,.96)"; ctx.strokeStyle = "rgba(46,232,138,.7)"; ctx.lineWidth = 2.4;
-  ctx.fill(); ctx.stroke();
-  ctx.shadowColor = "rgba(46,232,138,.75)"; ctx.shadowBlur = 36;
-  txt("JN", 0, 3, { size: 44, color: C.ac, font: MONO, weight: "800", align: "center" });
+  marca(0, 0, 1, t);
   ctx.restore();
 
   txt("JumperNET", cx, 392 + (1 - a) * 24, { size: 74, weight: "800", align: "center", alpha: a, ls: -1 });
@@ -315,10 +332,7 @@ function e6(t) {
   const cx = W / 2;
   ctx.save();
   ctx.globalAlpha = a;
-  rr(cx - 46, 168, 92, 92, 24);
-  ctx.fillStyle = "rgba(10,24,18,.96)"; ctx.strokeStyle = "rgba(46,232,138,.7)"; ctx.lineWidth = 2;
-  ctx.fill(); ctx.stroke();
-  txt("JN", cx, 216, { size: 32, color: C.ac, font: MONO, weight: "800", align: "center" });
+  marca(cx, 214, .74, t);
   txt("Crea tu cuenta.", cx, 330, { size: 46, weight: "800", align: "center", alpha: easeOut(seg(t, 22.9, 23.7)) });
   txt("Enciende tu red.", cx, 386, { size: 46, weight: "800", color: C.ac, align: "center", alpha: easeOut(seg(t, 23.1, 23.9)) });
   txt("y0selin.github.io/jumperNET", cx, 470, { size: 18, color: C.tx, font: MONO, align: "center", alpha: easeOut(seg(t, 23.5, 24.2)) });
@@ -370,21 +384,62 @@ window.__iniciar = () => {
 window.__parar = () => { cancelAnimationFrame(raf); dibuja(0); };
 window.__poster = () => { dibuja(2.6); return cv.toDataURL("image/jpeg", .86); };
 
-window.__grabar = async (ms, fps) => {
-  const tipos = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+/* pista de audio: el MP3 de la portada se decodifica aquí y se mezcla en
+   la grabación con MediaRecorder (Opus) — sin ffmpeg. */
+let bufferAudio = null;
+let ctxAudio = null;
+
+window.__cargaAudio = async (b64) => {
+  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  const AC = window.AudioContext || window.webkitAudioContext;
+  ctxAudio = new AC();
+  bufferAudio = await ctxAudio.decodeAudioData(bytes.buffer);
+  return bufferAudio.duration;
+};
+
+window.__grabar = async (ms, fps, conAudio) => {
+  const tipos = conAudio
+    ? ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
+    : ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
   const mime = tipos.find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m));
   if (!mime) throw new Error("MediaRecorder no soporta webm");
+
   const stream = cv.captureStream(fps);
-  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 1_300_000 });
+  let fuente = null, ganancia = null;
+  if (conAudio && bufferAudio && ctxAudio) {
+    await ctxAudio.resume();
+    const destino = ctxAudio.createMediaStreamDestination();
+    fuente = ctxAudio.createBufferSource();
+    fuente.buffer = bufferAudio;
+    fuente.loop = true;
+    ganancia = ctxAudio.createGain();
+    ganancia.gain.value = 0;
+    fuente.connect(ganancia);
+    ganancia.connect(destino);
+    stream.addTrack(destino.stream.getAudioTracks()[0]);
+  }
+
+  const rec = new MediaRecorder(stream, {
+    mimeType: mime, videoBitsPerSecond: 1_300_000, audioBitsPerSecond: 128_000,
+  });
   const trozos = [];
   rec.ondataavailable = (e) => { if (e.data && e.data.size) trozos.push(e.data); };
   const parado = new Promise((res) => { rec.onstop = res; });
   dibuja(0);
   rec.start(250);
   window.__iniciar();
+  if (fuente) {
+    const ahora = ctxAudio.currentTime;
+    fuente.start(ahora, .6);
+    ganancia.gain.setValueAtTime(0, ahora);
+    ganancia.gain.linearRampToValueAtTime(.92, ahora + 1.4);
+    ganancia.gain.setValueAtTime(.92, ahora + ms / 1000 - 2.2);
+    ganancia.gain.linearRampToValueAtTime(0, ahora + ms / 1000 - .15);
+  }
   await new Promise((r) => setTimeout(r, ms));
   rec.stop();
   await parado;
+  if (fuente) { try { fuente.stop(); } catch (e) { /* ya parada */ } }
   const bytes = new Uint8Array(await new Blob(trozos, { type: mime }).arrayBuffer());
   let bin = "";
   for (let i = 0; i < bytes.length; i += 32768) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 32768));

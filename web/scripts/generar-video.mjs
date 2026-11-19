@@ -1,9 +1,10 @@
-/* Genera el vídeo de portada (WebM VP9) y su carátula JPG.
+/* Genera el vídeo de portada (WebM VP9 + Opus) y su carátula JPG.
    Uso:  node scripts/generar-video.mjs
    No necesita ffmpeg: la página scripts/video-portada.html dibuja el guion en un
-   canvas y aquí se graba con MediaRecorder desde Chrome headless. */
+   canvas, decodifica el MP3 de public/audio y aquí se graba todo con
+   MediaRecorder desde Chrome headless. */
 import puppeteer from "puppeteer-core";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -16,7 +17,9 @@ const DURACION_MS = 25_200;
 const FPS = 24;
 
 const ejecutable = process.env.CHROMIUM
-  || ["/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome"].find(Boolean);
+  || ["/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome"].find((p) => {
+    try { return readFileSync(p) && p; } catch { return false; }
+  });
 
 const navegador = await puppeteer.launch({
   executablePath: ejecutable,
@@ -30,7 +33,13 @@ const caratula = await pagina.evaluate(() => window.__poster());
 writeFileSync(join(salida, "portada.jpg"), Buffer.from(caratula.split(",")[1], "base64"));
 console.log("carátula: public/video/portada.jpg");
 
-const { base64, tipo, bytes } = await pagina.evaluate((ms, fps) => window.__grabar(ms, fps), DURACION_MS, FPS);
+const audio = readFileSync(join(raíz, "public", "audio", "portada.mp3")).toString("base64");
+const durAudio = await pagina.evaluate((b) => window.__cargaAudio(b), audio);
+console.log(`música: public/audio/portada.mp3 · ${durAudio.toFixed(1)} s`);
+
+const { base64, tipo, bytes } = await pagina.evaluate(
+  (ms, fps) => window.__grabar(ms, fps, true), DURACION_MS, FPS,
+);
 writeFileSync(join(salida, "portada.webm"), Buffer.from(base64, "base64"));
 console.log(`vídeo: public/video/portada.webm · ${(bytes / 1024 / 1024).toFixed(2)} MB · ${tipo}`);
 
