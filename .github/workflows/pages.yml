@@ -40,3 +40,5 @@ jobs:
           path: web/dist
       - id: deployment
         uses: actions/deploy-pages@v4
+
+# Nota: recompila la web cuando cambie el panel o sus estilos.
