@@ -190,42 +190,195 @@ async function pulsaSwitch() {
   await pagina.click(".interruptor");
 }
 
+/* El acceso es una página propia: #/acceso/login o #/acceso/registro.
+   Se navega por hash (sin recargar) para no perder el mock de la API. */
+async function irAlAcceso(modo = "login") {
+  await pagina.evaluate((m) => { location.hash = "#/acceso/" + m; }, modo);
+  await espera(400);
+  await pagina.waitForSelector(".panel-auth", { timeout: 8000 });
+}
+
+/* clic limitado a un contenedor: en la portada hay botones «Crear cuenta»
+   en la barra y «Crear» en las pestañas del formulario. */
+async function clicEn(raiz, match, etiqueta = null) {
+  for (const b of await pagina.$$(`${raiz} button`)) {
+    const t = (await b.evaluate((e) => e.textContent)) || "";
+    if (!t.includes(match)) continue;
+    try {
+      await b.click();
+    } catch {
+      await b.evaluate((e) => e.click());
+    }
+    ok(`clic → ${etiqueta || match}`); return true;
+  }
+  MAL(`no encontré botón «${match}» dentro de ${raiz}`); return false;
+}
+
 async function entrar(email, clave) {
   await pagina.evaluate((e, c) => { const s = window.__mock; s.email = e; s.pass = c; s.token = null; }, email, clave);
-  await clic("Acceder");
-  await pagina.waitForSelector(".panel-auth", { timeout: 5000 }).catch(() => {});
+  await irAlAcceso("login").catch(() => {});
   await escribe("input[type=email]", email);
   await escribe("input[type=password]", clave);
   await clic("Entrar →");
   await enPanel();
 }
 
-console.log("\n== 1 · LANDING ==");
+console.log("\n== 1 · INICIO ==");
 await pagina.goto(URL_APP, { waitUntil: "networkidle2" });
-igual((await texto("h1")).includes("JumperNET"), true, "hero con título JumperNET");
-igual((await texto(".terminal")).includes("jumpernat"), true, "terminal viva presente");
+igual((await texto(".pp-marca")).includes("JumperNET"), true, "la marca JumperNET abre la portada");
+igual((await texto("h1")).toLowerCase().includes("no va sola"), true, "el hero promete el cambio de IP («no va sola»)");
 igual((await pagina.$$("canvas")).length >= 1, true, "fondo de glifos (canvas) presente");
-igual((await pagina.$$(".tarjeta")).length >= 4, true, "tarjetas renderizadas");
-igual((await pagina.$$(".paquete")).length >= 4, true, "flujo animado de paquetes");
-igual((await cuerpo()).includes("--proxy-user"), true, "la landing enseña el comando correcto (--proxy-user)");
-const estiloLogo = await pagina.$eval(".logo-cubo.flota", (e) => {
+igual((await pagina.$$(".sp-tres-item")).length, 3, "tres ideas que explican el proyecto");
+igual(await pagina.$$eval(".hn-paradas .hn-nodo", (b) => b.length), 5, "el hero enseña las cinco paradas");
+igual(await pagina.$eval(".hn-panel", (e) => e.classList.contains("on")), true, "el circuito de portada arranca encendido");
+await pagina.click(".hero-switch");
+igual(await pagina.$eval(".hero-switch", (b) => b.getAttribute("aria-checked")), "false", "el interruptor apaga la red");
+igual(await pagina.$eval(".hn-panel", (e) => e.classList.contains("off")), true, "la portada refleja la red apagada");
+await pagina.click(".hero-switch");
+await pagina.click(".hn-paradas .hn-nodo:nth-child(4)");
+igual((await texto(".hn-ficha")).includes("nodo₃"), true, "tocar una parada cuenta qué ve y qué sabe");
+const antesGiro = await pagina.$$eval(".hn-paradas .hn-nodo b", (b) => b.map((x) => x.textContent).join("|"));
+await pagina.click(".hn-girar");
+igual((await pagina.$$eval(".hn-paradas .hn-nodo b", (b) => b.map((x) => x.textContent).join("|"))) !== antesGiro, true, "«girar relés» cambia el circuito");
+igual((await pagina.$$(".sp-dir")).length >= 5, true, "directorio con las páginas del sitio");
+igual(await pagina.$$eval(".sp-mapa-nodo", (b) => b.length), 5, "esquema del circuito con sus 5 paradas");
+await pagina.click(".sp-mapa-nodo:nth-child(2)");
+await espera(250);
+igual((await texto(".sp-mapa-det-n")).includes("nodo₁"), true, "tocar una parada explica qué ve y qué sabe");
+await pagina.click(".sp-mapa-acciones .btn.primario");
+await espera(1600);
+const avance = await pagina.$eval(".sp-mapa-paquete", (e) => parseFloat(e.style.left) || 0);
+igual(avance > 30, true, `el paquete cruza el esquema (${avance}%)`);
+await pagina.click(".sp-mapa-acciones .btn");
+igual(await pagina.$eval(".sp-mapa-paquete", (e) => e.classList.contains("con-capas")), true, "el botón enseña las capas sobre el paquete");
+await pagina.click(".sp-tres-item .sp-mas");
+igual(await pagina.$$eval(".sp-mas-txt", (p) => p.length), 1, "las ideas se despliegan al pulsar «saber más»");
+igual((await pagina.$(".pp-progreso")) !== null, true, "la cabecera tiene barra de progreso de lectura");
+igual((await pagina.$(".pp-metricas")) !== null, true, "métricas vivas de la red");
+igual((await pagina.$(".pp-video")) !== null, true, "vídeo de portada en el inicio");
+const estiloPaquete = await pagina.$eval(".hn-paquete", (e) => {
   const s = getComputedStyle(e); return { nom: s.animationName, iter: s.animationIterationCount, dur: s.animationDuration };
 });
-igual(estiloLogo.nom, "flota", "logo animado con «flota»");
-igual(estiloLogo.iter, "infinite", "la animación del logo se repite (infinite intacto)");
-igual(parseFloat(estiloLogo.dur) > 0, true, "duración del logo válida (" + estiloLogo.dur + ")");
-igual(await pagina.$eval(".lateral", (e) => getComputedStyle(e).position), "fixed", "barra lateral fija (estructura del diseño de referencia)");
-await captura("01-landing");
+igual(estiloPaquete.nom, "hn-viaje", "el paquete del hero recorre el circuito");
+igual(estiloPaquete.iter, "infinite", "la animación del paquete se repite");
+igual(parseFloat(estiloPaquete.dur) > 0, true, "duración del paquete válida (" + estiloPaquete.dur + ")");
+igual(await pagina.$eval(".pp-nav", (e) => getComputedStyle(e).position), "fixed", "barra superior fija del sitio");
+igual((await pagina.$(".hn-panel")) !== null, true, "panel interactivo del circuito en el hero");
+igual((await pagina.$(".pp-dock")) !== null, true, "dock de navegación inferior presente");
+await captura("01-inicio");
 for (const frac of [0.4, 0.75, 1]) {
   await pagina.evaluate((f) => window.scrollTo(0, document.body.scrollHeight * f), frac);
   await espera(450);
 }
 const revelados = (await pagina.$$(".revela.visto")).length, totalRevela = (await pagina.$$(".revela")).length;
 igual(revelados >= 3, true, `secciones reveladas al hacer scroll (${revelados}/${totalRevela})`);
+await pagina.evaluate(() => window.scrollTo(0, 0));
+
+console.log("\n== 1a · PÁGINAS PROPIAS (no anclas) ==");
+const enlacesNav = await pagina.$$eval(".dock-enlace", (as) => as.map((a) => a.getAttribute("href")));
+igual(enlacesNav.length, 5, "el dock tiene 5 páginas (sencillo)");
+igual(enlacesNav.includes("#/proyecto") && enlacesNav.includes("#/tarifas"), true, "los enlaces apuntan a rutas propias, no a anclas");
+await pagina.click('.dock-enlace[href="#/proyecto"]');
+await espera(700);
+igual(await pagina.evaluate(() => location.hash), "#/proyecto", "«Proyecto» navega a su propia URL");
+igual((await texto("h1")).includes("Qué es JumperNET"), true, "la página del proyecto tiene su título");
+igual(await pagina.evaluate(() => document.querySelector(".dock-enlace.activa .dock-txt")?.textContent || null), "Proyecto", "el dock marca la página activa");
+igual((await pagina.$$(".pp-parada")).length >= 6, true, "el proyecto trae el flujo TÚ → 3 nodos → internet");
+await captura("01a-proyecto");
+await pagina.evaluate(() => document.querySelector(".ds").scrollIntoView({ block: "center" }));
+await pagina.click(".ds .btn.primario");
+await espera(2400);
+const pasoDemo = await pagina.$eval(".ds", (e) => Number(e.dataset.paso));
+igual(pasoDemo >= 2, true, `la demo mueve el paquete por los saltos (paso ${pasoDemo})`);
+await pagina.click(".ds-capas-btn");
+igual(await pagina.$eval(".ds-capas-btn", (e) => e.textContent.includes("Ver capas")), true, "la demo permite ocultar las capas");
+await captura("01a-demo");
+
+await pagina.click('.dock-enlace[href="#/usos"]');
+await espera(700);
+igual(await pagina.evaluate(() => location.hash), "#/usos", "«Para qué sirve» navega a su propia URL");
+igual((await texto("h1")).includes("Qué puedes hacer"), true, "la página explica para qué sirve con situaciones");
+igual(await pagina.$$eval(".us-tab", (b) => b.length), 5, "cinco escenarios de uso seleccionables");
+await pagina.click(".us-tab:nth-child(2)");
+await espera(250);
+igual(await pagina.$eval(".us-tab:nth-child(2)", (b) => b.getAttribute("aria-selected")), "true", "el escenario elegido queda marcado");
+igual(await pagina.$eval(".us-ruta", (e) => e.classList.contains("on")), false, "el circuito empieza apagado");
+await pagina.click(".us-switch");
+await espera(350);
+igual(await pagina.$eval(".us-switch", (b) => b.getAttribute("aria-checked")), "true", "el interruptor enciende el circuito");
+igual(await pagina.$eval(".us-ruta", (e) => e.classList.contains("on")), true, "la ruta se dibuja encendida");
+igual((await cuerpo()).includes("la IP del exit"), true, "enseña qué ve el destino con el circuito encendido");
+const rotulo1 = await pagina.$$eval(".us-ruta .us-nodo b", (bs) => bs[1]?.textContent || "");
+await pagina.click(".us-girar");
+await espera(300);
+const rotulo2 = await pagina.$$eval(".us-ruta .us-nodo b", (bs) => bs[1]?.textContent || "");
+igual(rotulo2 !== rotulo1, true, `«girar nodos» cambia el circuito (${rotulo1} → ${rotulo2})`);
+await captura("01b-usos");
+await pagina.evaluate(() => { location.hash = "#/funciona"; });
+await espera(700);
+igual((await texto(".terminal")).includes("jumpernat"), true, "«Cómo funciona» trae la terminal viva");
+igual((await cuerpo()).includes("--proxy-user"), true, "y el comando correcto (--proxy-user)");
+
+await pagina.evaluate(() => { location.hash = "#/tarifas"; });
+await espera(600);
+igual(await pagina.evaluate(() => document.querySelectorAll(".tarjeta-descarga").length), 3, "«Tarifas» tiene página propia con los 3 planes");
+
+await pagina.evaluate(() => { location.hash = "#/dudas"; });
+await espera(600);
+igual((await pagina.$$(".pp-faq-item")).length >= 6, true, "«Dudas» lista las preguntas en su página");
+await pagina.click(".pp-faq-item");
+await espera(300);
+
+await pagina.evaluate(() => { location.hash = "#/descargas"; });
+await espera(600);
+igual(await incluye("Extensión"), true, "«Descargas» es una página con las entregas");
+
+await pagina.evaluate(() => { location.hash = "#/"; });
+await espera(700);
+
+console.log("\n== 1b · VÍDEO DE PORTADA ==");
+igual(await pagina.evaluate(() => location.hash), "#/", "de vuelta en el inicio");
+await pagina.evaluate(() => {
+  document.documentElement.style.scrollBehavior = "auto";
+  document.getElementById("video").scrollIntoView();
+});
+await espera(1800);
+const vid = await pagina.$eval(".pp-video-lienzo", (v) => ({
+  w: v.videoWidth, h: v.videoHeight, t: v.currentTime, pausado: v.paused, listo: v.readyState,
+}));
+igual(vid.w, 1280, `el vídeo de portada carga a ${vid.w}×${vid.h}`);
+igual(vid.t > 0 && !vid.pausado, true, "se reproduce solo al entrar en pantalla");
+/* la cabecera ya no lleva «Inicio»: el logo es el inicio, así que volver a #/
+   no marca ninguna pestaña (y eso es lo correcto, no un fallo). */
+igual(await pagina.evaluate(() => !document.querySelector(".dock-enlace.activa")), true, "en la portada ninguna pestaña queda marcada (el logo es el inicio)");
+igual(await pagina.evaluate(() => document.querySelector(".pp-marca").getAttribute("href")), "#/", "el logo lleva a la portada");
+await captura("01b-video");
+
+console.log("\n== 1c · CABECERA MÓVIL ==");
+await pagina.setViewport({ width: 390, height: 844 });
+await espera(700);
+await pagina.evaluate(() => window.scrollTo(0, 0));
+await espera(500);
+igual(await pagina.$eval(".pp-dock", (e) => {
+  const r = e.getBoundingClientRect();
+  return r.width > 300 && r.top > 700 && r.bottom <= 845;
+}), true, "dock fijo y visible en móvil");
+igual(await pagina.$$eval(".dock-enlace", (a) => a.length), 5, "el dock conserva las cinco páginas en móvil");
+igual(await pagina.evaluate(() => [...document.querySelectorAll(".dock-txt")].every((e) => e.getBoundingClientRect().width > 0)), true, "etiquetas legibles en el dock móvil");
+igual(await pagina.$eval(".pp-nav", (e) => e.getBoundingClientRect().height > 0), true, "barra superior visible en móvil");
+igual(await pagina.evaluate(() => !!document.querySelector('.pp-nav-acciones a[href="#/acceso/login"]')), true, "«Entrar» sigue accesible en móvil");
+await captura("01c-dock-movil");
+await pagina.click('.dock-enlace[href="#/proyecto"]');
+await espera(700);
+igual(await pagina.evaluate(() => location.hash), "#/proyecto", "el dock móvil navega a otra página");
+await pagina.evaluate(() => { location.hash = "#/"; });
+await espera(600);
+await pagina.setViewport({ width: 1280, height: 900 });
+await espera(600);
 
 console.log("\n== 2 · AUTH: validaciones y registro ==");
-await pagina.evaluate(() => window.scrollTo(0, 0));
-await clic("Acceder");
+await irAlAcceso("login");
+igual(await pagina.evaluate(() => location.hash), "#/acceso/login", "el acceso tiene URL propia (#/acceso/login)");
 await pagina.waitForSelector(".panel-auth", { timeout: 5000 }).then(() => ok("panel de auth visible")).catch(() => MAL("auth no apareció"));
 await captura("02-auth");
 await escribe("input[type=email]", "noesuncorreo");
@@ -233,8 +386,9 @@ await escribe("input[type=password]", "clave-e2e-123");
 await clic("Entrar →");
 await espera(350);
 igual((await cuerpo()).includes("eso no parece un correo válido"), true, "valida el formato del correo sin llamar a la API");
-await clic("Crear", "pestaña Crear");
-await espera(250);
+await irAlAcceso("registro");
+igual(await pagina.evaluate(() => location.hash), "#/acceso/registro", "el registro tiene URL propia (#/acceso/registro)");
+igual(await pagina.evaluate(() => document.querySelector(".pestAuth.on")?.textContent.trim()), "Crear", "la página de registro abre en modo «Crear»");
 await escribe("input[type=email]", "e2e@jumpernat.local");
 await escribe("input[type=password]", "corta");
 await clic("Crear cuenta →");
@@ -242,13 +396,12 @@ await espera(350);
 igual((await cuerpo()).includes("8 caracteres o más"), true, "exige 8 caracteres en el registro");
 await escribe("input[type=password]", "clave-e2e-123");
 await clic("Crear cuenta →");
-await espera(700);
-igual((await cuerpo()).includes("cuenta creada"), true, "registro completado");
-await escribe("input[type=password]", "clave-e2e-123");
-await clic("Entrar →");
-await enPanel().then(() => ok("panel visible tras el login")).catch(async () => {
-  MAL("el login no llevó al panel"); console.log("  ERRORES:", JSON.stringify(errores, null, 1)); console.log("  BODY:", JSON.stringify((await cuerpo()).slice(0, 400)));
+/* el registro entra directo al panel: no se vuelve a pedir la contraseña */
+await enPanel().then(() => ok("registro completado y entrada automática al panel")).catch(async () => {
+  MAL("el registro no llevó al panel"); console.log("  ERRORES:", JSON.stringify(errores, null, 1)); console.log("  BODY:", JSON.stringify((await cuerpo()).slice(0, 400)));
 });
+igual(await pagina.evaluate(() => location.hash), "#/panel", "el registro entra al panel por su ruta (#/panel)");
+igual((await cuerpo()).includes("cuenta creada"), true, "aviso de cuenta creada");
 
 console.log("\n== 3 · PANEL: red APAGADA y todos los nodos a la vista ==");
 await espera(700);
@@ -396,13 +549,37 @@ await captura("07-disenador");
 console.log("\n== 9 · RESPONSIVE + MENÚ LATERAL EN MÓVIL ==");
 await pagina.setViewport({ width: 390, height: 844 });
 await espera(700);
-const oculto = await pagina.$eval(".lateral", (e) => e.getBoundingClientRect().left < 0);
-igual(oculto, true, "en móvil la barra lateral está oculta");
+/* el lateral se oculta con una transición al entrar la media query: esperar a
+   la geometría real (fuera de pantalla) en vez de asumir un tiempo fijo. */
+await pagina.waitForFunction(() => {
+  const e = document.querySelector(".lateral");
+  if (!e) return false;
+  const r = e.getBoundingClientRect();
+  return r.right <= 0 || r.width === 0;
+}, { timeout: 5000 }).catch(() => {});
+const geoLateral = await pagina.$eval(".lateral", (e) => {
+  const r = e.getBoundingClientRect();
+  const s = getComputedStyle(e);
+  return {
+    izq: Math.round(r.left), der: Math.round(r.right), ancho: Math.round(r.width),
+    tr: s.transform, anim: s.animationName,
+    mq: window.matchMedia("(max-width: 1000px)").matches, iw: window.innerWidth,
+  };
+});
+console.log("  [diag] lateral en móvil:", JSON.stringify(geoLateral));
+/* Oculto = fuera de pantalla por la izquierda o sin ancho (el diseño puede
+   recortar la columna a 0 en móvil, no solo desplazarla con transform). */
+igual(geoLateral.der <= 0 || geoLateral.ancho === 0, true, "en móvil la barra lateral está oculta");
 igual((await pagina.$(".hamburguesa")) !== null, true, "botón de menú presente en móvil");
 await pagina.click(".hamburguesa");
 ok("clic → abrir menú (hamburguesa)");
 await espera(600);
-igual(await pagina.$eval(".lateral", (e) => e.getBoundingClientRect().left >= -1), true, "el menú lateral se abre en móvil");
+const geoAbierto = await pagina.$eval(".lateral", (e) => {
+  const r = e.getBoundingClientRect();
+  return { izq: Math.round(r.left), der: Math.round(r.right), ancho: Math.round(r.width) };
+});
+console.log("  [diag] lateral abierto:", JSON.stringify(geoAbierto));
+igual(geoAbierto.der > 0 && geoAbierto.ancho > 0 && geoAbierto.izq >= -1, true, "el menú lateral se abre en móvil");
 await captura("08-movil-menu");
 await clic("Panel de red");
 await espera(700);
@@ -458,7 +635,8 @@ await espera(400);
 igual((await pagina.$(".interruptor.activo")) === null, true, "interruptor visualmente apagado");
 await clic("Salir");
 await espera(900);
-igual((await cuerpo()).includes("Crear mi cuenta"), true, "vuelta a la landing tras salir");
+igual((await cuerpo()).includes("Crear mi cuenta"), true, "vuelta al inicio tras salir");
+igual(await pagina.evaluate(() => location.hash), "#/", "salir lleva a la portada pública");
 igual(await pagina.evaluate(() => localStorage.getItem("token")), null, "el token se borra al salir");
 
 await entrar("e2e@jumpernat.local", "clave-e2e-123");
@@ -470,7 +648,7 @@ await espera(300);
 await clic("Sí, eliminar para siempre");
 await espera(1200);
 igual(await pagina.evaluate(() => window.__mock.borrados), 1, "la API recibió el DELETE /me");
-igual((await cuerpo()).includes("Crear mi cuenta"), true, "tras borrar la cuenta vuelve a la landing");
+igual((await cuerpo()).includes("Crear mi cuenta"), true, "tras borrar la cuenta vuelve al inicio");
 igual(await pagina.evaluate(() => localStorage.getItem("token")), null, "sin token tras borrar la cuenta");
 
 console.log("\n== ERRORES DE CONSOLA / RED ==");

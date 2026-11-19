@@ -602,6 +602,123 @@ details.tarjeta .contenido-faq {
   50% { opacity: 1; }
 }
 
+/* la clase ya existía en las piezas pero la animación solo estaba definida
+   para el logo viejo: ahora los iconos flotan de verdad */
+.pp-pieza-ico.flota { animation: flota calc(5 * var(--veld)) ease-in-out infinite; }
+/* tres CTA en fila en escritorio; en móvil siguen apilándose */
+.pp-hero .pp-acciones { max-width: 780px; }
+
+/* ── cabecera viva: progreso, enlace activo y menú móvil ── */
+.pp-progreso {
+  position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+  pointer-events: none; overflow: hidden;
+}
+.pp-progreso i {
+  display: block; height: 100%; transform-origin: 0 50%; transform: scaleX(0);
+  background: linear-gradient(90deg, var(--acento-1), var(--acento-2));
+  box-shadow: 0 0 10px rgb(from var(--acento-1) r g b / .6);
+  transition: transform .12s linear;
+}
+.pp-enlace.activa { color: var(--acento-1); }
+.pp-enlace.activa::after { transform: scaleX(1); }
+
+.pp-hamburguesa {
+  display: none; width: 38px; height: 38px; flex: none;
+  border-radius: 10px; border: 1px solid var(--borde);
+  background: rgb(0 0 0 / .3); color: var(--texto); font-size: 16px;
+  cursor: pointer; place-items: center;
+  transition: border-color .2s ease, transform .2s ease;
+}
+.pp-hamburguesa:hover { border-color: var(--acento-1); }
+.pp-hamburguesa.abierta { transform: rotate(90deg); }
+
+.pp-menu {
+  position: absolute; top: calc(100% + 8px); right: clamp(10px, 3vw, 22px);
+  width: min(320px, calc(100vw - 22px)); z-index: 80;
+  display: grid; gap: 3px; padding: 10px;
+  background: rgb(from var(--bg-1) r g b / .97);
+  border: 1px solid var(--borde); border-radius: 16px;
+  box-shadow: 0 26px 60px -26px rgb(0 0 0 / .95);
+  backdrop-filter: blur(18px);
+  animation: pp-menu-entra .22s cubic-bezier(.2, .8, .25, 1) both;
+}
+@keyframes pp-menu-entra { from { opacity: 0; transform: translateY(-8px) scale(.98); } }
+.pp-menu-enlace {
+  text-align: left; padding: 11px 12px; border-radius: 10px;
+  background: none; border: 1px solid transparent; color: var(--texto-suave);
+  font-family: inherit; font-size: 14px; cursor: pointer;
+}
+.pp-menu-enlace:hover, .pp-menu-enlace.activa {
+  background: rgb(from var(--acento-1) r g b / .09);
+  border-color: rgb(from var(--acento-1) r g b / .3); color: var(--acento-1);
+}
+.pp-menu-acciones {
+  display: grid; gap: 7px; margin-top: 6px; padding-top: 10px;
+  border-top: 1px solid var(--borde);
+}
+.pp-menu-acciones .btn { justify-content: center; }
+
+/* ── vídeo de portada ── */
+.pp-video-seccion { scroll-margin-top: 92px; }
+.pp-video {
+  position: relative; margin: 0 auto; width: min(1040px, 100%);
+  aspect-ratio: 16 / 9; border-radius: 20px; overflow: hidden;
+  border: 1px solid var(--borde); background: #060a08;
+  box-shadow: 0 40px 90px -50px rgb(0 0 0 / 1);
+}
+.pp-video::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(120% 80% at 50% 0%, rgb(from var(--acento-1) r g b / .08), transparent 60%);
+}
+.pp-video-lienzo {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; cursor: pointer;
+}
+.pp-video-play {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 74px; height: 74px; border-radius: 50%; display: grid; place-items: center;
+  background: rgb(6 12 9 / .62); border: 1px solid rgb(from var(--acento-1) r g b / .55);
+  color: var(--acento-1); font-size: 22px; cursor: pointer; z-index: 2;
+  backdrop-filter: blur(8px);
+  transition: opacity .3s ease, transform .3s ease, background .2s ease;
+}
+.pp-video-play:hover { transform: translate(-50%, -50%) scale(1.06); background: rgb(6 12 9 / .82); }
+.pp-video.en-marcha .pp-video-play { opacity: 0; pointer-events: none; }
+.pp-video.en-marcha:hover .pp-video-play { opacity: 1; pointer-events: auto; }
+.pp-video-pie {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 30px 14px 10px; font-size: 11px;
+  background: linear-gradient(0deg, rgb(3 7 5 / .86), transparent);
+}
+.pp-video-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: var(--texto-suave); font-size: 10.5px; letter-spacing: .06em;
+}
+.pp-video-controles { display: flex; gap: 6px; margin-left: auto; }
+.pp-video-btn {
+  background: rgb(255 255 255 / .05); border: 1px solid var(--borde);
+  color: var(--texto-suave); border-radius: 999px; padding: 5px 11px;
+  font-size: 10.5px; font-family: var(--fuente-mono); cursor: pointer;
+  text-decoration: none; transition: all .18s ease;
+}
+.pp-video-btn:hover { color: var(--acento-1); border-color: rgb(from var(--acento-1) r g b / .45); }
+.pp-video-barra {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+  background: rgb(255 255 255 / .12); z-index: 3;
+}
+.pp-video-barra i {
+  display: block; height: 100%; width: 0; background: var(--acento-1);
+  box-shadow: 0 0 10px rgb(from var(--acento-1) r g b / .7);
+}
+.pp-video-barra.indeterminada i { width: 34%; animation: pp-video-carga 2.4s ease-in-out infinite; }
+@keyframes pp-video-carga { 0% { transform: translateX(-120%); } 100% { transform: translateX(330%); } }
+.pp-video-fallo {
+  position: absolute; inset: 0; display: grid; place-content: center; gap: 6px;
+  text-align: center; padding: 20px;
+  background: radial-gradient(circle at 50% 40%, rgb(from var(--acento-1) r g b / .1), transparent 70%);
+}
+
 /* ── responsive de la portada ── */
 @media (max-width: 1040px) {
   .pp-enlaces { display: none; }
@@ -630,5 +747,26 @@ details.tarjeta .contenido-faq {
   .pp-acciones .btn { min-width: 0; flex: 1 1 100%; max-width: none; }
   .pp-badge { font-size: 9px; padding: 5px 11px; letter-spacing: .1em; }
   .pp-cinta-item { font-size: 9.5px; }
+}
+
+/* cabecera por tamaños: el menú sustituye a los enlaces ocultos */
+@media (max-width: 1180px) {
+  .pp-nav-chip { display: none; }
+  .pp-enlace { padding: 8px 8px; font-size: 12px; }
+}
+
+@media (max-width: 1040px) {
+  .pp-hamburguesa { display: grid; }
+  .pp-nav { width: 100%; }
+  .pp-video { border-radius: 16px; }
+}
+
+@media (max-width: 640px) {
+  .pp-solo-escritorio { display: none; }
+  .pp-nav-acciones .btn.primario { padding: 7px 12px; font-size: 12px; }
+  .pp-video-pie { padding: 22px 10px 8px; }
+  .pp-video-tag { font-size: 9px; gap: 6px; }
+  .pp-video-controles { margin-left: 0; }
+  .pp-video-play { width: 58px; height: 58px; font-size: 18px; }
 }
 

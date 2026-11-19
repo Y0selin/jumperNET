@@ -1,8 +1,18 @@
 /* Temas del Diseñador: cada tema es un conjunto de variables CSS que se
    aplican en vivo sobre document.documentElement. Persiste en localStorage. */
-const CLAVE = "jumpernat-tema";
+const CLAVE = "jumpernat-tema-v2";
 
 export const PRESETS = {
+  "coral-nocturno": {
+    nombre: "Coral Nocturno",
+    variables: {
+      "--bg-1": "#06050b", "--bg-2": "#0a0812", "--panel": "22, 19, 32", "--panel-sol": "255, 90, 54",
+      "--borde": "#2a2438", "--acento-1": "#ff5a36", "--acento-2": "#8b7bff",
+      "--acento-3": "#33d6c0", "--texto": "#f4f0e8", "--texto-suave": "#a49dae",
+    },
+    forma: { "--radio": "20px", "--radio-2": "12px", "--tam-fuente": "15px", "--fuente": '"Avenir Next", "Segoe UI", system-ui, sans-serif' },
+    efectos: { "--glow": "0.8", "--glass": "0.7", "--vel-anim": "1" },
+  },
   "terminal-verde": {
     nombre: "Terminal Verde",
     variables: {
@@ -81,6 +91,6 @@ export function cargaTema() {
     const t = JSON.parse(localStorage.getItem(CLAVE));
     if (t && t.variables) return t;
   } catch { /* tema roto: preset */ }
-  return JSON.parse(JSON.stringify(PRESETS["terminal-verde"]));
+  return JSON.parse(JSON.stringify(PRESETS["coral-nocturno"]));
 }
-export function temaPorId(id) { return JSON.parse(JSON.stringify(PRESETS[id] || PRESETS["terminal-verde"])); }
+export function temaPorId(id) { return JSON.parse(JSON.stringify(PRESETS[id] || PRESETS["coral-nocturno"])); }

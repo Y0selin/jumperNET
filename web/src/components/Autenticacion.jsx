@@ -61,12 +61,21 @@ export default function Autenticacion({ alEntrar, aviso, modoInicial = "login", 
         alEntrar();
       } else {
         await registrar(correo, pass);
-        setModo("login");
-        setPass("");
-        setError("");
-        aviso("cuenta creada — te llevo a entrar", "ok");
-        /* el correo ya está: el foco va directo a la contraseña */
-        requestAnimationFrame(() => refClave.current?.focus());
+        /* Registro + entrada en un solo paso: pedir la contraseña otra vez justo
+           después de crearla es donde más gente se cae. Si el login automático
+           fallara, se vuelve al modo «Entrar» con la clave limpia. */
+        try {
+          const r = await login(correo, pass);
+          setToken(r.token);
+          aviso("cuenta creada — ya estás dentro", "ok");
+          alEntrar();
+        } catch {
+          setModo("login");
+          setPass("");
+          setError("");
+          aviso("cuenta creada — entra con tu contraseña", "ok");
+          requestAnimationFrame(() => refClave.current?.focus());
+        }
       }
     } catch (err0) {
       const e1 = entiende(err0);

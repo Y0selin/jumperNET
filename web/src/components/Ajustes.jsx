@@ -28,7 +28,7 @@ export default function Ajustes({aviso}) {
 
   function guarda() { guardaTema({ ...tema, cssExtra }); aviso("tema guardado: se aplica en todo el sitio", "ok"); }
   function preset(id) { const t = temaPorId(id); setTema(t); setCssExtra(""); aplicaTema(t); guardaTema(t); aviso(`preestablecido «${PRESETS[id]?.nombre}» aplicado`, "ok"); }
-  function reset() { const t = temaPorId("grafito-profesional"); setTema(t); setCssExtra(""); aplicaTema(t); guardaTema(t); }
+  function reset() { const t = temaPorId("coral-nocturno"); setTema(t); setCssExtra(""); aplicaTema(t); guardaTema(t); }
 
   function exportar() {
     const blob = new Blob([JSON.stringify({ ...tema, cssExtra }, null, 2)], { type: "application/json" });

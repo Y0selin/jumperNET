@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>JumperNET · vídeo de portada</title>
+<style>html,body{margin:0;background:#060a08}canvas{display:block}</style>
+</head>
+<body>
+<canvas id="lienzo" width="1280" height="720"></canvas>
+<script>
+/* Guion visual del vídeo de portada. Se dibuja en un canvas de 1280x720 y
+   generar-video.mjs lo graba con MediaRecorder (VP9) sin ffmpeg.
+   Escenas: problema -> circuito de 3 saltos -> salida validada -> interruptor -> registro. */
+const W = 1280, H = 720;
+const cv = document.getElementById("lienzo");
+const real = cv.getContext("2d");
+let ctx = real;
+/* cada escena se dibuja aparte y se compone con su alfa: así no se solapan */
+const off = document.createElement("canvas");
+off.width = W; off.height = H;
+const octx = off.getContext("2d");
+const C = { ac: "#2ee88a", ac2: "#63d2ff", tx: "#eaf7f0", mu: "#8fa79b", wa: "#ffb86b", bad: "#ff6b6b" };
+const MONO = 'ui-monospace, "DejaVu Sans Mono", monospace';
+const SANS = '"DejaVu Sans", "Liberation Sans", Arial, sans-serif';
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const seg = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+const easeInOut = (x) => (x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
+const lerp = (a, b, p) => a + (b - a) * p;
+
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+
+function txt(s, x, y, o) {
+  o = o || {};
+  ctx.save();
+  ctx.globalAlpha = o.alpha == null ? 1 : o.alpha;
+  ctx.fillStyle = o.color || C.tx;
+  ctx.textAlign = o.align || "left";
+  ctx.textBaseline = "middle";
+  ctx.font = (o.weight || "600") + " " + (o.size || 24) + "px " + (o.font || SANS);
+  if ("letterSpacing" in ctx) ctx.letterSpacing = (o.ls || 0) + "px";
+  ctx.fillText(s, x, y);
+  ctx.restore();
+}
+
+function tarjeta(x, y, w, h, r, borde) {
+  rr(x, y, w, h, r == null ? 16 : r);
+  ctx.fillStyle = "rgba(11,21,18,.92)";
+  ctx.strokeStyle = borde || "rgba(46,232,138,.22)";
+  ctx.lineWidth = 1.4;
+  ctx.fill(); ctx.stroke();
+}
+
+function chip(s, x, y, color, size) {
+  size = size || 12;
+  ctx.save();
+  ctx.font = '600 ' + size + 'px ' + MONO;
+  const w = ctx.measureText(s).width + 24;
+  rr(x, y - size / 2 - 8, w, size + 16, 999);
+  ctx.fillStyle = "rgba(46,232,138,.08)";
+  ctx.strokeStyle = (color || C.ac) + "66";
+  ctx.fill(); ctx.stroke();
+  txt(s, x + 12, y + 1, { size: size, color: color || C.ac, font: MONO, ls: .4 });
+  ctx.restore();
+  return w;
+}
+
+function fondo(t) {
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, "#06100b"); g.addColorStop(.55, "#07130e"); g.addColorStop(1, "#050a08");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+  const halos = [[290, 160, 430, "46,232,138"], [1010, 540, 470, "99,210,255"]];
+  for (const h of halos) {
+    const rg = ctx.createRadialGradient(h[0], h[1], 0, h[0], h[1], h[2]);
+    rg.addColorStop(0, "rgba(" + h[3] + ",.11)"); rg.addColorStop(1, "rgba(" + h[3] + ",0)");
+    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H);
+  }
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(46,232,138,.06)";
+  ctx.lineWidth = 1;
+  const off = (t * 9) % 48;
+  for (let x = -off; x < W; x += 48) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = -off; y < H; y += 48) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  ctx.restore();
+
+  for (let i = 0; i < 26; i++) {
+    const sx = (i * 137.5 + t * (14 + (i % 4) * 5)) % W;
+    const sy = (i * 89.3 + Math.sin(t * .55 + i) * 18 + (i * 53 % H) + H) % H;
+    ctx.fillStyle = "rgba(46,232,138," + (.05 + (i % 4) * .025) + ")";
+    ctx.beginPath(); ctx.arc(sx, sy, 1.2 + (i % 3) * .5, 0, 7); ctx.fill();
+  }
+
+  const vg = ctx.createRadialGradient(W / 2, H / 2, 200, W / 2, H / 2, 780);
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.55)");
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+}
+
+function cabecera(t, t0, kicker, titulo) {
+  const p = seg(t, t0, t0 + .7);
+  const a = easeOut(p);
+  txt(kicker, 110, 96 + (1 - a) * 10, { size: 12, color: C.ac, font: MONO, ls: 3, alpha: a });
+  txt(titulo, 110, 146 + (1 - a) * 14, { size: 40, weight: "800", alpha: a });
+}
+
+function cable(x1, y1, x2, y2, dash) {
+  ctx.save();
+  ctx.strokeStyle = "rgba(46,232,138,.24)";
+  ctx.lineWidth = 2;
+  if (dash) ctx.setLineDash([8, 8]);
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  ctx.restore();
+}
+
+function paquete(x, y, color, etiqueta, escala) {
+  escala = escala || 1;
+  ctx.save();
+  const g = ctx.createRadialGradient(x, y, 0, x, y, 34 * escala);
+  g.addColorStop(0, color + "cc"); g.addColorStop(1, color + "00");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 34 * escala, 0, 7); ctx.fill();
+  ctx.fillStyle = "#08120d"; ctx.strokeStyle = color; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, y, 9 * escala, 0, 7); ctx.fill(); ctx.stroke();
+  if (etiqueta) {
+    ctx.font = "600 11px " + MONO;
+    const w = ctx.measureText(etiqueta).width + 16;
+    rr(x - w / 2, y - 34 * escala - 16, w, 22, 8);
+    ctx.fillStyle = "rgba(5,12,9,.92)"; ctx.strokeStyle = color + "77"; ctx.fill(); ctx.stroke();
+    txt(etiqueta, x, y - 34 * escala - 5, { size: 11, color: color, font: MONO, align: "center" });
+  }
+  ctx.restore();
+}
+
+/* ───────── escena 1: marca ───────── */
+function e1(t) {
+  const a = easeOut(seg(t, 0, .9));
+  const b = easeOut(seg(t, .5, 1.5));
+  const c = easeOut(seg(t, .9, 1.8));
+  const cx = W / 2;
+
+  const hg = ctx.createRadialGradient(cx, 250, 0, cx, 250, 260);
+  hg.addColorStop(0, "rgba(46,232,138,.22)"); hg.addColorStop(1, "rgba(46,232,138,0)");
+  ctx.fillStyle = hg; ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.translate(cx, 250);
+  const s = lerp(.72, 1, a);
+  ctx.scale(s, s);
+  ctx.rotate(-.04 + Math.sin(t * 1.6) * .01);
+  rr(-62, -62, 124, 124, 30);
+  ctx.fillStyle = "rgba(10,24,18,.96)"; ctx.strokeStyle = "rgba(46,232,138,.7)"; ctx.lineWidth = 2.4;
+  ctx.fill(); ctx.stroke();
+  ctx.shadowColor = "rgba(46,232,138,.75)"; ctx.shadowBlur = 36;
+  txt("JN", 0, 3, { size: 44, color: C.ac, font: MONO, weight: "800", align: "center" });
+  ctx.restore();
+
+  txt("JumperNET", cx, 392 + (1 - a) * 24, { size: 74, weight: "800", align: "center", alpha: a, ls: -1 });
+  txt("Tu conexión no va sola", cx, 460, { size: 30, color: C.tx, align: "center", alpha: b });
+  txt("RED DE ANONIMATO POR 3 SALTOS · SOCKS5 · CHACHA20-POLY1305 · 80/443",
+    cx, 520, { size: 12, color: C.mu, font: MONO, align: "center", ls: 2.4, alpha: c });
+}
+
+/* ───────── escena 2: sin circuito, tu IP viaja sola ───────── */
+function e2(t) {
+  cabecera(t, 4.4, "SIN CIRCUITO", "Tu IP viaja sola");
+  const a = easeOut(seg(t, 4.8, 5.6));
+
+  /* equipo */
+  tarjeta(110, 300, 260, 190, 18, "rgba(46,232,138,.28)");
+  ctx.save(); ctx.globalAlpha = a;
+  rr(170, 345, 140, 88, 10); ctx.strokeStyle = "rgba(46,232,138,.6)"; ctx.lineWidth = 2; ctx.stroke();
+  rr(150, 440, 180, 9, 5); ctx.fillStyle = "rgba(46,232,138,.5)"; ctx.fill();
+  txt("TU EQUIPO", 240, 528, { size: 12, color: C.mu, font: MONO, align: "center", ls: 2 });
+  ctx.restore();
+
+  /* destino */
+  const destA = easeOut(seg(t, 5.2, 6));
+  tarjeta(910, 300, 260, 190, 18, "rgba(255,107,107,.32)");
+  ctx.save(); ctx.globalAlpha = destA;
+  for (let i = 0; i < 3; i++) {
+    rr(970, 342 + i * 28, 140, 20, 5);
+    ctx.fillStyle = "rgba(255,255,255,.05)"; ctx.strokeStyle = "rgba(143,167,155,.28)"; ctx.fill(); ctx.stroke();
+    ctx.fillStyle = i === 2 ? C.bad : "rgba(46,232,138,.65)";
+    ctx.beginPath(); ctx.arc(1090, 352 + i * 28, 3.5, 0, 7); ctx.fill();
+  }
+  txt("DESTINO", 1040, 528, { size: 12, color: C.mu, font: MONO, align: "center", ls: 2 });
+  ctx.restore();
+
+  /* paquete */
+  const p = (t - 4.8) / 2.6 % 1;
+  const x = lerp(380, 900, p);
+  cable(380, 395, 900, 395, true);
+  paquete(x, 395, C.bad, "83.34.12.7", 1);
+
+  /* conclusión */
+  const ca = easeOut(seg(t, 6.4, 7.2));
+  txt("El destino ve tu IP real y sabe de dónde vienes.", 110, 600, { size: 24, color: C.tx, alpha: ca });
+  if (ca > 0) chip("sin anonimato", 110, 648, C.bad, 13);
+}
+
+/* ───────── escena 3: circuito de 3 saltos ───────── */
+function e3(t) {
+  cabecera(t, 9.6, "CON JUMPERNET", "Tres saltos y cifrado por capas");
+  const nodos = ["TÚ", "entrada", "nodo₁", "nodo₂", "nodo₃", "internet"];
+  const subs = ["tu equipo", "SOCKS5 :1080", "relé ciego", "relé ciego", "exit", "solo 80/443"];
+  const w = 152, gap = 30, x0 = 110;
+  const y = 356;
+
+  for (let i = 0; i < nodos.length; i++) {
+    const ap = easeOut(seg(t, 10 + i * .14, 10.5 + i * .14));
+    const x = x0 + i * (w + gap);
+    ctx.save();
+    ctx.globalAlpha = ap;
+    ctx.translate(0, (1 - ap) * 18);
+    tarjeta(x, y, w, 118, 14, i === 4 ? "rgba(46,232,138,.65)" : "rgba(46,232,138,.24)");
+    txt(nodos[i], x + w / 2, y + 46, { size: i === 0 ? 19 : 17, color: i === 4 ? C.ac : C.tx, weight: "700", align: "center" });
+    txt(subs[i], x + w / 2, y + 78, { size: 10.5, color: C.mu, font: MONO, align: "center", ls: .8 });
+    ctx.restore();
+    if (i < nodos.length - 1) {
+      const x1 = x + w, x2 = x + w + gap;
+      cable(x1, y + 59, x2, y + 59, false);
+      const q = ((t - 10.6) * .9 + i * .17) % 1;
+      const color = i === 0 ? C.ac2 : (i === 4 ? C.ac : C.wa);
+      paquete(lerp(x1 + 4, x2 - 4, q), y + 59, color, null, .42);
+    }
+  }
+
+  /* capas */
+  const la = easeOut(seg(t, 12, 12.8));
+  ctx.save(); ctx.globalAlpha = la;
+  for (let i = 1; i < 4; i++) {
+    const x = x0 + i * (w + gap) - gap / 2;
+    ctx.fillStyle = "rgba(8,18,13,.95)"; ctx.strokeStyle = "rgba(46,232,138,.5)";
+    rr(x - 26, y - 36, 52, 22, 7); ctx.fill(); ctx.stroke();
+    txt("JENC", x, y - 25, { size: 10, color: C.ac, font: MONO, align: "center", ls: .6 });
+  }
+  txt("cifrado por capas · los intermedios solo reenvían", x0, 556, { size: 21, color: C.tx, alpha: la });
+  txt("ChaCha20-Poly1305 · el exit descifra y valida el destino", x0, 594, { size: 13, color: C.mu, font: MONO, alpha: la });
+  ctx.restore();
+}
+
+/* ───────── escena 4: salida validada ───────── */
+function e4(t) {
+  cabecera(t, 15.2, "EN LA SALIDA", "Solo sale lo que debe salir");
+  const a = easeOut(seg(t, 15.5, 16.3));
+  const items = [
+    ["✓", "puertos 80 / 443", "nada más", C.ac],
+    ["✓", "anti-IP-privadas", "loopback bloqueado", C.ac],
+    ["✓", "anti-metadata", "169.254.169.254 fuera", C.ac],
+  ];
+
+  tarjeta(110, 260, 520, 280, 18, "rgba(46,232,138,.3)");
+  ctx.save(); ctx.globalAlpha = a;
+  txt("NODO DE SALIDA", 142, 296, { size: 11, color: C.mu, font: MONO, ls: 2.2 });
+  items.forEach((it, i) => {
+    const ap = easeOut(seg(t, 15.8 + i * .28, 16.4 + i * .28));
+    ctx.globalAlpha = ap;
+    txt(it[0], 146, 352 + i * 56, { size: 20, color: it[3], weight: "800" });
+    txt(it[1], 178, 348 + i * 56, { size: 18, color: C.tx });
+    txt(it[2], 178, 370 + i * 56, { size: 11, color: C.mu, font: MONO });
+  });
+  ctx.restore();
+
+  const b = easeOut(seg(t, 16.6, 17.4));
+  tarjeta(700, 260, 470, 280, 18, "rgba(99,210,255,.32)");
+  ctx.save(); ctx.globalAlpha = b;
+  txt("LO QUE VE EL DESTINO", 732, 296, { size: 11, color: C.mu, font: MONO, ls: 2.2 });
+  txt("129.213.137.20", 732, 360, { size: 34, color: C.ac, font: MONO, weight: "700" });
+  txt("la IP del circuito, no la tuya", 732, 400, { size: 15, color: C.tx });
+  chip("tu IP no aparece", 732, 460, C.ac, 13);
+  ctx.restore();
+
+  const c = easeOut(seg(t, 17.6, 18.3));
+  txt("Tu tráfico cambia de cara al salir.", 110, 604, { size: 24, alpha: c });
+}
+
+/* ───────── escena 5: el interruptor ───────── */
+function e5(t) {
+  cabecera(t, 19.4, "SIEMPRE EN TU MANO", "La enciendes tú, no la web");
+  const on = easeInOut(seg(t, 20.2, 20.9));
+
+  ctx.save();
+  const bx = 470, by = 330, bw = 220, bh = 96;
+  rr(bx, by, bw, bh, 999);
+  ctx.fillStyle = on > .5 ? "rgba(46,232,138,.16)" : "rgba(143,167,155,.08)";
+  ctx.strokeStyle = on > .5 ? "rgba(46,232,138,.75)" : "rgba(143,167,155,.35)";
+  ctx.lineWidth = 2; ctx.fill(); ctx.stroke();
+  const kx = lerp(bx + 52, bx + bw - 52, on);
+  ctx.shadowColor = "rgba(46,232,138," + (.15 + on * .55) + ")"; ctx.shadowBlur = 30 * on;
+  ctx.fillStyle = on > .5 ? C.ac : "#7d8f86";
+  ctx.beginPath(); ctx.arc(kx, by + bh / 2, 32, 0, 7); ctx.fill();
+  ctx.shadowBlur = 0;
+  txt(on > .5 ? "ENCENDIDA" : "APAGADA", bx + bw / 2, by + bh + 44,
+    { size: 13, color: on > .5 ? C.ac : C.mu, font: MONO, align: "center", ls: 2.4 });
+  ctx.restore();
+
+  const puntos = ["red apagada por defecto", "sesión JWT de 2 horas", "sin histórico de destinos"];
+  puntos.forEach((p, i) => {
+    const ap = easeOut(seg(t, 19.8 + i * .3, 20.5 + i * .3));
+    ctx.save(); ctx.globalAlpha = ap;
+    ctx.fillStyle = C.ac; ctx.beginPath();
+    ctx.arc(830, 320 + i * 52, 4, 0, 7); ctx.fill();
+    txt(p, 850, 320 + i * 52, { size: 18, color: C.tx });
+    ctx.restore();
+  });
+
+  const f = easeOut(seg(t, 21.3, 22));
+  txt("Nada se conecta hasta que pulsas el interruptor.", 110, 604, { size: 23, alpha: f });
+}
+
+/* ───────── escena 6: cierre ───────── */
+function e6(t) {
+  const a = easeOut(seg(t, 22.6, 23.4));
+  const cx = W / 2;
+  ctx.save();
+  ctx.globalAlpha = a;
+  rr(cx - 46, 168, 92, 92, 24);
+  ctx.fillStyle = "rgba(10,24,18,.96)"; ctx.strokeStyle = "rgba(46,232,138,.7)"; ctx.lineWidth = 2;
+  ctx.fill(); ctx.stroke();
+  txt("JN", cx, 216, { size: 32, color: C.ac, font: MONO, weight: "800", align: "center" });
+  txt("Crea tu cuenta.", cx, 330, { size: 46, weight: "800", align: "center", alpha: easeOut(seg(t, 22.9, 23.7)) });
+  txt("Enciende tu red.", cx, 386, { size: 46, weight: "800", color: C.ac, align: "center", alpha: easeOut(seg(t, 23.1, 23.9)) });
+  txt("y0selin.github.io/jumperNET", cx, 470, { size: 18, color: C.tx, font: MONO, align: "center", alpha: easeOut(seg(t, 23.5, 24.2)) });
+  txt("proyecto educativo ASIR · la red solo se activa cuando tú lo decides",
+    cx, 520, { size: 12, color: C.mu, font: MONO, align: "center", ls: 1.4, alpha: easeOut(seg(t, 23.8, 24.5)) });
+  ctx.restore();
+}
+
+const TOTAL = 25.2;
+const ESCENAS = [
+  [0, 4.4, e1], [4.4, 9.6, e2], [9.6, 15.2, e3],
+  [15.2, 19.4, e4], [19.4, 22.6, e5], [22.6, 25.2, e6],
+];
+
+function dibuja(t) {
+  ctx = real;
+  fondo(t);
+
+  for (const [a, b, fn] of ESCENAS) {
+    if (t < a - .3 || t > b + .3) continue;
+    const entra = a === 0 ? 1 : seg(t, a - .3, a + .3);
+    const alfa = entra * (1 - seg(t, b - .3, b + .3));
+    if (alfa <= .002) continue;
+    ctx = octx;
+    octx.clearRect(0, 0, W, H);
+    fn(t);
+    ctx = real;
+    real.save();
+    real.globalAlpha = alfa;
+    real.drawImage(off, 0, 0);
+    real.restore();
+  }
+
+  /* barra de progreso con marcas de escena */
+  const p = clamp(t / TOTAL, 0, 1);
+  ctx.fillStyle = "rgba(255,255,255,.07)"; ctx.fillRect(0, H - 6, W, 6);
+  ctx.fillStyle = C.ac; ctx.fillRect(0, H - 6, W * p, 6);
+  ctx.fillStyle = "rgba(255,255,255,.22)";
+  [0.174, 0.381, 0.603, 0.77, 0.896].forEach((m) => ctx.fillRect(W * m, H - 10, 1, 10));
+}
+
+let t0 = 0, raf = 0;
+window.__iniciar = () => {
+  cancelAnimationFrame(raf);
+  t0 = performance.now();
+  const paso = (t) => { dibuja((t - t0) / 1000); raf = requestAnimationFrame(paso); };
+  raf = requestAnimationFrame(paso);
+};
+window.__parar = () => { cancelAnimationFrame(raf); dibuja(0); };
+window.__poster = () => { dibuja(2.6); return cv.toDataURL("image/jpeg", .86); };
+
+window.__grabar = async (ms, fps) => {
+  const tipos = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+  const mime = tipos.find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m));
+  if (!mime) throw new Error("MediaRecorder no soporta webm");
+  const stream = cv.captureStream(fps);
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 1_300_000 });
+  const trozos = [];
+  rec.ondataavailable = (e) => { if (e.data && e.data.size) trozos.push(e.data); };
+  const parado = new Promise((res) => { rec.onstop = res; });
+  dibuja(0);
+  rec.start(250);
+  window.__iniciar();
+  await new Promise((r) => setTimeout(r, ms));
+  rec.stop();
+  await parado;
+  const bytes = new Uint8Array(await new Blob(trozos, { type: mime }).arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 32768) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 32768));
+  return { base64: btoa(bin), tipo: mime, bytes: bytes.length };
+};
+
+dibuja(0);
+</script>
+</body>
+</html>
