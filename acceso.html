@@ -212,7 +212,7 @@ async function iniciar(){
     const r = await api("POST","/login", {email:$("lg-email").value.trim(), password:$("lg-pass").value}, false);
     TOKEN = r.token; localStorage.setItem("token", TOKEN);
     $("lg-pass").value=""; $("msg-anon").innerHTML="";
-    vistaAutenticada();
+    await cargarMe();
   }catch(e){ errorEn("msg-anon", e.message); }
   finally{ ocupando(btn,false,"Entrar"); }
 }
