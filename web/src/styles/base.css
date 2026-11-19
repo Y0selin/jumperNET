@@ -680,7 +680,7 @@ input[type="range"] { accent-color: var(--acento-1); }
   overflow: hidden;
   border-radius: 16px;
   border: 1px solid var(--borde);
-  background: linear-gradient(180deg, var(--bg-2), var(--bg));
+  background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
   padding: 18px 18px 16px;
   display: grid;
   gap: 10px;
@@ -745,4 +745,4 @@ input[type="range"] { accent-color: var(--acento-1); }
 .tarjeta-doc { display: grid; align-content: start; }
 .sub-titulo { font-size: 15px; letter-spacing: -.01em; margin-bottom: 8px; }
 
-.link-externa:hover { background: var(--bg-3); }
+.link-externa:hover { background: rgb(255 255 255 / .06); }
