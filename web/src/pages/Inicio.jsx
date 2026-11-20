@@ -4,6 +4,7 @@ import VideoPortada from "../components/VideoPortada.jsx";
 import MapaCircuito from "../components/MapaCircuito.jsx";
 import CircuitoHero from "../components/CircuitoHero.jsx";
 import Logo from "../components/Logo.jsx";
+import CampoNodos from "../components/CampoNodos.jsx";
 import { BandaHoy, PildoraHoy, SelloHoy } from "../components/Hoy.jsx";
 import { VERSION, EDICION, PUBLICADA, NOVEDADES } from "../lib/version.js";
 import { FRASES, PIEZAS } from "../lib/contenido.js";
@@ -139,6 +140,7 @@ export default function Inicio() {
   return (
     <>
       <section className="hn-hero" ref={hero} onPointerMove={paralaje} onPointerLeave={suelta}>
+        <CampoNodos />
         <div className="hn-guirnalda" aria-hidden="true">
           <svg viewBox="0 0 1200 52" preserveAspectRatio="none">
             <path d="M-20 6 C 180 52 380 52 600 6 S 1020 52 1220 6" />

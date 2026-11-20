@@ -1015,3 +1015,60 @@ html[data-modo="claro"] .pp .hn-sello { border-color: #b1802f; }
   .pp-nov { grid-template-columns: 1fr; gap: 18px; padding: 22px; }
   .pp-nov-ver { position: static; justify-self: start; order: -1; }
 }
+
+/* ─────────── bienvenida al entrar al panel ─────────── */
+.bienvenida {
+  position: fixed; inset: 0; z-index: 200;
+  display: grid; place-items: center;
+  background: radial-gradient(1200px 700px at 50% 40%, rgb(from var(--acento-1) r g b / .18), transparent 60%),
+              rgb(from var(--bg-1) r g b / .86);
+  backdrop-filter: blur(6px);
+  animation: bienvenida-entra .45s cubic-bezier(.2,.85,.3,1) both;
+}
+.bienvenida-canvas { position: absolute; inset: 0; pointer-events: none; }
+.bienvenida-txt {
+  position: relative; z-index: 2; text-align: center;
+  display: grid; gap: 10px; padding: 24px;
+  animation: bienvenida-subir .6s cubic-bezier(.2,.85,.3,1) both;
+}
+.bienvenida-etq { font-size: 10.5px; letter-spacing: .26em; color: var(--acento-1); }
+.bienvenida-nombre { font-size: clamp(40px, 8vw, 86px); letter-spacing: -.03em; font-weight: 800; line-height: 1; }
+.bienvenida-sub { font-size: 14px; color: var(--texto-suave); max-width: 46ch; margin: 0 auto; }
+.bienvenida-pulso { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+.bienvenida-pulso i {
+  width: 9px; height: 9px; border-radius: 50%; background: var(--acento-1);
+  animation: bienvenida-latido .9s ease-in-out infinite;
+}
+.bienvenida-pulso i:nth-child(2) { animation-delay: .15s; background: var(--acento-2); }
+.bienvenida-pulso i:nth-child(3) { animation-delay: .3s; background: var(--acento-3); }
+@keyframes bienvenida-entra { from { opacity: 0; } to { opacity: 1; } }
+@keyframes bienvenida-subir { from { opacity: 0; transform: translateY(18px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes bienvenida-latido { 50% { transform: scale(1.6); opacity: .5; } }
+
+/* ─────────── cuenta: avatar con anillo giratorio ─────────── */
+.cuenta-avatar-anillo::before {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from 0deg, var(--acento-1), var(--acento-2), var(--acento-3), var(--acento-1));
+  animation: cuenta-anillo 4s linear infinite;
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  filter: drop-shadow(0 0 8px rgb(from var(--acento-1) r g b / .5));
+}
+@keyframes cuenta-anillo { to { transform: rotate(360deg); } }
+
+/* ─────────── cuenta: tarjeta identidad en gradiente ─────────── */
+.tarjeta.apa.brillo:has(.cuenta-avatar-anillo) {
+  background: linear-gradient(135deg,
+    rgb(from var(--acento-1) r g b / .12),
+    rgb(from var(--panel) r g b / var(--glass)) 40%,
+    rgb(from var(--acento-2) r g b / .08));
+  border-color: rgb(from var(--acento-1) r g b / .35);
+}
+
+/* ─────────── campo de nodos del hero ─────────── */
+.hn-hero { position: relative; overflow: hidden; }
+.campo-nodos {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  z-index: 0; opacity: .75; pointer-events: auto; cursor: crosshair;
+}
+.hn-hero > *:not(.campo-nodos) { position: relative; z-index: 1; }

@@ -64,11 +64,11 @@ export const PRESETS = {
     efectos: { "--glow": "0.9", "--glass": "0.55", "--vel-anim": "1.1" },
   },
   "luz-blanca": {
-    nombre: "Luz Blanca",
+    nombre: "Luz Aurora",
     variables: {
-      "--bg-1": "#f4f6fa", "--bg-2": "#e8ecf4", "--panel": "255, 255, 255", "--panel-sol": "255,255,255",
-      "--borde": "#d0d9e6", "--acento-1": "#3b7ddd", "--acento-2": "#199d70",
-      "--acento-3": "#6d5ce6", "--texto": "#131b2a", "--texto-suave": "#5c6a83",
+      "--bg-1": "#f0f4ff", "--bg-2": "#e6ecff", "--panel": "255, 255, 255", "--panel-sol": "124, 77, 255",
+      "--borde": "#c9d4f0", "--acento-1": "#7c4dff", "--acento-2": "#00b8d9",
+      "--acento-3": "#ff5c93", "--texto": "#0f1233", "--texto-suave": "#5b6490",
     },
     forma: { "--radio": "12px", "--radio-2": "8px", "--tam-fuente": "14.5px", "--fuente": '"Inter", system-ui' },
     efectos: { "--glow": "0.3", "--glass": "0.9", "--vel-anim": "1" },

@@ -99,6 +99,7 @@ export default function Cuenta({ yo: yoInicial, aviso, alSalir, irRed, alRecarga
   const inicial = nombreVisible.trim().charAt(0).toUpperCase();
   const alta = yo?.alta ? new Date(yo.alta * 1000) : (jwt?.cuerpo?.iat ? new Date(jwt.cuerpo.iat * 1000) : null);
   const dias = alta ? Math.max(1, Math.floor((Date.now() - alta.getTime()) / 86400000)) : null;
+  const nivel = dias == null ? "nuevo" : dias < 7 ? "novato" : dias < 30 ? "explorador" : dias < 90 ? "veterano" : "leyenda";
 
   return (
     <div className="apa" style={{ display: "grid", gap: 16 }}>
@@ -112,12 +113,12 @@ export default function Cuenta({ yo: yoInicial, aviso, alSalir, irRed, alRecarga
       {/* ── identidad + métricas ── */}
       <div className="tarjeta apa brillo">
         <div className="identidad">
-          <div style={{ position: "relative", width: 62, height: 62, flex: "none" }}>
+          <div className="cuenta-avatar-anillo" style={{ position: "relative", width: 74, height: 74, flex: "none" }}>
             {yo?.foto
-              ? <img src={yo.foto} alt="tu foto" style={{ width: 62, height: 62, borderRadius: 16, objectFit: "cover", border: "1px solid var(--borde)" }} />
-              : <div className="avatar flota" style={{ fontSize: 20 }}>{inicial}</div>}
+              ? <img src={yo.foto} alt="tu foto" style={{ width: 62, height: 62, borderRadius: 18, objectFit: "cover", border: "2px solid var(--bg-1)", position: "absolute", top: 6, left: 6 }} />
+              : <div className="avatar flota" style={{ fontSize: 22, width: 62, height: 62, position: "absolute", top: 6, left: 6 }}>{inicial}</div>}
             <label className="btn" title={subiendoFoto ? "subiendo…" : "cambiar tu foto de perfil"}
-              style={{ position: "absolute", bottom: -6, right: -8, padding: "2px 7px", fontSize: 11, borderRadius: 99, cursor: "pointer", background: "var(--bg-1)" }}>
+              style={{ position: "absolute", bottom: -4, right: -6, padding: "2px 8px", fontSize: 11, borderRadius: 99, cursor: "pointer", background: "var(--bg-1)" }}>
               {subiendoFoto ? <span className="spin" /> : "📷"}
               <input type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }} onChange={elegirFoto} />
             </label>
@@ -155,6 +156,9 @@ export default function Cuenta({ yo: yoInicial, aviso, alSalir, irRed, alRecarga
             <span className={`chip ${yo?.plan === "pro" ? "acento" : ""} mono`} style={{ fontSize: 10.5 }}
               title={yo?.plan === "pro" ? "ha el número de saltos (3…7) y refresca cada 10 h" : "3 saltos fijos · refresco 1 vez al día"}>
               {yo?.plan === "pro" ? "⚡ plan pro" : yo?.plan === "empresarial" ? "🏛 empresarial" : "🌱 plan free"}
+            </span>
+            <span className="chip mono" style={{ fontSize: 10.5, color: "var(--acento-2)", borderColor: "rgb(from var(--acento-2) r g b / .4)", background: "rgb(from var(--acento-2) r g b / .09)" }}>
+              ★ nivel {nivel}
             </span>
             {yo?.foto && !subiendoFoto && (
               <button className="btn" style={{ padding: "2px 8px", fontSize: 10 }} onClick={quitarFoto} title="Quitar tu foto de perfil">✕ foto</button>
