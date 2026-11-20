@@ -621,7 +621,13 @@ igual(geoLateral.der <= 0 || geoLateral.ancho === 0, true, "en móvil la barra l
 igual((await pagina.$(".hamburguesa")) !== null, true, "botón de menú presente en móvil");
 await pagina.click(".hamburguesa");
 ok("clic → abrir menú (hamburguesa)");
-await espera(600);
+/* la barra tiene una transición: se espera a que termine, no a un tiempo fijo */
+await pagina.waitForFunction(() => {
+  const e = document.querySelector(".lateral");
+  if (!e) return false;
+  const r = e.getBoundingClientRect();
+  return r.width > 0 && r.left >= -1;
+}, { timeout: 4000 }).catch(() => {});
 const geoAbierto = await pagina.$eval(".lateral", (e) => {
   const r = e.getBoundingClientRect();
   return { izq: Math.round(r.left), der: Math.round(r.right), ancho: Math.round(r.width) };

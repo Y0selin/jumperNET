@@ -8,9 +8,9 @@ import { EQUIPO, NOMBRES } from "../lib/equipo.js";
    habla de puertos ni de cifrado. */
 
 const PIEZAS_LOGO = [
-  { n: "01", t: "Tres relés", d: "Los tres nodos del circuito, dibujados como paradas en zigzag. No es un rayo: es una ruta." },
-  { n: "02", t: "El salto", d: "El trazo que sube y cambia de dirección es el paquete viajando de un relé al siguiente." },
-  { n: "03", t: "La salida", d: "La punta violeta es el exit: lo último que ve internet antes de devolverte la respuesta." },
+  { n: "01", t: "Tres relés", d: "Los tres nodos —oro, crema y coral— marcan las paradas del circuito. No es un rayo: es una ruta." },
+  { n: "02", t: "El salto", d: "El trazo que baja y gira es la J de JumperNET: el paquete viajando de un relé al siguiente." },
+  { n: "03", t: "La salida", d: "La punta dorada es el exit: lo último que ve internet antes de devolverte la respuesta." },
 ];
 
 function inclina(e) {

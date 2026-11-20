@@ -1855,11 +1855,11 @@ html[data-modo="claro"] .fondo-red { opacity: .82; }
 }
 .eq-logo-foco:hover .logo-jn { transform: translateY(-3px) rotate(-1deg); }
 .eq-logo-foco .logo-jn-nodo,
-.eq-logo-foco .logo-jn-salto,
-.eq-logo-foco .logo-jn-punta { transition: filter .3s ease; }
-.eq-logo-foco.es-01 .logo-jn-nodo { filter: drop-shadow(0 0 7px #ff5a36) brightness(1.35); }
-.eq-logo-foco.es-02 .logo-jn-salto { filter: drop-shadow(0 0 8px #ff5a36); }
-.eq-logo-foco.es-03 .logo-jn-punta { filter: drop-shadow(0 0 9px #8b7bff) brightness(1.45); }
+.eq-logo-foco .logo-jn-ruta,
+.eq-logo-foco .logo-jn-salida { transition: filter .3s ease; }
+.eq-logo-foco.es-01 .logo-jn-nodo { filter: drop-shadow(0 0 8px #f0c97a) brightness(1.35); }
+.eq-logo-foco.es-02 .logo-jn-ruta { filter: drop-shadow(0 0 8px #fff8ea) brightness(1.25); }
+.eq-logo-foco.es-03 .logo-jn-salida { filter: drop-shadow(0 0 9px #ec7a56) brightness(1.5); }
 .eq-logo-anillo {
   position: absolute;
   inset: 16%;

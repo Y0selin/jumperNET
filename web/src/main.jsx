@@ -6,5 +6,6 @@ import "./styles/animaciones.css";
 import "./styles/elevacion.css";
 import "./styles/sitio.css";
 import "./styles/aurora.css";
+import "./styles/navidad.css";
 
 createRoot(document.getElementById("root")).render(<App />);

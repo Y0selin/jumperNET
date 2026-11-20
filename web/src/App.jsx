@@ -217,7 +217,7 @@ export default function App() {
 
           <a className="lateral-promo" href="#/tarifas">
             <span className="lateral-promo-estrella" aria-hidden>✦</span>
-            <span><b>Diciembre en red</b><small>7 saltos Pro al precio de 3</small></span>
+            <span><b>Navidad en red</b><small>7 saltos Pro al precio de 3</small></span>
           </a>
 
           <div className="lateral-pie">
@@ -225,7 +225,7 @@ export default function App() {
               <span className={`punto-vivo ${activo ? "" : "apagado"}`} />
               {activo ? "red activa · 3 saltos" : "red apagada"}
             </span>
-            <span style={{ color: "rgb(255 255 255 / .35)" }}>jumpernet.duckdns.org</span>
+            <span className="lateral-pie-url">jumpernet.duckdns.org</span>
           </div>
         </aside>
 

@@ -21,6 +21,29 @@ const DESTINOS = [
   { r: "/dudas", n: "06", t: "Dudas", d: "La IP, la latencia, lo que se guarda de ti y en qué se diferencia (y en qué no) de Tor.", ico: "?" },
 ];
 
+/* Luces de la guirnalda: posición sobre el cable, color y retardo. */
+const LUCES_GUIRNALDA = [
+  { x: 5, y: 17, c: "#f0c97a", d: "0s" },
+  { x: 13, y: 31, c: "#ec7a56", d: "-.5s" },
+  { x: 22, y: 41, c: "#71c6a8", d: "-1s" },
+  { x: 31, y: 43, c: "#f0c97a", d: "-1.5s" },
+  { x: 40, y: 32, c: "#ec7a56", d: "-2s" },
+  { x: 48, y: 15, c: "#71c6a8", d: "-2.5s" },
+  { x: 56, y: 18, c: "#f0c97a", d: "-3s" },
+  { x: 65, y: 33, c: "#ec7a56", d: "-3.5s" },
+  { x: 74, y: 42, c: "#71c6a8", d: "-4s" },
+  { x: 83, y: 40, c: "#f0c97a", d: "-4.5s" },
+  { x: 92, y: 26, c: "#ec7a56", d: "-5s" },
+  { x: 97, y: 11, c: "#71c6a8", d: "-5.5s" },
+];
+
+function diasParaNavidad() {
+  const hoy = new Date();
+  const ano = hoy.getMonth() === 11 && hoy.getDate() > 25 ? hoy.getFullYear() + 1 : hoy.getFullYear();
+  const navidad = new Date(ano, 11, 25);
+  return Math.max(0, Math.ceil((navidad - hoy) / 86400000));
+}
+
 function Typewriter({ frases, velocidad = 46 }) {
   const [txt, setTxt] = useState("");
   const [i, setI] = useState(0);
@@ -75,6 +98,10 @@ export default function Inicio() {
   const [sinApi, setSinApi] = useState(false);
   const [abierta, setAbierta] = useState(-1);
   const [recarga, setRecarga] = useState(0);
+  const diasNavidad = diasParaNavidad();
+  const cuentaNavidad = diasNavidad === 0
+    ? "hoy · 25/12"
+    : `faltan ${diasNavidad} ${diasNavidad === 1 ? "día" : "días"}`;
 
   useEffect(() => {
     let montado = true;
@@ -118,6 +145,20 @@ export default function Inicio() {
   return (
     <>
       <section className="hn-hero" ref={hero} onPointerMove={paralaje} onPointerLeave={suelta}>
+        <div className="hn-guirnalda" aria-hidden="true">
+          <svg viewBox="0 0 1200 52" preserveAspectRatio="none">
+            <path d="M-20 6 C 180 52 380 52 600 6 S 1020 52 1220 6" />
+          </svg>
+          {LUCES_GUIRNALDA.map((luz, i) => (
+            <i key={i} style={{
+              "--x": `${luz.x}%`,
+              "--y": `${luz.y}px`,
+              "--c": luz.c,
+              "--d": luz.d,
+            }} />
+          ))}
+        </div>
+
         <div className="hn-terciopelo" aria-hidden>
           <i className="hn-luz hn-luz-a" />
           <i className="hn-luz hn-luz-b" />
@@ -132,13 +173,13 @@ export default function Inicio() {
         <div className="hn-hero-txt">
           <a className="hn-promo" href="#/tarifas">
             <span className="hn-promo-estrella" aria-hidden>✦</span>
-            <span className="hn-promo-txt"><b>Diciembre en red</b><span>7 saltos Pro al precio de 3</span></span>
-            <span className="hn-promo-tag mono">hasta 31/12</span>
+            <span className="hn-promo-txt"><b>Navidad en red</b><span>7 saltos Pro al precio de 3</span></span>
+            <span className="hn-promo-tag mono">{cuentaNavidad}</span>
             <span className="hn-promo-flecha" aria-hidden>→</span>
           </a>
 
           <span className="hn-eyebrow">
-            <span className="punto-vivo" /> jumpernet · proxy SOCKS5 · 3 saltos · la enciendes tú
+            <span className="punto-vivo" /> jumpernet · edición de diciembre · proxy SOCKS5 · 3 saltos
           </span>
 
           <h1 className="hn-titulo">
@@ -199,6 +240,7 @@ export default function Inicio() {
         </div>
 
         <div className="hn-hero-visual">
+          <span className="hn-sello mono" aria-hidden="true"><small>Navidad</small><b>25</b><small>dic</small></span>
           <span className="hn-globo hn-globo-a mono" aria-hidden>JENC</span>
           <span className="hn-globo hn-globo-b mono" aria-hidden>sin logs</span>
           <span className="hn-globo hn-globo-c mono" aria-hidden>exit 80/443</span>
