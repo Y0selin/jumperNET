@@ -363,10 +363,8 @@ body::before {
   isolation: isolate;
   overflow: clip;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.06fr) minmax(0, .94fr);
   align-items: center;
-  justify-items: center;
-  text-align: center;
   gap: clamp(30px, 5vw, 66px);
   min-height: min(760px, calc(100dvh - 150px));
   padding: clamp(12px, 2vw, 28px) 0 clamp(24px, 4vw, 48px);
@@ -435,7 +433,7 @@ body::before {
 .hn-lead { margin: 14px 0 0; max-width: 53ch; font-size: 14.5px; line-height: 1.75; color: var(--texto-suave); }
 .hn-lead b { color: var(--texto); font-weight: 600; }
 
-.hn-acciones { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; margin-top: 28px; }
+.hn-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 28px; }
 .hn-play {
   display: inline-flex;
   align-items: center;
@@ -467,7 +465,7 @@ body::before {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  margin: 34px auto 0;
+  margin: 34px 0 0;
   padding-top: 18px;
   border-top: 1px solid rgb(255 255 255 / .09);
   max-width: 520px;
@@ -1536,8 +1534,6 @@ html[data-modo="claro"] .fondo-red { opacity: .82; }
   align-items: center;
   gap: 11px;
   margin-top: 26px;
-  margin-left: auto;
-  margin-right: auto;
   max-width: 100%;
   color: var(--texto-suave);
   text-decoration: none;

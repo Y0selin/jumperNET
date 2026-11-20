@@ -102,6 +102,12 @@ export default function Sitio({ ruta, enSesion, children }) {
       <div className="pp-luz" ref={luz} aria-hidden />
 
       <header className={`pp-nav ${pegada ? "pegada" : ""}`}>
+        <a className="pp-marca" href="#/" aria-label="JumperNET, ir a la portada">
+          <Logo tam={40} />
+          <span className="pp-marca-txt">Jumper<span>NET</span><i className="cursor">_</i></span>
+          <span className="pp-marca-ver mono">v{VERSION}</span>
+        </a>
+
         <div className="pp-nav-centro" aria-hidden>
           <span className="pp-nav-seccion mono">// {TITULOS[activa] || "jumpernet"}</span>
           <span className="pp-nav-linea" />
@@ -128,12 +134,6 @@ export default function Sitio({ ruta, enSesion, children }) {
             </>
           )}
         </div>
-
-        <a className="pp-marca pp-marca-der" href="#/" aria-label="JumperNET, ir a la portada">
-          <Logo tam={40} />
-          <span className="pp-marca-txt">Jumper<span>NET</span><i className="cursor">_</i></span>
-          <span className="pp-marca-ver mono">v{VERSION}</span>
-        </a>
 
         <span className="pp-progreso" style={{ transform: `scaleX(${progreso})` }} aria-hidden />
       </header>
