@@ -171,7 +171,7 @@ export default function Inicio() {
                 <i key={`${onda}-${i}`} style={{ "--i": i }} aria-hidden="true">{letra}</i>
               ))}
             </button>
-            <span className="hn-lema">tu conexión <em>no va sola</em></span>
+            <span className="hn-lema">tu conexión <span className="hn-lema-em">no va sola</span></span>
           </h1>
 
           <p className="hn-rotativa mono"><Typewriter frases={FRASES} /></p>

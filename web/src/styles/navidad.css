@@ -1198,3 +1198,10 @@ html[data-modo="claro"] .pp .hn-sello { border-color: #b1802f; }
   from { opacity: .6; transform: scale(1); }
   to { opacity: 1; transform: scale(1.15); }
 }
+
+/* ─────────── lema del hero ─────────── */
+.hn-lema-em {
+  font-style: italic;
+  color: #FF6347;
+  font-weight: 600;
+}
