@@ -294,7 +294,13 @@ for (const frac of [0.4, 0.75, 1]) {
 const revelados = (await pagina.$$(".revela.visto")).length, totalRevela = (await pagina.$$(".revela")).length;
 igual(revelados >= 3, true, `secciones reveladas al hacer scroll (${revelados}/${totalRevela})`);
 await pagina.evaluate(() => window.scrollTo(0, 0));
-await espera(450);
+/* el dock se oculta mientras el vídeo está a la vista: esperar a que
+   termine su transición de vuelta, no a un tiempo fijo */
+await pagina.waitForFunction(() => {
+  const d = document.querySelector(".pp-dock");
+  return d && Number(getComputedStyle(d).opacity) > .95;
+}, { timeout: 4000 }).catch(() => {});
+await espera(80);
 
 console.log("\n== 1a · PÁGINAS PROPIAS (no anclas) ==");
 const enlacesNav = await pagina.$$eval(".dock-enlace", (as) => as.map((a) => a.getAttribute("href")));
@@ -506,6 +512,23 @@ if (!botonCopiar) {
   const portapapeles = await pagina.evaluate(() => navigator.clipboard.readText()).catch(() => "");
   igual(portapapeles, "129.213.137.20", "el portapapeles recibe la IP de salida real");
 }
+
+console.log("\n== 4c · DIAGNÓSTICO DE LA SESIÓN ==");
+await clic("Ejecutar diagnóstico");
+await espera(1200);
+const filasDiagnostico = await pagina.$$(".pn-diag-fila");
+igual(filasDiagnostico.length, 6, "el diagnóstico muestra sus 6 comprobaciones");
+igual(await incluye("IP que ve internet"), true, "el diagnóstico incluye la salida real");
+igual(await incluye("JWT válido"), true, "el diagnóstico valida la sesión JWT");
+await clic("Copiar informe");
+await espera(250);
+const informe = await pagina.evaluate(() => navigator.clipboard.readText()).catch(() => "");
+igual(informe.includes("JumperNET · diagnóstico de red"), true, "el informe se copia con su cabecera");
+igual(informe.includes("129.213.137.20"), true, "el informe incluye la IP de salida");
+igual(await pagina.evaluate(() => !!localStorage.getItem("jumpernet-diagnostico-v1")), true, "el último diagnóstico queda guardado en el navegador");
+await pagina.$eval(".pn-diag", (e) => e.scrollIntoView({ block: "center" }));
+await espera(350);
+await captura("05b-diagnostico");
 
 console.log("\n== 5 · COMPROBACIÓN REAL DEL CIRCUITO ==");
 await escribe("input[type=password]", "clave-mala");

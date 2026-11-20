@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { me, conectar, rotar, desconectar_, geoApi, salida, comprobar, nodosVivos, nodos as nodosApi, miNodo } from "../lib/api.js";
 import { Stat, Tuberia, AnilloJwt, Hecho } from "./Piezas.jsx";
 import Nodos from "./Nodos.jsx";
+import Diagnostico from "./Diagnostico.jsx";
 import Revela from "./Revela.jsx";
 
 /* ── interruptor de red grande ── */
@@ -660,6 +661,8 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
               )}
             </div>
           </Revela>
+
+          <Revela><Diagnostico yo={yo} aviso={aviso} /></Revela>
 
           {/* ── ruta en vivo ── */}
           <Revela className="tarjeta pn-ruta">
