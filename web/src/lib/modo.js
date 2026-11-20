@@ -29,18 +29,6 @@ export const MODOS = {
   },
 };
 
-export function cargaModo() {
-  try {
-    const m = localStorage.getItem(CLAVE);
-    if (m === "oscuro" || m === "claro") return m;
-  } catch { /* almacenamiento bloqueado */ }
-  return "claro";
-}
-
-export function guardaModo(modo) {
-  try { localStorage.setItem(CLAVE, modo); } catch { /* sin persistencia */ }
-}
-
 export function aplicaModo(modo) {
   const m = modo === "oscuro" ? "oscuro" : "claro";
   const html = document.documentElement;
@@ -50,4 +38,21 @@ export function aplicaModo(modo) {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute("content", MODOS[m].color);
   return m;
+}
+
+/* Hook de React para usar el modo en componentes */
+export function useModo() {
+  const [modo, setModo] = React.useState(() => {
+    try {
+      const persisted = localStorage.getItem(CLAVE);
+      return persisted || "claro";
+    } catch { return "claro"; }
+  });
+
+  React.useEffect(() => {
+    document.dispatchEvent(new Event("toggle-modo"));
+    aplicaModo(modo);
+  }, [modo]);
+
+  return { modo, setModo };
 }

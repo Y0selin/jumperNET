@@ -104,3 +104,19 @@ export function cargaTema() {
   return JSON.parse(JSON.stringify(PRESETS["navidad-clara"]));
 }
 export function temaPorId(id) {  return JSON.parse(JSON.stringify(PRESETS[id] || PRESETS["navidad-clara"])); }
+
+export function useTemas() {
+  const [tema, setTema] = React.useState(() => {
+    try {
+      const persisted = localStorage.getItem(CLAVE);
+      return persisted ? JSON.parse(persisted) : PRESETS["navidad-clara"];
+    } catch { return PRESETS["navidad-clara"]; }
+  });
+
+  React.useEffect(() => {
+    document.dispatchEvent(new Event("toggle-tema"));
+    aplicaTema(tema);
+  }, [tema]);
+
+  return { tema, setTema };
+}

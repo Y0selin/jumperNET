@@ -49,18 +49,15 @@ html[data-modo="claro"] :focus-visible { box-shadow: 0 0 0 2px rgb(36 91 71 / .6
   place-items: center;
   flex: none;
   overflow: hidden;
-  border: 1px solid rgb(255 248 234 / .24);
-  background:
-    radial-gradient(circle at 28% 20%, #2e6d55 0, #1b4b39 46%, #11362a 100%);
-  color: #FFFFFF;
-  box-shadow:
-    0 10px 24px -14px rgb(12 36 27 / .95),
-    inset 0 1px 0 rgb(255 255 255 / .18);
+  border-radius: 14px;
+  border: 1px solid var(--borde);
+  background: linear-gradient(145deg, var(--bg-2), var(--sup-1));
+  box-shadow: 0 8px 20px -12px rgb(20 40 62 / .4);
   transition: transform .35s cubic-bezier(.2, .8, .25, 1), box-shadow .35s ease;
 }
 .logo-jn::before,
 .logo-jn::after { display: none; }
-.logo-jn svg { width: 84%; height: 84%; overflow: visible; }
+.logo-jn svg { width: 86%; height: 86%; overflow: visible; }
 .logo-jn-ruta {
   fill: none;
   stroke: #FFFFFF;

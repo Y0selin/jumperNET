@@ -1,0 +1,119 @@
+/* Variables de tema */
+:root {
+  /* Modo claro */
+  --bg-1: #FFFFFF;
+  --bg-2: #EFF8FF;
+  --panel: 255, 255, 255;
+  --panel-sol: 255, 99, 71;
+  --borde: #D6E4F0;
+  --acento-1: #FF6347;
+  --acento-2: #33D6C0;
+  --acento-3: #D6A84B;
+  --texto: #14283E;
+  --texto-suave: #3A5068;
+  --fuente: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  --fuente-mono: "Consolas", "Monaco", monospace;
+}
+
+/* Reset y base */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--fuente);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg-1);
+  color: var(--texto);
+}
+
+/* Modo oscuro */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-1: #0B1320;
+    --bg-2: #111B2E;
+    --panel: 17, 27, 46;
+    --panel-sol: 255, 99, 71;
+    --borde: #2A3A55;
+    --acento-1: #FF6347;
+    --acento-2: #33D6C0;
+    --acento-3: #D6A84B;
+    --texto: #E8F0F8;
+    --texto-suave: #A8B8CC;
+  }
+}
+
+/* Contenedor principal */
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.contenido {
+  flex: 1;
+  width: 100%;
+}
+
+.pagina {
+  padding: 2rem 1rem;
+}
+
+/* Footer */
+.footer {
+  padding: 1rem 2rem;
+  background: var(--bg-2);
+  margin-top: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer-enlaces a {
+  margin-left: 1rem;
+  color: var(--texto);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color .2s;
+}
+
+.footer-enlaces a:hover {
+  color: var(--acento-1);
+}
+
+.footer-footer {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.footer-modo {
+  background: none;
+  border: none;
+  color: var(--acento-1);
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .pp-nav-acciones .pp-btn-modo,
+  .pp-nav-acciones .pp-btn-acceso {
+    font-size: 11px;
+    padding: "4px 6px";
+  }
+  
+  .footer {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+}
