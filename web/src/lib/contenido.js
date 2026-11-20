@@ -18,6 +18,7 @@ export const ENLACES = [
   { ruta: "/funciona", texto: "Cómo funciona", corto: "Funciona", ico: "⌁" },
   { ruta: "/tarifas", texto: "Tarifas", corto: "Tarifas", ico: "◇" },
   { ruta: "/dudas", texto: "Dudas", corto: "Dudas", ico: "?" },
+  { ruta: "/recursos", texto: "Recursos", corto: "Recursos", ico: "⌬" },
 ];
 
 export const PIEZAS = [

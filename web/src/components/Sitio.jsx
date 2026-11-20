@@ -22,6 +22,7 @@ const TITULOS = {
   "/funciona": "Cómo funciona",
   "/tarifas": "Tarifas",
   "/dudas": "Dudas",
+  "/recursos": "Recursos",
   "/descargas": "Descargas",
   "/acceso": "Entrar o crear cuenta",
   "/panel": "Panel",

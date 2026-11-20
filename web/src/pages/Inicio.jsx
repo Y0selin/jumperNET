@@ -387,6 +387,31 @@ export default function Inicio() {
         <Revela retardo={1}><VideoPortada /></Revela>
       </section>
 
+      <section id="demo" className="pp-seccion pp-video-seccion">
+        <Revela className="pp-cab">
+          <span className="migas">descubre jumpernet en acción</span>
+          <h2 className="pp-h2">El viaje <span className="texto-gradiente">completo</span></h2>
+          <p className="pp-sub2 nota">
+            Un recorrido en vídeo del proyecto: cómo se monta el circuito, cómo se enciende
+            y qué ve cada salto. Reprodúcelo con controles y a pantalla completa.
+          </p>
+        </Revela>
+        <Revela retardo={1}>
+          <div className="tarjeta" style={{ padding: 0, overflow: "hidden", borderRadius: 20 }}>
+            <video
+              controls
+              preload="metadata"
+              playsInline
+              poster={`${import.meta.env.BASE_URL || "./"}video/portada.jpg`}
+              style={{ display: "block", width: "100%", height: "auto", background: "#000" }}
+            >
+              <source src={`${import.meta.env.BASE_URL || "./"}video/JumperNET_El_Viaje.mp4`} type="video/mp4" />
+              Tu navegador no puede reproducir este vídeo.
+            </video>
+          </div>
+        </Revela>
+      </section>
+
       <Revela className="pp-metricas tarjeta">
         <div className="pp-metricas-cab">
           <span className="etiqueta-viva">la red ahora mismo</span>

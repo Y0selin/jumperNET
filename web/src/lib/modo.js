@@ -18,13 +18,13 @@ export const MODOS = {
   },
   oscuro: {
     nombre: "Oscuro",
-    color: "#06050b",
+    color: "#0B1320",
     vars: {
-      "--bg-1": "#06050b", "--bg-2": "#0a0812",
-      "--panel": "22, 19, 32", "--panel-sol": "255, 90, 54",
-      "--borde": "#2a2438", "--acento-1": "#ff5a36",
-      "--acento-2": "#8b7bff", "--acento-3": "#33d6c0",
-      "--texto": "#f4f0e8", "--texto-suave": "#a49dae",
+      "--bg-1": "#0B1320", "--bg-2": "#111B2E",
+      "--panel": "17, 27, 46", "--panel-sol": "255, 99, 71",
+      "--borde": "#2A3A55", "--acento-1": "#FF6347",
+      "--acento-2": "#33D6C0", "--acento-3": "#D6A84B",
+      "--texto": "#E8F0F8", "--texto-suave": "#A8B8CC",
     },
   },
 };

@@ -14,6 +14,7 @@ import Inicio from "./pages/Inicio.jsx";
 import Proyecto from "./pages/Proyecto.jsx";
 import EquipoPagina from "./pages/EquipoPagina.jsx";
 import Usos from "./pages/Usos.jsx";
+import Recursos from "./pages/Recursos.jsx";
 import Funciona from "./pages/Funciona.jsx";
 import TarifasPagina from "./pages/TarifasPagina.jsx";
 import Dudas from "./pages/Dudas.jsx";
@@ -109,6 +110,7 @@ export default function App() {
   if (!esPanel) {
     let pagina = <Inicio />;
     if (activa === "/usos") pagina = <Usos />;
+    else if (activa === "/recursos") pagina = <Recursos />;
     else if (activa === "/proyecto") pagina = <Proyecto />;
     else if (activa === "/equipo") pagina = <EquipoPagina />;
     else if (activa === "/funciona") pagina = <Funciona />;
