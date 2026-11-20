@@ -7,15 +7,15 @@
    Todo bajo variables CSS: el Diseñador de Ajustes las reescribe en vivo.
    ============================================================ */
 :root {
-  --bg-1: #f0f6fa;
-  --bg-2: #e8f0f6;
+  --bg-1: #F5F9FC;
+  --bg-2: #EAF3FA;
   --panel: 255, 255, 255;
-  --panel-sol: 30, 120, 180;
-  --borde: #d0dde6;
-  --acento-1: #e85a2a;
-  --acento-2: #3b82f6;
-  --acento-3: #d97706;
-  --texto: #1a2332;
+  --panel-sol: 22, 125, 104;
+  --borde: #d4e0ea;
+  --acento-1: #FF6347;
+  --acento-2: #167D68;
+  --acento-3: #D6A84B;
+  --texto: #17283B;
   --texto-suave: #5a6b7c;
 
   --radio: 12px;
@@ -41,7 +41,7 @@ html { scroll-behavior: smooth; }
 html, body, #root { min-height: 100vh; }
 
 body {
-  background: linear-gradient(180deg, #f0f6fa 0%, #e8f0f6 50%, #f5f9fc 100%);
+  background: #F5F9FC;
   color: var(--texto);
   font-family: var(--fuente), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: var(--tam-fuente);

@@ -31,7 +31,7 @@
 #root { position: relative; z-index: 1; }
 
 body {
-  background: linear-gradient(180deg, #f0f6fa 0%, #e8f0f6 50%, #f5f9fc 100%);
+  background: #F5F9FC;
   color: var(--texto);
   font-family: var(--fuente);
   font-size: var(--tam-fuente);
@@ -39,16 +39,8 @@ body {
 }
 
 body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(900px 640px at 88% -12%, rgb(139 123 255 / .12), transparent 70%),
-    radial-gradient(760px 540px at -6% 18%, rgb(255 90 54 / .08), transparent 70%),
-    radial-gradient(700px 520px at 55% 105%, rgb(51 214 192 / .06), transparent 70%),
-    linear-gradient(180deg, #f0f6fa, #e8f0f6 55%, #f5f9fc);
+  content: none;
+  display: none;
 }
 
 ::selection { background: var(--acento-1); color: #140a06; }

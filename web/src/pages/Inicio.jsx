@@ -248,6 +248,39 @@ export default function Inicio() {
             </div>
             <CircuitoHero />
             <span className="hn-pie-visual mono">toca una parada · enciende o apaga la red</span>
+
+            <svg className="hn-arbol-navidad" viewBox="0 0 200 240" aria-hidden="true">
+              <g className="arbol-conexiones">
+                <line x1="100" y1="20" x2="60" y2="60" />
+                <line x1="100" y1="20" x2="140" y2="60" />
+                <line x1="60" y1="60" x2="40" y2="110" />
+                <line x1="60" y1="60" x2="80" y2="110" />
+                <line x1="140" y1="60" x2="120" y2="110" />
+                <line x1="140" y1="60" x2="160" y2="110" />
+                <line x1="40" y1="110" x2="30" y2="170" />
+                <line x1="80" y1="110" x2="70" y2="170" />
+                <line x1="120" y1="110" x2="130" y2="170" />
+                <line x1="160" y1="110" x2="170" y2="170" />
+                <line x1="30" y1="170" x2="100" y2="200" />
+                <line x1="70" y1="170" x2="100" y2="200" />
+                <line x1="130" y1="170" x2="100" y2="200" />
+                <line x1="170" y1="170" x2="100" y2="200" />
+              </g>
+              <g className="arbol-nodos">
+                <circle cx="100" cy="20" r="5" className="nodo-estrella" />
+                <circle cx="60" cy="60" r="4" />
+                <circle cx="140" cy="60" r="4" />
+                <circle cx="40" cy="110" r="4" />
+                <circle cx="80" cy="110" r="4" />
+                <circle cx="120" cy="110" r="4" />
+                <circle cx="160" cy="110" r="4" />
+                <circle cx="30" cy="170" r="4" />
+                <circle cx="70" cy="170" r="4" />
+                <circle cx="130" cy="170" r="4" />
+                <circle cx="170" cy="170" r="4" />
+                <circle cx="100" cy="200" r="5" className="nodo-tronco" />
+              </g>
+            </svg>
           </div>
         </div>
       </section>
