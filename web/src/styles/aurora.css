@@ -1169,6 +1169,27 @@ body::before {
   transition: transform .25s ease, border-color .25s ease;
 }
 .rep-boton:hover { transform: translateY(-2px); border-color: rgb(from var(--acento-1) r g b / .5); }
+.rep-fila { display: flex; align-items: center; gap: 8px; }
+.rep-parar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgb(from var(--acento-1) r g b / .38);
+  background: rgb(from var(--acento-1) r g b / .1);
+  color: var(--texto);
+  font-family: var(--fuente-mono);
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  transition: transform .2s ease, border-color .2s ease, background .2s ease;
+}
+.rep-parar:hover { transform: translateY(-1px); border-color: var(--acento-1); background: rgb(from var(--acento-1) r g b / .18); }
+.rep-parar span:first-child { font-size: 8px; }
 .rep-ico {
   width: 28px;
   height: 28px;
@@ -1233,6 +1254,28 @@ body::before {
 .rep-barra i { display: block; height: 100%; background: var(--acento-1); box-shadow: 0 0 10px rgb(from var(--acento-1) r g b / .7); }
 .rep-pie { display: block; margin-top: 8px; font-size: 8px; letter-spacing: .06em; color: var(--texto-suave); opacity: .7; }
 .rep-fallo { margin-top: 8px; font-size: 11px; color: #ff9088; }
+
+/* ─────────── IP copiable en la verificación ─────────── */
+.ip-pie { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+.ip-copiar {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--linea-2);
+  background: transparent;
+  color: var(--texto-suave);
+  font-family: var(--fuente-mono);
+  font-size: 9px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color .2s ease, border-color .2s ease, background .2s ease;
+}
+.ip-copiar:hover:not(:disabled) { color: var(--texto); border-color: rgb(from var(--acento-1) r g b / .55); background: rgb(from var(--acento-1) r g b / .08); }
+.ip-copiar:disabled { opacity: .35; cursor: not-allowed; }
+.ip-copiar.hecho { color: var(--acento-3); border-color: rgb(from var(--acento-3) r g b / .5); background: rgb(from var(--acento-3) r g b / .08); }
 
 /* ─────────── vídeo: capítulos y sonido ─────────── */
 .pp-video-bloque { width: min(1040px, 100%); margin: 0 auto; }
@@ -1437,9 +1480,11 @@ html[data-modo="claro"] .cascara .escalon { background: rgb(27 21 32 / .03); }
   .btn-modo { padding: 0 5px; }
   .reproductor { left: 12px; bottom: 82px; }
   .rep-boton { height: 40px; padding: 0 11px 0 7px; }
+  .rep-parar { height: 40px; padding: 0 9px; }
   .rep-etq { display: none; }
   .rep-panel { width: min(272px, calc(100vw - 24px)); }
   .hn-musica { justify-content: center; }
+  .ip-pie { gap: 6px; }
   .pp-video-caps { gap: 5px; }
   .pp-video-cap { padding: 6px 9px; font-size: 9px; }
   .pp-video-sonido { top: 8px; right: 8px; padding: 6px 9px; font-size: 9px; }
@@ -2070,6 +2115,8 @@ html[data-anim="off"] .pp .texto-gradiente { animation: none !important; }
 body.video-en-vista .pp-dock { opacity: 0; pointer-events: none; transform: translate(-50%, calc(100% + 28px)); }
 .reproductor { transition: opacity .3s ease, transform .3s ease; }
 body.video-en-vista .reproductor { opacity: 0; pointer-events: none; transform: translateY(12px); }
+/* si la música de fondo está sonando, su botón de parar sigue a mano */
+body.video-en-vista .reproductor.suena { opacity: 1; pointer-events: auto; transform: none; }
 
 /* ─────────── subtítulos del vídeo de portada ─────────── */
 .pp-video-sub {

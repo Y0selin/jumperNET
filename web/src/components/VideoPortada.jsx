@@ -97,7 +97,10 @@ export default function VideoPortada() {
     if (!v) return;
     const nuevo = !conAudio;
     v.muted = !nuevo;
-    if (nuevo) v.play().catch(() => {});
+    if (nuevo) {
+      window.dispatchEvent(new Event("jumpernet-callar-musica"));
+      v.play().catch(() => {});
+    }
     setConAudio(nuevo);
   }
   function salta(t) {

@@ -116,6 +116,9 @@ const navegador = await puppeteer.launch({
   args: ["--no-sandbox", "--disable-gpu"],
 });
 const pagina = await navegador.newPage();
+await navegador.defaultBrowserContext()
+  .overridePermissions(new URL(URL_APP).origin, ["clipboard-read", "clipboard-write"])
+  .catch(() => { /* el portapapeles no siempre está disponible en headless */ });
 const errores = [];
 pagina.on("pageerror", (e) => errores.push("pageerror: " + e.message));
 pagina.on("response", (r) => {
@@ -490,6 +493,19 @@ igual(c.includes("exit · salida real") || c.includes("tu circuito #3"), true, "
 const saltosMarcados = await pagina.evaluate(() => (document.body.innerText.match(/tu circuito #/g) || []).length);
 igual(saltosMarcados, 3, `los 3 nodos del circuito marcados con su posición (${saltosMarcados}/3)`);
 await captura("04-panel-activo");
+
+console.log("\n== 4b · COPIAR LA IP DE SALIDA ==");
+const botonCopiar = await pagina.$(".ip-caja.salida .ip-copiar");
+if (!botonCopiar) {
+  MAL("no encontré el botón para copiar la IP de salida");
+} else {
+  await botonCopiar.click();
+  await espera(250);
+  const textoCopiar = (await botonCopiar.evaluate((e) => e.textContent)) || "";
+  igual(textoCopiar.includes("copiada"), true, "el botón confirma la IP copiada");
+  const portapapeles = await pagina.evaluate(() => navigator.clipboard.readText()).catch(() => "");
+  igual(portapapeles, "129.213.137.20", "el portapapeles recibe la IP de salida real");
+}
 
 console.log("\n== 5 · COMPROBACIÓN REAL DEL CIRCUITO ==");
 await escribe("input[type=password]", "clave-mala");

@@ -166,9 +166,9 @@ export default function Inicio() {
               <i className="mono">30 s</i>
             </button>
             <button className="hn-musica" type="button" onClick={poneMusica}
-              aria-label="Poner la música de la portada">
+              aria-label="Abrir los controles de música de la portada">
               <span className="hn-musica-ico" aria-hidden>♪</span>
-              <span>Poner música</span>
+              <span>Música</span>
             </button>
           </div>
 

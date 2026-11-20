@@ -360,6 +360,7 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
   const [prueba, setPrueba] = useState(null);
   const [probando, setProbando] = useState(false);
   const [ipSalida, setIpSalida] = useState(null);
+  const [copiada, setCopiada] = useState(null);
   const [avisaExt, setAvisaExt] = useState(false);
   const [saltosSel, setSel] = useState(3);   // nº deseado de saltos (plan pro)
   const [modoSel, setModo] = useState("todos"); // "todos" | "externos"
@@ -464,9 +465,40 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
     finally { setProbando(false); }
   }
 
+  async function copiar(texto, etiqueta, clave) {
+    const valor = String(texto || "").trim();
+    if (!valor || valor === "—" || valor === "midiendo…") {
+      aviso("todavía no hay una IP que copiar", "error");
+      return;
+    }
+    let ok = false;
+    if (navigator.clipboard?.writeText) {
+      try { await navigator.clipboard.writeText(valor); ok = true; } catch { /* usa el respaldo */ }
+    }
+    if (!ok) {
+      try {
+        const area = document.createElement("textarea");
+        area.value = valor;
+        area.setAttribute("readonly", "");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        ok = document.execCommand("copy");
+        area.remove();
+      } catch { ok = false; }
+    }
+    if (!ok) { aviso("no se pudo copiar; selecciona la IP a mano", "error"); return; }
+    setCopiada({ clave, valor });
+    aviso(`${etiqueta} copiada`, "ok");
+    setTimeout(() => setCopiada((c) => (c?.clave === clave && c?.valor === valor ? null : c)), 2200);
+  }
+
   const activo = !!yo?.activo;
   const saltos = yo?.circuito?.length ? yo.circuito : ["nodo·", "nodo·", "nodo·"];
   const ipExit = yo?.ip_salida || ipSalida;
+  const salidaLista = activo && !!ipExit && ipExit !== "midiendo…";
+  const esCopiada = (clave, valor) => copiada?.clave === clave && copiada?.valor === String(valor || "");
   const nombre = yo?.alias || (yo?.email || "tú").split("@")[0];
   const fecha = new Date().toLocaleDateString("es-ES", { weekday: "long", day: "2-digit", month: "long" });
 
@@ -550,18 +582,34 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
               <div className="ip-caja entrada">
                 <span className="rotulo">tu IP (origen)</span>
                 <div className="ip">{yo?.ip_real || "—"}</div>
-                <div className="lugar">
-                  {geoTu?.ok ? [geoTu.ciudad, geoTu.pais].filter(Boolean).join(", ") : (geoTu ? "no se pudo localizar (⟳ reintenta)" : "localizando…")}
+                <div className="ip-pie">
+                  <div className="lugar">
+                    {geoTu?.ok ? [geoTu.ciudad, geoTu.pais].filter(Boolean).join(", ") : (geoTu ? "no se pudo localizar (⟳ reintenta)" : "localizando…")}
+                  </div>
+                  <button type="button" className={`ip-copiar ${esCopiada("origen", yo?.ip_real) ? "hecho" : ""}`}
+                    onClick={() => copiar(yo?.ip_real, "tu IP", "origen")}
+                    disabled={!yo?.ip_real} title="Copiar tu IP">
+                    <span aria-hidden>{esCopiada("origen", yo?.ip_real) ? "✓" : "⧉"}</span>
+                    {esCopiada("origen", yo?.ip_real) ? "copiada" : "copiar"}
+                  </button>
                 </div>
               </div>
               <div className="flecha-cambia">⟶</div>
               <div className="ip-caja salida">
                 <span className="rotulo">IP al salir (destino)</span>
                 <div className="ip">{activo ? (ipExit || "midiendo…") : "—"}</div>
-                <div className="lugar">
-                  {!activo ? "activa la red para verla"
-                    : geoSal?.ok ? [geoSal.ciudad, geoSal.pais].filter(Boolean).join(", ")
-                    : geoSal ? "no se pudo localizar (⟳ reintenta)" : "localizando…"}
+                <div className="ip-pie">
+                  <div className="lugar">
+                    {!activo ? "activa la red para verla"
+                      : geoSal?.ok ? [geoSal.ciudad, geoSal.pais].filter(Boolean).join(", ")
+                      : geoSal ? "no se pudo localizar (⟳ reintenta)" : "localizando…"}
+                  </div>
+                  <button type="button" className={`ip-copiar ${esCopiada("salida", ipExit) ? "hecho" : ""}`}
+                    onClick={() => copiar(ipExit, "IP de salida", "salida")}
+                    disabled={!salidaLista} title="Copiar la IP de salida">
+                    <span aria-hidden>{esCopiada("salida", ipExit) ? "✓" : "⧉"}</span>
+                    {esCopiada("salida", ipExit) ? "copiada" : "copiar"}
+                  </button>
                 </div>
               </div>
             </div>

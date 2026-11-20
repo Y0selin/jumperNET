@@ -27,6 +27,7 @@ export default function VideoModal({ abierto, cerrar }) {
       return;
     }
     document.body.classList.add("video-abierto");
+    window.dispatchEvent(new Event("jumpernet-callar-musica"));
     v.currentTime = 0;
     v.muted = true;
     setSonido(false);
@@ -58,7 +59,10 @@ export default function VideoModal({ abierto, cerrar }) {
     if (!v) return;
     const nuevo = !sonido;
     v.muted = !nuevo;
-    if (nuevo) v.play().catch(() => {});
+    if (nuevo) {
+      window.dispatchEvent(new Event("jumpernet-callar-musica"));
+      v.play().catch(() => {});
+    }
     setSonido(nuevo);
   }
   function salta(t) {
