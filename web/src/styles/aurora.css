@@ -366,7 +366,7 @@ body::before {
   grid-template-columns: minmax(0, 1.06fr) minmax(0, .94fr);
   align-items: center;
   gap: clamp(30px, 5vw, 66px);
-  min-height: min(760px, calc(100dvh - 150px));
+  min-height: min(600px, calc(100dvh - 150px));
   padding: clamp(12px, 2vw, 28px) 0 clamp(24px, 4vw, 48px);
 }
 .hn-aurora { position: absolute; inset: -8% -2% -6% -4%; z-index: -1; pointer-events: none; }

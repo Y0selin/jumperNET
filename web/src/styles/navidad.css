@@ -1086,3 +1086,16 @@ html[data-modo="claro"] .pp .hn-sello { border-color: #b1802f; }
 }
 .hn-hero-visual { animation: hn-entrada .9s cubic-bezier(.2,.8,.2,1) .2s both; }
 .hn-hero-txt { animation: hn-entrada .9s cubic-bezier(.2,.8,.2,1) both; }
+
+/* ─────────── video del hero ─────────── */
+.hn-hero-video {
+  width: 100%;
+  max-width: 260px;
+  aspect-ratio: 9 / 16;
+  border-radius: 16px;
+  object-fit: cover;
+  margin-top: 14px;
+  border: 1px solid rgb(255 255 255 / .12);
+  box-shadow: 0 18px 40px rgb(0 0 0 / .35);
+  opacity: .9;
+}
