@@ -1151,3 +1151,17 @@ html[data-modo="claro"] .pp .hn-sello { border-color: #b1802f; }
   90% { opacity: .9; }
   100% { transform: translateY(100vh) translateX(30px); opacity: 0; }
 }
+
+/* ─────────── simulador en la portada ─────────── */
+.hn-simulador {
+  padding: 24px;
+  border-radius: 20px;
+  background: rgb(from var(--panel) r g b / .7);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--borde);
+  box-shadow: 0 20px 50px rgb(0 0 0 / .12);
+}
+.hn-simulador-cab { margin-bottom: 12px; }
+.hn-simulador-cab h3 { font-size: 18px; margin: 4px 0 0; color: var(--texto); }
+.hn-hero { width: 100%; max-width: 100%; }
+.hn-hero-txt { max-width: 100%; }

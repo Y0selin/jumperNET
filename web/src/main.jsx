@@ -8,4 +8,5 @@ import "./styles/sitio.css";
 import "./styles/aurora.css";
 import "./styles/navidad.css";
 
+if (!document.documentElement.dataset.modo) document.documentElement.dataset.modo = "claro";
 createRoot(document.getElementById("root")).render(<App />);

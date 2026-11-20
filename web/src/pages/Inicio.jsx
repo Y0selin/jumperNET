@@ -140,7 +140,6 @@ export default function Inicio() {
   return (
     <>
       <section className="hn-hero" ref={hero} onPointerMove={paralaje} onPointerLeave={suelta}>
-        <CampoNodos />
         <div className="hn-guirnalda" aria-hidden="true">
           <svg viewBox="0 0 1200 52" preserveAspectRatio="none">
             <path d="M-20 6 C 180 52 380 52 600 6 S 1020 52 1220 6" />
@@ -153,17 +152,6 @@ export default function Inicio() {
               "--d": luz.d,
             }} />
           ))}
-        </div>
-
-        <div className="hn-terciopelo" aria-hidden>
-          <i className="hn-luz hn-luz-a" />
-          <i className="hn-luz hn-luz-b" />
-          <i className="hn-luz hn-luz-c" />
-          <span className="hn-aro hn-aro-a" />
-          <span className="hn-aro hn-aro-b" />
-          <span className="hn-constelacion hn-constelacion-a">✦</span>
-          <span className="hn-constelacion hn-constelacion-b">✦</span>
-          <span className="hn-constelacion hn-constelacion-c">+</span>
         </div>
 
         <div className="hn-hero-txt">
@@ -253,12 +241,14 @@ export default function Inicio() {
         </div>
 
         <div className="hn-hero-visual">
-          <SelloHoy />
-          <span className="hn-globo hn-globo-a mono" aria-hidden>JENC</span>
-          <span className="hn-globo hn-globo-b mono" aria-hidden>sin logs</span>
-          <span className="hn-globo hn-globo-c mono" aria-hidden>exit 80/443</span>
-          <CircuitoHero />
-          <span className="hn-pie-visual mono">toca una parada · enciende o apaga la red</span>
+          <div className="hn-simulador tarjeta">
+            <div className="hn-simulador-cab">
+              <span className="migas">simulador en vivo</span>
+              <h3>tu circuito de 3 saltos</h3>
+            </div>
+            <CircuitoHero />
+            <span className="hn-pie-visual mono">toca una parada · enciende o apaga la red</span>
+          </div>
         </div>
       </section>
 

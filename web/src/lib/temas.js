@@ -73,6 +73,16 @@ export const PRESETS = {
     forma: { "--radio": "12px", "--radio-2": "8px", "--tam-fuente": "14.5px", "--fuente": '"Inter", system-ui' },
     efectos: { "--glow": "0.3", "--glass": "0.9", "--vel-anim": "1" },
   },
+  "navidad-clara": {
+    nombre: "Navidad Clara",
+    variables: {
+      "--bg-1": "#f0f6fa", "--bg-2": "#e8f0f6", "--panel": "255, 255, 255", "--panel-sol": "36, 91, 71",
+      "--borde": "#d0dde6", "--acento-1": "#e85a2a", "--acento-2": "#3b82f6",
+      "--acento-3": "#d97706", "--texto": "#1a2332", "--texto-suave": "#5a6b7c",
+    },
+    forma: { "--radio": "16px", "--radio-2": "10px", "--tam-fuente": "15px", "--fuente": '"Inter", system-ui' },
+    efectos: { "--glow": "0.4", "--glass": "0.85", "--vel-anim": "1" },
+  },
 };
 
 export function aplicaTema(tema) {
@@ -91,6 +101,6 @@ export function cargaTema() {
     const t = JSON.parse(localStorage.getItem(CLAVE));
     if (t && t.variables) return t;
   } catch { /* tema roto: preset */ }
-  return JSON.parse(JSON.stringify(PRESETS["coral-nocturno"]));
+  return JSON.parse(JSON.stringify(PRESETS["navidad-clara"]));
 }
-export function temaPorId(id) { return JSON.parse(JSON.stringify(PRESETS[id] || PRESETS["coral-nocturno"])); }
+export function temaPorId(id) {  return JSON.parse(JSON.stringify(PRESETS[id] || PRESETS["navidad-clara"])); }
