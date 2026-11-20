@@ -114,6 +114,8 @@ export default function Sitio({ ruta, enSesion, children }) {
         </div>
 
         <div className="pp-nav-acciones">
+          <a className="pp-nav-video" href="/videos/JumperNET_El_Viaje.mp4" target="_blank" rel="noopener" title="Ver el video del viaje">▶ video</a>
+          <span className="pp-nav-badge mono" aria-hidden>EN VIVO</span>
           <span className="pp-nav-estado mono"><i aria-hidden /> {enSesion ? "sesión activa" : "red educativa"}</span>
           <button type="button" className="pp-video-abrir" onClick={() => setVideoAbierto(true)}
             aria-label="Ver el vídeo de portada de JumperNET" aria-haspopup="dialog">

@@ -1099,3 +1099,30 @@ html[data-modo="claro"] .pp .hn-sello { border-color: #b1802f; }
   box-shadow: 0 18px 40px rgb(0 0 0 / .35);
   opacity: .9;
 }
+
+/* ─────────── cabecera: video y badge ─────────── */
+.pp-nav-video {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgb(255 255 255 / .14);
+  background: rgb(255 255 255 / .05);
+  color: var(--texto-suave);
+  font-size: 11px;
+  text-decoration: none;
+  transition: color .2s ease, border-color .2s ease, background .2s ease;
+}
+.pp-nav-video:hover { color: var(--texto); border-color: var(--acento-1); background: rgb(255 90 54 / .08); }
+.pp-nav-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgb(255 90 54 / .18);
+  color: var(--acento-1);
+  font-size: 9px;
+  letter-spacing: .12em;
+  border: 1px solid rgb(255 90 54 / .35);
+}

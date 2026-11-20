@@ -258,7 +258,6 @@ export default function Inicio() {
           <span className="hn-globo hn-globo-b mono" aria-hidden>sin logs</span>
           <span className="hn-globo hn-globo-c mono" aria-hidden>exit 80/443</span>
           <CircuitoHero />
-          <video className="hn-hero-video" src="/videos/JumperNET_El_Viaje.mp4" autoPlay muted loop playsInline />
           <span className="hn-pie-visual mono">toca una parada · enciende o apaga la red</span>
         </div>
       </section>
