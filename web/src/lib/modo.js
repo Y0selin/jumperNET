@@ -7,13 +7,13 @@ const CLAVE = "jumpernet-modo-v1";
 export const MODOS = {
   claro: {
     nombre: "Claro",
-    color: "#f0f4ff",
+    color: "#FFFFFF",
     vars: {
-      "--bg-1": "#f0f4ff", "--bg-2": "#e6ecff",
-      "--panel": "255, 255, 255", "--panel-sol": "124, 77, 255",
-      "--borde": "#c9d4f0", "--acento-1": "#7c4dff",
-      "--acento-2": "#00b8d9", "--acento-3": "#ff5c93",
-      "--texto": "#0f1233", "--texto-suave": "#5b6490",
+      "--bg-1": "#FFFFFF", "--bg-2": "#EFF8FF",
+      "--panel": "255, 255, 255", "--panel-sol": "22, 125, 104",
+      "--borde": "#dce8f2", "--acento-1": "#FF6347",
+      "--acento-2": "#167D68", "--acento-3": "#D6A84B",
+      "--texto": "#14283E", "--texto-suave": "#3a5068",
     },
   },
   oscuro: {

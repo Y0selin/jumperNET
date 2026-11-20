@@ -1,6 +1,4 @@
-import { useEffect, useRef, useState } from "react";
-import GlifosFondo from "./GlifosFondo.jsx";
-import FondoRed from "./FondoRed.jsx";
+import { useEffect, useState } from "react";
 import Logo from "./Logo.jsx";
 import BotonModo from "./BotonModo.jsx";
 import Reproductor from "./Reproductor.jsx";
@@ -34,27 +32,7 @@ export default function Sitio({ ruta, enSesion, children }) {
   const [arriba, setArriba] = useState(false);
   const [progreso, setProgreso] = useState(0);
   const [videoAbierto, setVideoAbierto] = useState(false);
-  const luz = useRef(null);
   const activa = baseRuta(ruta);
-
-  /* una luz suave sigue al cursor por la página (solo con ratón) */
-  useEffect(() => {
-    if (typeof window.matchMedia === "function" && window.matchMedia("(hover: none)").matches) return;
-    let viva = false;
-    const mueve = (e) => {
-      const el = luz.current;
-      if (!el) return;
-      if (!viva) { viva = true; el.classList.add("viva"); }
-      el.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
-    };
-    const fuera = () => { viva = false; luz.current?.classList.remove("viva"); };
-    window.addEventListener("pointermove", mueve, { passive: true });
-    document.addEventListener("pointerleave", fuera);
-    return () => {
-      window.removeEventListener("pointermove", mueve);
-      document.removeEventListener("pointerleave", fuera);
-    };
-  }, []);
 
   useEffect(() => {
     const alScroll = () => {
@@ -96,16 +74,7 @@ export default function Sitio({ ruta, enSesion, children }) {
 
   return (
     <div className="pp sp">
-      <GlifosFondo />
-      <FondoRed />
       <Nieve />
-      <div className="pp-luz" ref={luz} aria-hidden />
-
-      <div className="nieve" aria-hidden>
-        {Array.from({ length: 40 }).map((_, i) => (
-          <span key={i} className="copo" style={{ left: `${(i * 2.5) % 100}%`, animationDelay: `${(i * 0.3) % 8}s`, animationDuration: `${6 + (i % 5)}s` }} />
-        ))}
-      </div>
 
       <header className={`pp-nav ${pegada ? "pegada" : ""}`}>
         <a className="pp-marca" href="#/" aria-label="JumperNET, ir a la portada">

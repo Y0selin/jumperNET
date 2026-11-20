@@ -76,9 +76,9 @@ export const PRESETS = {
   "navidad-clara": {
     nombre: "Navidad Clara",
     variables: {
-      "--bg-1": "#f0f6fa", "--bg-2": "#e8f0f6", "--panel": "255, 255, 255", "--panel-sol": "36, 91, 71",
-      "--borde": "#d0dde6", "--acento-1": "#e85a2a", "--acento-2": "#3b82f6",
-      "--acento-3": "#d97706", "--texto": "#1a2332", "--texto-suave": "#5a6b7c",
+      "--bg-1": "#FFFFFF", "--bg-2": "#EFF8FF", "--panel": "255, 255, 255", "--panel-sol": "22, 125, 104",
+      "--borde": "#dce8f2", "--acento-1": "#FF6347", "--acento-2": "#167D68",
+      "--acento-3": "#D6A84B", "--texto": "#14283E", "--texto-suave": "#3a5068",
     },
     forma: { "--radio": "16px", "--radio-2": "10px", "--tam-fuente": "15px", "--fuente": '"Inter", system-ui' },
     efectos: { "--glow": "0.4", "--glass": "0.85", "--vel-anim": "1" },
