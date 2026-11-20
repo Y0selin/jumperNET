@@ -195,6 +195,12 @@ export default function Inicio() {
             red y sin encenderse hasta que tú lo pides.
           </p>
 
+          <p className="hn-lead hn-lead-2">
+            Puedes girar el circuito, ver qué sabe cada salto de ti, lanzar un paquete real
+            y comprobar la IP que ve el destino. Todo desde el navegador o desde la terminal,
+            con una cuenta gratuita y sin instalar nada extra.
+          </p>
+
           <div className="hn-acciones">
             <a className="btn primario grande" href="#/acceso/registro">
               Crear cuenta gratis <span aria-hidden>→</span>
