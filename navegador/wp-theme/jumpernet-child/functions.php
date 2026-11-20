@@ -14,7 +14,7 @@ add_action('wp_enqueue_scripts', function () {
 			wp_get_theme()->parent()->get('Version')
 		);
 	}
-	wp_enqueue_style('jumpernet-child', get_stylesheet_uri(), array('twentytwentyfour-style'), '1.0.5');
+	wp_enqueue_style('jumpernet-child', get_stylesheet_uri(), array('twentytwentyfour-style'), '1.1.0');
 });
 
 /* ─── login con la marca ─── */
@@ -22,12 +22,13 @@ add_action('login_enqueue_scripts', function () {
 	?>
 	<style>
 		body.login{
-			background:#0b0b10 !important;
+			background:#090710 !important;
 			background-image:
-				radial-gradient(900px 420px at 60% -10%, rgba(108,92,231,.18), transparent 60%),
+				radial-gradient(900px 420px at 60% -10%, rgba(255,90,54,.18), transparent 60%),
+				radial-gradient(700px 360px at 0% 100%, rgba(139,123,255,.14), transparent 62%),
 				linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
 				linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px) !important;
-			background-size:auto,44px 44px,44px 44px !important;
+			background-size:auto,auto,44px 44px,44px 44px !important;
 		}
 		#login h1{display:none}
 		#login::before{
@@ -47,12 +48,50 @@ add_action('login_enqueue_scripts', function () {
 		}
 		#login input:focus{border-color:#6c5ce7 !important}
 		#wp-submit{
-			background:#6c5ce7 !important;border-color:transparent !important;border-radius:9px !important;
-			font-weight:700;padding:8px 16px !important
+			background:linear-gradient(135deg,#ff7a4f,#ff5a36 60%,#e2491f) !important;border-color:transparent !important;border-radius:9px !important;
+			color:#261006 !important;font-weight:700;padding:8px 16px !important
 		}
-		#wp-submit:hover{background:#7a6bf0 !important}
+		#wp-submit:hover{background:linear-gradient(135deg,#ff9a6f,#ff6a3d) !important}
 		#nav,#backtoblog a{color:#9a9aa2 !important}
 	</style>
+	<?php
+});
+
+/* ─── lectura y código: progreso + copiar ─── */
+add_action('wp_footer', function () {
+	if (!is_singular()) return;
+	?>
+	<div id="jn-progreso" aria-hidden="true"></div>
+	<script>
+	(function () {
+		var barra = document.getElementById('jn-progreso');
+		function pinta() {
+			var h = document.documentElement;
+			var max = h.scrollHeight - h.clientHeight;
+			if (barra) barra.style.transform = 'scaleX(' + (max > 0 ? Math.min(1, h.scrollTop / max) : 0) + ')';
+		}
+		addEventListener('scroll', pinta, { passive: true });
+		pinta();
+
+		document.querySelectorAll('.entry-content pre').forEach(function (pre) {
+			var boton = document.createElement('button');
+			boton.type = 'button';
+			boton.className = 'jn-copiar';
+			boton.textContent = 'copiar';
+			boton.setAttribute('aria-label', 'Copiar el bloque de código');
+			boton.addEventListener('click', function () {
+				var code = pre.querySelector('code');
+				var texto = (code || pre).innerText;
+				navigator.clipboard.writeText(texto).then(function () {
+					boton.textContent = 'copiado ✓';
+					boton.classList.add('hecho');
+					setTimeout(function () { boton.textContent = 'copiar'; boton.classList.remove('hecho'); }, 1800);
+				});
+			});
+			pre.appendChild(boton);
+		});
+	})();
+	</script>
 	<?php
 });
 

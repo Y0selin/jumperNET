@@ -1,9 +1,9 @@
 /*
 Theme Name: JumperNET Docs
-Description: Tema hijo de Twenty Twenty-Four con el diseño oscuro/terminal de JumperNET para la documentación: portada hero, tarjetas de índice, tablas y bloques de código estilo consola. v1.0.5: título de categoría/archivo claro, tarjetas vacías del índice eliminadas y defensivo anti-texto-oscuro inline.
+Description: Tema hijo de Twenty Twenty-Four con el diseño de JumperNET para la documentación: portada hero, tarjetas de índice, tablas, bloques de código estilo consola, barra de lectura y acentos de temporada. v1.1.0: paleta coral/violeta, lectura más cómoda y copia rápida de código.
 Author: jumpernet
 Template: twentytwentyfour
-Version: 1.0.5
+Version: 1.1.0
 */
 
 :root{
@@ -410,3 +410,110 @@ kbd,.entry-content kbd{
   opacity:0;transition:opacity .2s ease
 }
 .jn-card:hover::after{opacity:1}
+
+/* ════════════════════════════════════════════════════════════
+   v1.1.0 · la documentación se alinea con la marca nueva
+   ════════════════════════════════════════════════════════════ */
+:root{
+  --jn-bg:#090710; --jn-bg2:#12101a; --jn-bg3:#18141f;
+  --jn-borde:#2b2436; --jn-texto:#f7f1e8; --jn-suave:#b7acb8;
+  --jn-acento:#ff5a36; --jn-acento2:#ffb09a; --jn-cyan:#33d6c0;
+  --jn-ok:#37d39a; --jn-warn:#ffc46b; --jn-error:#ff8f9a;
+  --jn-luz:rgb(255 90 54/.5)
+}
+html{scroll-behavior:smooth;scroll-padding-top:92px}
+body{
+  background:var(--jn-bg)!important;
+  background-image:
+    radial-gradient(1000px 620px at 90% -12%, rgb(139 123 255 / .2), transparent 64%),
+    radial-gradient(860px 560px at -8% 8%, rgb(255 90 54 / .16), transparent 64%),
+    linear-gradient(rgb(255 255 255 / .022) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / .022) 1px, transparent 1px)!important;
+  background-size:auto,auto,46px 46px,46px 46px!important;
+  color:var(--jn-texto)!important;
+}
+::selection{background:rgb(255 90 54/.4);color:#fff}
+a{color:#ffb09a!important;text-decoration-color:rgb(255 176 154/.4)}
+a:hover{color:#ffd0c0!important;text-decoration-color:#ffd0c0}
+.wp-site-blocks > header{
+  background:rgb(9 7 16/.84)!important;
+  border-bottom:1px solid rgb(255 255 255/.08)!important;
+  box-shadow:0 16px 40px -34px #000;
+}
+header .wp-block-site-title a::before{
+  content:"↯";color:#251007;
+  background:linear-gradient(140deg,#ff9a6f,#ff5a36 55%,#8b7bff);
+  box-shadow:0 8px 18px -10px rgb(255 90 54/.9)
+}
+.jn-hero{
+  border-color:rgb(255 90 54/.24)!important;
+  background:
+    radial-gradient(720px 340px at 88% -18%, rgb(255 90 54/.24), transparent 62%),
+    radial-gradient(520px 280px at 4% 104%, rgb(139 123 255/.2), transparent 64%),
+    linear-gradient(180deg,#171220,#0e0b14)!important;
+  box-shadow:0 28px 70px -48px rgb(255 90 54/.45),0 18px 50px rgb(0 0 0/.4)
+}
+.jn-hero::before{
+  content:"";position:absolute;inset:-30% 52% auto -12%;height:420px;
+  border-radius:50%;background:radial-gradient(circle,rgb(255 90 54/.2),transparent 68%);
+  pointer-events:none;animation:jn-docs-luz 14s ease-in-out infinite
+}
+.jn-hero::after{color:rgb(255 90 54/.12)}
+@keyframes jn-docs-luz{50%{transform:translate(22px,18px) scale(1.08);opacity:.7}}
+.jn-badge{color:#ffd0c0;border-color:rgb(255 90 54/.45);background:rgb(255 90 54/.12)}
+.jn-titulo{text-wrap:balance}
+.jn-titulo span{color:#ffb09a!important;-webkit-text-fill-color:#ffb09a!important}
+.jn-sub{color:#c9bfc8!important}
+.jn-stats div{background:rgb(255 255 255/.028);border-color:rgb(255 255 255/.09)}
+.jn-stats b{color:#ffb09a}
+.jn-card{border-color:rgb(255 255 255/.09);background:linear-gradient(180deg,#15111d,#0f0c14)}
+.jn-card:hover{border-color:var(--c,var(--jn-acento));box-shadow:0 18px 42px -24px rgb(255 90 54/.35)}
+.jn-card--1{--c:#ff6a3d}.jn-card--2{--c:#8b7bff}.jn-card--3{--c:#33d6c0}.jn-card--4{--c:#ffc46b}
+.jn-card--5{--c:#ff8f9a}.jn-card--6{--c:#c4b5fd}.jn-card--7{--c:#5eead4}.jn-card--8{--c:#f0abfc}
+.jn-card--9{--c:#93c5fd}.jn-card--10{--c:#fcd34d}
+.entry-content{font-size:16.5px;line-height:1.78;letter-spacing:-.003em}
+.entry-content h2{scroll-margin-top:92px}
+.entry-content h2::before{color:#ff9a76}
+.entry-content h3::before{color:#ff9a76;opacity:.7}
+.entry-content h2::after{background:linear-gradient(90deg,#ff8a5f,rgb(139 123 255/.5),transparent)}
+.entry-content code{background:rgb(139 123 255/.14)!important;border-color:rgb(139 123 255/.3);color:#e5dcff!important}
+.entry-content pre{background:#0b0910!important;border-color:rgb(255 255 255/.1)!important;padding-top:38px!important}
+.entry-content pre::before{color:#5b5267}
+.entry-content pre code{color:#d8d0df!important}
+.entry-content table{border-color:rgb(255 255 255/.1)}
+.entry-content th{background:rgb(255 90 54/.12)!important;color:#ffd0c0!important}
+.entry-content td:first-child{color:#ffb09a}
+.entry-content tr:hover td{background:rgb(255 255 255/.035)}
+.entry-content blockquote{border-left-color:#ff5a36;background:rgb(255 90 54/.07)}
+.jn-serie{border-color:rgb(255 255 255/.1);background:linear-gradient(180deg,#14101b,transparent)}
+.jn-serie h2::before{color:#ff9a76}
+.wp-site-blocks > footer{background:#08060d!important;border-top-color:rgb(255 255 255/.08)!important}
+
+/* barra de lectura y copiar código */
+#jn-progreso{
+  position:fixed;left:0;right:0;top:0;height:3px;z-index:9999;
+  transform:scaleX(0);transform-origin:0 50%;
+  background:linear-gradient(90deg,#ff5a36,#ffb26b 48%,#8b7bff);
+  box-shadow:0 0 14px rgb(255 90 54/.6);pointer-events:none
+}
+.jn-copiar{
+  position:absolute;top:10px;right:10px;z-index:2;
+  border:1px solid rgb(255 255 255/.16);border-radius:8px;
+  background:rgb(255 255 255/.06);color:#cfc6d8;
+  padding:4px 9px;font:10px/1.2 var(--jn-mono);cursor:pointer;
+  opacity:.65;transition:opacity .2s ease,background .2s ease,color .2s ease
+}
+.jn-copiar:hover{opacity:1;background:rgb(255 90 54/.18);color:#fff;border-color:rgb(255 90 54/.5)}
+.jn-copiar.hecho{opacity:1;color:#9ff5df;border-color:rgb(51 214 192/.5)}
+
+@media (max-width:640px){
+  .entry-content{font-size:15.8px;line-height:1.72}
+  .jn-hero{padding:28px 20px;border-radius:22px}
+  .jn-titulo{font-size:clamp(28px,8vw,38px)}
+  .jn-copiar{top:7px;right:7px;padding:3px 7px;font-size:9px}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .jn-hero::before{animation:none}
+  .jn-card{transition:none}
+}

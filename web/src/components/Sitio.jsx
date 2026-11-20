@@ -5,6 +5,7 @@ import Logo from "./Logo.jsx";
 import BotonModo from "./BotonModo.jsx";
 import Reproductor from "./Reproductor.jsx";
 import VideoModal from "./VideoModal.jsx";
+import Nieve from "./Nieve.jsx";
 import { ENLACES } from "../lib/contenido.js";
 import { NOMBRES } from "../lib/equipo.js";
 import { baseRuta } from "../lib/router.js";
@@ -96,6 +97,7 @@ export default function Sitio({ ruta, enSesion, children }) {
     <div className="pp sp">
       <GlifosFondo />
       <FondoRed />
+      <Nieve />
       <div className="pp-luz" ref={luz} aria-hidden />
 
       <header className={`pp-nav ${pegada ? "pegada" : ""}`}>

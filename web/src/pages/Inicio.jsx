@@ -118,9 +118,25 @@ export default function Inicio() {
   return (
     <>
       <section className="hn-hero" ref={hero} onPointerMove={paralaje} onPointerLeave={suelta}>
-        <div className="hn-aurora" aria-hidden><i /><i /><i /></div>
+        <div className="hn-terciopelo" aria-hidden>
+          <i className="hn-luz hn-luz-a" />
+          <i className="hn-luz hn-luz-b" />
+          <i className="hn-luz hn-luz-c" />
+          <span className="hn-aro hn-aro-a" />
+          <span className="hn-aro hn-aro-b" />
+          <span className="hn-constelacion hn-constelacion-a">✦</span>
+          <span className="hn-constelacion hn-constelacion-b">✦</span>
+          <span className="hn-constelacion hn-constelacion-c">+</span>
+        </div>
 
         <div className="hn-hero-txt">
+          <a className="hn-promo" href="#/tarifas">
+            <span className="hn-promo-estrella" aria-hidden>✦</span>
+            <span className="hn-promo-txt"><b>Diciembre en red</b><span>7 saltos Pro al precio de 3</span></span>
+            <span className="hn-promo-tag mono">hasta 31/12</span>
+            <span className="hn-promo-flecha" aria-hidden>→</span>
+          </a>
+
           <span className="hn-eyebrow">
             <span className="punto-vivo" /> jumpernet · proxy SOCKS5 · 3 saltos · la enciendes tú
           </span>
@@ -174,6 +190,11 @@ export default function Inicio() {
               Hecho por <b>{NOMBRES}</b>
               <span className="hn-firma-link">la marca y el equipo →</span>
             </span>
+          </a>
+
+          <a className="hn-scroll" href="#esquema">
+            <span className="mono">sigue el paquete</span>
+            <i aria-hidden>↓</i>
           </a>
         </div>
 

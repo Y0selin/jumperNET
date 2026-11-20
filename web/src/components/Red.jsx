@@ -9,35 +9,47 @@ import Revela from "./Revela.jsx";
 /* ── interruptor de red grande ── */
 function Interruptor({ activo, ocupado, alCambiar }) {
   return (
-    <div className="red-card tarjeta brillo">
-      <div className="int-estados">
-        <span className={`mono bfases ${activo ? "" : "on"}`}>DESACTIVADA</span>
-        <button
-          className={"interruptor" + (activo ? " activo" : "") + (ocupado ? " ocupado" : "")}
-          onClick={alCambiar} disabled={ocupado}
-          aria-label={activo ? "Desactivar red" : "Activar red"}
-          title={activo ? "Desactivar la red (cierra tu circuito)" : "Activar la red (crea tu circuito de 3 saltos)"}
-        >
-          <span className="interruptor-bola" />
-        </button>
-        <span className={`mono bfases ${activo ? "on" : ""}`}>ACTIVADA</span>
+    <section className={`red-card pn-switch tarjeta brillo ${activo ? "on" : "off"}`}>
+      <div className="pn-switch-cab">
+        <div>
+          <span className="pn-kicker">interruptor maestro</span>
+          <h2 className="seccion">{activo ? "La red está en marcha" : "La red está en espera"}</h2>
+        </div>
+        <span className={`chip ${activo ? "vivo" : "muerto"} mono`}>{activo ? "ON" : "OFF"}</span>
       </div>
 
-      <div style={{ textAlign: "center", marginTop: 14 }}>
-        {activo
-          ? <div className="chip vivo" style={{ fontSize: 12.5 }}>● red activa — tráfico viajando por 3 saltos</div>
-          : <div className="chip muerto" style={{ fontSize: 12.5 }}>○ red apagada — tus credenciales no conectarán por SOCKS5</div>}
-        <p className="nota" style={{ marginTop: 10, fontSize: 12.5, maxWidth: 560, marginInline: "auto" }}>
-          {activo
-            ? "tu circuito está vivo: al navegar con el proxy, la IP que ve internet es la del nodo de salida, no la tuya. Abajo puedes comprobarlo de verdad."
-            : "nada se conecta hasta que tú lo digas: pulsa el interruptor y la red elegirá 3 nodos vivos al azar, cifrará cada salto y saldrá solo por 80/443."}
-        </p>
+      <div className="pn-switch-cuerpo">
+        <div className="pn-switch-control">
+          <span className={`mono bfases ${activo ? "" : "on"}`}>DESACTIVADA</span>
+          <button
+            className={"interruptor" + (activo ? " activo" : "") + (ocupado ? " ocupado" : "")}
+            onClick={alCambiar} disabled={ocupado}
+            aria-label={activo ? "Desactivar red" : "Activar red"}
+            title={activo ? "Desactivar la red (cierra tu circuito)" : "Activar la red (crea tu circuito de 3 saltos)"}
+          >
+            <span className="interruptor-bola" />
+          </button>
+          <span className={`mono bfases ${activo ? "on" : ""}`}>ACTIVADA</span>
+        </div>
+
+        <div className="pn-switch-copy">
+          <p className="nota">
+            {activo
+              ? "Tu circuito está vivo: al navegar con el proxy, la IP que ve internet es la del nodo de salida, no la tuya. Abajo puedes comprobarlo de verdad."
+              : "Nada se conecta hasta que tú lo digas: pulsa el interruptor y la red elegirá 3 nodos vivos al azar, cifrará cada salto y saldrá solo por 80/443."}
+          </p>
+          <div className="pn-switch-datos">
+            <span><b>3</b><small>saltos al azar</small></span>
+            <span><b>80/443</b><small>solo salida</small></span>
+            <span><b>JENC</b><small>ChaCha20</small></span>
+          </div>
+        </div>
       </div>
 
-      <div style={{ maxWidth: 620, margin: "18px auto 0" }}>
+      <div className="pn-switch-tuberia">
         <Tuberia activo={activo} saltos={["nodo₁", "nodo₂", "nodo₃"]} paquetes={5} compacta />
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -455,171 +467,232 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
   const activo = !!yo?.activo;
   const saltos = yo?.circuito?.length ? yo.circuito : ["nodo·", "nodo·", "nodo·"];
   const ipExit = yo?.ip_salida || ipSalida;
+  const nombre = yo?.alias || (yo?.email || "tú").split("@")[0];
+  const fecha = new Date().toLocaleDateString("es-ES", { weekday: "long", day: "2-digit", month: "long" });
 
   return (
-    <div className="apa" style={{ display: "grid", gap: 14 }}>
+    <div className="pn">
 
-      {/* ── cabecera de sesión ── */}
-      <div className="tarjeta" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <span className="whoami">≋</span>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 700, wordBreak: "break-all" }}>{yo?.email}</div>
-          <div className="nota mono" style={{ fontSize: 11 }}>
-            id {yo?.id} · API <span className={latencia != null ? "" : "parpadea"}>{latencia != null ? latencia + " ms" : "…"}</span>
+      {/* ── cabecera del panel ── */}
+      <header className="pn-cab">
+        <div className="pn-cab-txt">
+          <span className="pn-kicker">panel / red · {fecha}</span>
+          <h1 className="pn-h1">Hola, <em>{nombre}</em>.<br />Tu red, a tu ritmo.</h1>
+          <p className="nota pn-cab-sub">
+            {activo
+              ? "El circuito está vivo. Aquí tienes cada salto, la latencia real y la IP con la que te ve internet."
+              : "Todo listo y apagado. Enciende cuando quieras: elegimos los nodos, ciframos cada salto y tú mantienes el control."}
+          </p>
+          <div className="pn-cab-chips">
+            <span className={`chip ${activo ? "vivo" : "muerto"} mono`}>{activo ? "RED ACTIVA" : "RED OFF"}</span>
+            <span className="chip mono">plan {yo?.plan || "free"}</span>
+            <span className="chip mono">{yo?.saltos_max || 3} saltos máx.</span>
+            <span className="chip mono">API {latencia != null ? `${latencia} ms` : "…"}</span>
           </div>
         </div>
-        <span className={`chip ${activo ? "vivo" : "muerto"}`} style={{ marginLeft: "auto" }}>{activo ? "RED ACTIVA" : "RED OFF"}</span>
-        <button className="btn" onClick={() => refrescar(false)} disabled={ocupado} aria-label="Refrescar datos">
-          {ocupado ? <span className="spin" /> : "⟳"}
-        </button>
-      </div>
 
-      {/* ── métricas rápidas ── */}
-      <div className="tira-stats">
+        <div className={`pn-orbe ${activo ? "on" : "off"}`} aria-hidden="true">
+          <span className="pn-orbe-anillo a" />
+          <span className="pn-orbe-anillo b" />
+          <span className="pn-orbe-anillo c" />
+          <span className="pn-orbe-punto p1" />
+          <span className="pn-orbe-punto p2" />
+          <span className="pn-orbe-punto p3" />
+          <span className="pn-orbe-nucleo"><b>{activo ? saltos.length : 0}</b><small>saltos</small></span>
+          <span className="pn-orbe-pie mono">{activo ? "circuito vivo" : "en espera"}</span>
+        </div>
+
+        <button className="btn pn-refrescar" onClick={() => refrescar(false)} disabled={ocupado} aria-label="Refrescar datos">
+          {ocupado ? <span className="spin" /> : "⟳"} <span>Actualizar</span>
+        </button>
+      </header>
+
+      {/* ── resumen ── */}
+      <div className="pn-resumen">
         <Stat etq="estado" val={activo ? "ACTIVA" : "APAGADA"} pie={activo ? "circuito en pie" : "sin tráfico"} tono={activo ? "ok" : "off"} />
         <Stat etq="saltos" val={`${yo?.circuito?.length || 0} / ${yo?.saltos_max || 3}`} pie={`plan ${yo?.plan || "free"}`} tono="ok" />
         <Stat etq="IP que ve internet" val={<span style={{ fontSize: 13 }}>{activo ? (ipExit || "midiendo…") : "—"}</span>} pie={activo ? "la del nodo de salida" : "usa la tuya"} tono="aviso" />
         <Stat etq="tu IP" val={<span style={{ fontSize: 13 }}>{yo?.ip_real || "—"}</span>} pie="la que ve el servidor" tono="info" />
+        <ContadorVivos yo={yo} />
       </div>
 
-      {/* ── contador real de nodos (en vivo) ── */}
-      <ContadorVivos yo={yo} />
+      <div className="pn-mosaico">
+        <div className="pn-principal">
 
-      {/* ── tablón en vivo: salto a salto, latencia real, latido de tu equipo ── */}
-      <TablonVivo yo={yo} aviso={aviso} />
+          <Interruptor
+            activo={activo} ocupado={ocupado}
+            alCambiar={() => accion(activo ? () => desconectar_() : () => conectar(saltosSel, modoSel),
+              activo ? "red desactivada" : `red activada ✓ — ${saltosSel} saltos (${modoSel})`)}
+            saltos={saltosSel}
+          />
 
-      {/* ── selector del MODO de saltos ── */}
-      <SelectorModo modo={modoSel} setModo={setModo} yo={yo} activo={activo} />
+          {avisaExt && activo && (
+            <AvisoExtension alCerrar={() => setAvisaExt(false)} email={yo?.email || ""} />
+          )}
 
-      {/* ── selector de nº de saltos (pro elige, free lo ve bloqueado) ── */}
-      <SelectorSaltos yo={yo} saltosSel={saltosSel} setSel={setSel} ocupado={ocupado} />
-
-      {/* ── interruptor ── */}
-      <Interruptor
-        activo={activo} ocupado={ocupado}
-        alCambiar={() => accion(activo ? () => desconectar_() : () => conectar(saltosSel, modoSel),
-          activo ? "red desactivada" : `red activada ✓ — ${saltosSel} saltos (${modoSel})`)}
-        saltos={saltosSel}
-      />
-
-      {/* ── aviso de instalar la extensión (solo tras encender) ── */}
-      {avisaExt && activo && (
-        <AvisoExtension alCerrar={() => setAvisaExt(false)} email={yo?.email || ""} />
-      )}
-
-      {/* ── verificación real del circuito ── */}
-      <Revela className="tarjeta">
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
-          <h2 className="seccion" style={{ marginBottom: 0 }}>¿Está funcionando de verdad?</h2>
-          <span className={`etiqueta-viva`} style={activo ? undefined : { color: "var(--texto-suave)", opacity: .7 }}>
-            {activo ? "comprobación real" : "red apagada"}
-          </span>
-        </div>
-
-        <div className="par-ips">
-          <div className="ip-caja entrada">
-            <span className="rotulo">tu IP (origen)</span>
-            <div className="ip">{yo?.ip_real || "—"}</div>
-            <div className="lugar">
-              {geoTu?.ok ? [geoTu.ciudad, geoTu.pais].filter(Boolean).join(", ") : (geoTu ? "no se pudo localizar (⟳ reintenta)" : "localizando…")}
-            </div>
-          </div>
-          <div className="flecha-cambia">⟶</div>
-          <div className="ip-caja salida">
-            <span className="rotulo">IP al salir (destino)</span>
-            <div className="ip">{activo ? (ipExit || "midiendo…") : "—"}</div>
-            <div className="lugar">
-              {!activo ? "activa la red para verla"
-                : geoSal?.ok ? [geoSal.ciudad, geoSal.pais].filter(Boolean).join(", ")
-                : geoSal ? "no se pudo localizar (⟳ reintenta)" : "localizando…"}
-            </div>
-          </div>
-        </div>
-
-        <div className="verificacion" style={{ marginTop: 14 }}>
-          <p className="nota" style={{ fontSize: 12.5 }}>
-            Esto no es una estimación: el servidor abre un SOCKS5 con tu cuenta, pide a un servicio externo
-            «¿qué IP ves?» y te enseña la respuesta. Tu contraseña viaja cifrada por HTTPS y <b>no se guarda</b>;
-            solo se usa para ese handshake.
-          </p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
-            <div className="campo-caja" style={{ flex: "1 1 220px" }}>
-              <input className="campo" type="password" autoComplete="current-password" style={{ marginBottom: 0 }}
-                placeholder="tu contraseña (solo para esta prueba)" value={clave}
-                onChange={(e) => setClave(e.target.value)} />
-            </div>
-            <button className="btn primario" onClick={comprobarAhora} disabled={probando || !activo}>
-              {probando ? <span className="spin" /> : "▶ Comprobar circuito ahora"}
-            </button>
+          <div className="pn-config">
+            <SelectorModo modo={modoSel} setModo={setModo} yo={yo} activo={activo} />
+            <SelectorSaltos yo={yo} saltosSel={saltosSel} setSel={setSel} ocupado={ocupado} />
           </div>
 
-          {prueba && (
-            <div className={`veredicto apa ${prueba.ok ? (prueba.cambia_tu_ip ? "ok" : "duda") : "mal"}`}>
-              <span>{prueba.ok ? (prueba.cambia_tu_ip ? "✓" : "!") : "✗"}</span>
-              <div>
-                {prueba.ok ? (
-                  <>
-                    <b>{prueba.cambia_tu_ip
-                      ? "el circuito funciona: el destino te vio con otra IP"
-                      : "el circuito responde, pero el destino te vio tu misma IP"}</b>
-                    <div style={{ marginTop: 4 }}>
-                      IP observada por el destino: <b>{prueba.ip_observada}</b>
-                      {prueba.ip_esperada ? <> · esperada (salida del servidor): <b>{prueba.ip_esperada}</b></> : null}
-                      {" · "}{prueba.ms} ms
-                    </div>
-                    <div style={{ marginTop: 2 }}>
-                      circuito: {prueba.circuito?.join(" → ")} → {prueba.destino} · tu IP real: {prueba.tu_ip || "—"}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <b>la comprobación falló</b>
-                    <div style={{ marginTop: 4 }}>{prueba.error}{prueba.ms != null ? ` (${prueba.ms} ms)` : ""}</div>
-                  </>
-                )}
+          <TablonVivo yo={yo} aviso={aviso} />
+
+          {/* ── verificación real del circuito ── */}
+          <Revela className="tarjeta pn-verificacion">
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+              <h2 className="seccion" style={{ marginBottom: 0 }}>¿Está funcionando de verdad?</h2>
+              <span className={`etiqueta-viva`} style={activo ? undefined : { color: "var(--texto-suave)", opacity: .7 }}>
+                {activo ? "comprobación real" : "red apagada"}
+              </span>
+            </div>
+
+            <div className="par-ips">
+              <div className="ip-caja entrada">
+                <span className="rotulo">tu IP (origen)</span>
+                <div className="ip">{yo?.ip_real || "—"}</div>
+                <div className="lugar">
+                  {geoTu?.ok ? [geoTu.ciudad, geoTu.pais].filter(Boolean).join(", ") : (geoTu ? "no se pudo localizar (⟳ reintenta)" : "localizando…")}
+                </div>
+              </div>
+              <div className="flecha-cambia">⟶</div>
+              <div className="ip-caja salida">
+                <span className="rotulo">IP al salir (destino)</span>
+                <div className="ip">{activo ? (ipExit || "midiendo…") : "—"}</div>
+                <div className="lugar">
+                  {!activo ? "activa la red para verla"
+                    : geoSal?.ok ? [geoSal.ciudad, geoSal.pais].filter(Boolean).join(", ")
+                    : geoSal ? "no se pudo localizar (⟳ reintenta)" : "localizando…"}
+                </div>
               </div>
             </div>
-          )}
-        </div>
-      </Revela>
 
-      {/* ── ruta en vivo ── */}
-      <Revela className="tarjeta">
-        <div className="seccion-titulo" style={{ marginBottom: 10 }}>
-          <h2 className="seccion" style={{ marginBottom: 0 }}>Ruta de tu tráfico</h2>
-          <span className="nota mono" style={{ fontSize: 11 }}>{activo ? "en vivo" : "detenida"}</span>
-        </div>
+            <div className="verificacion" style={{ marginTop: 14 }}>
+              <p className="nota" style={{ fontSize: 12.5 }}>
+                Esto no es una estimación: el servidor abre un SOCKS5 con tu cuenta, pide a un servicio externo
+                «¿qué IP ves?» y te enseña la respuesta. Tu contraseña viaja cifrada por HTTPS y <b>no se guarda</b>;
+                solo se usa para ese handshake.
+              </p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
+                <div className="campo-caja" style={{ flex: "1 1 220px" }}>
+                  <input className="campo" type="password" autoComplete="current-password" style={{ marginBottom: 0 }}
+                    placeholder="tu contraseña (solo para esta prueba)" value={clave}
+                    onChange={(e) => setClave(e.target.value)} />
+                </div>
+                <button className="btn primario" onClick={comprobarAhora} disabled={probando || !activo}>
+                  {probando ? <span className="spin" /> : "▶ Comprobar circuito ahora"}
+                </button>
+              </div>
 
-        <div className="ruta-lin">
-          <Parada nombre="TÚ" sub={yo?.ip_real || "tu IP"} tipo="tu" pulso={activo} />
-          <span className="mono flecha">━━▶</span>
-          {saltos.map((n, i) => (
-            <span key={n + i} style={{ display: "contents" }}>
-              <Parada nombre={n} sub={i === 2 ? "_exit_" : i === 0 ? "entrada" : "relé ciego"}
-                tipo={i === 2 ? "exit" : "nodo"} pulso={activo && i === 0} />
+              {prueba && (
+                <div className={`veredicto apa ${prueba.ok ? (prueba.cambia_tu_ip ? "ok" : "duda") : "mal"}`}>
+                  <span>{prueba.ok ? (prueba.cambia_tu_ip ? "✓" : "!") : "✗"}</span>
+                  <div>
+                    {prueba.ok ? (
+                      <>
+                        <b>{prueba.cambia_tu_ip
+                          ? "el circuito funciona: el destino te vio con otra IP"
+                          : "el circuito responde, pero el destino te vio tu misma IP"}</b>
+                        <div style={{ marginTop: 4 }}>
+                          IP observada por el destino: <b>{prueba.ip_observada}</b>
+                          {prueba.ip_esperada ? <> · esperada (salida del servidor): <b>{prueba.ip_esperada}</b></> : null}
+                          {" · "}{prueba.ms} ms
+                        </div>
+                        <div style={{ marginTop: 2 }}>
+                          circuito: {prueba.circuito?.join(" → ")} → {prueba.destino} · tu IP real: {prueba.tu_ip || "—"}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <b>la comprobación falló</b>
+                        <div style={{ marginTop: 4 }}>{prueba.error}{prueba.ms != null ? ` (${prueba.ms} ms)` : ""}</div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </Revela>
+
+          {/* ── ruta en vivo ── */}
+          <Revela className="tarjeta pn-ruta">
+            <div className="seccion-titulo" style={{ marginBottom: 10 }}>
+              <h2 className="seccion" style={{ marginBottom: 0 }}>Ruta de tu tráfico</h2>
+              <span className="nota mono" style={{ fontSize: 11 }}>{activo ? "en vivo" : "detenida"}</span>
+            </div>
+
+            <div className="ruta-lin">
+              <Parada nombre="TÚ" sub={yo?.ip_real || "tu IP"} tipo="tu" pulso={activo} />
               <span className="mono flecha">━━▶</span>
-            </span>
-          ))}
-          <Parada nombre="INTERNET" sub="80 / 443" tipo="destino" />
+              {saltos.map((n, i) => (
+                <span key={n + i} style={{ display: "contents" }}>
+                  <Parada nombre={n} sub={i === 2 ? "_exit_" : i === 0 ? "entrada" : "relé ciego"}
+                    tipo={i === 2 ? "exit" : "nodo"} pulso={activo && i === 0} />
+                  <span className="mono flecha">━━▶</span>
+                </span>
+              ))}
+              <Parada nombre="INTERNET" sub="80 / 443" tipo="destino" />
+            </div>
+
+            <div style={{ marginTop: 14 }}>
+              <Tuberia activo={activo} saltos={saltos} origen="TÚ" destino="INTERNET" />
+            </div>
+
+            <div ref={divMapa} style={{ height: 360, marginTop: 14, borderRadius: "var(--radio)", border: "1px solid rgb(from var(--borde) r g b / .6)" }} />
+            <p className="nota" style={{ marginTop: 8, fontSize: 12 }}>
+              El mapa usa <b>geolocalización real</b> resuelta por el servidor (tu IP y la IP de salida del circuito).
+              {!geoTu?.ok && geoTu && " Tu IP no se pudo localizar: no inventamos ninguna posición."}
+              {" "}Los 3 saltos corren en el mismo servidor de salida, así que solo hay dos puntos reales: tú y la salida.
+            </p>
+          </Revela>
         </div>
 
-        <div style={{ marginTop: 14 }}>
-          <Tuberia activo={activo} saltos={saltos} origen="TÚ" destino="INTERNET" />
-        </div>
+        <aside className="pn-lado">
+          <div className="tarjeta pn-acciones">
+            <span className="pn-kicker">control rápido</span>
+            <div className="pn-acciones-lista">
+              <button className="btn aviso" disabled={!activo || ocupado} onClick={() => accion(rotar, "circuito girado: nuevos saltos ✓")}>
+                🌀 Girar circuito
+              </button>
+              <button className="btn" disabled={!activo || ocupado} onClick={() => accion(desconectar_, "red desactivada")}>
+                ⏻ Apagar red
+              </button>
+              <button className="btn" disabled={ocupado} onClick={() => refrescar(false)}>
+                ⟳ Refrescar datos
+              </button>
+            </div>
+            <p className="nota">Girar cambia los relés sin cerrar la sesión. Apagar corta el circuito al instante.</p>
+          </div>
 
-        <div ref={divMapa} style={{ height: 360, marginTop: 14, borderRadius: "var(--radio)", border: "1px solid rgb(from var(--borde) r g b / .6)" }} />
-        <p className="nota" style={{ marginTop: 8, fontSize: 12 }}>
-          El mapa usa <b>geolocalización real</b> resuelta por el servidor (tu IP y la IP de salida del circuito).
-          {!geoTu?.ok && geoTu && " Tu IP no se pudo localizar: no inventamos ninguna posición."}
-          {" "}Los 3 saltos corren en el mismo servidor de salida, así que solo hay dos puntos reales: tú y la salida.
-        </p>
-      </Revela>
+          <AnilloJwt />
+
+          <div className="tarjeta pn-que-pasa">
+            <h2 className="seccion">¿Qué pasa si activo?</h2>
+            <div className="lista-hechos">
+              <Hecho>Se eligen <b>3 nodos vivos al azar</b> y se abre tu circuito.</Hecho>
+              <Hecho>Aparece el comando SOCKS5 listo para copiar.</Hecho>
+              <Hecho>Podrás <b>comprobar</b> que internet te ve con otra IP.</Hecho>
+              <Hecho>Puedes girar el circuito sin cortar la sesión.</Hecho>
+            </div>
+          </div>
+
+          <div className="tarjeta pn-cuenta-resumen">
+            <span className="pn-kicker">tu cuenta</span>
+            <b>{nombre}</b>
+            <span className="nota mono">{yo?.email}</span>
+            <div className="pn-cuenta-datos">
+              <span><small>plan</small>{yo?.plan || "free"}</span>
+              <span><small>id</small>#{yo?.id}</span>
+              <span><small>sesión</small>2 h</span>
+            </div>
+          </div>
+        </aside>
+      </div>
 
       {/* ── nodos en vivo (siempre visible) ── */}
       <Nodos yo={yo} aviso={aviso} compacta />
 
-      {/* ── detalles + costado ── */}
-      <div className="rejilla-cuenta">
+      {/* ── detalles ── */}
+      <div className="rejilla-cuenta pn-detalle">
         <div className="tarjeta">
           <h2 className="seccion">Tu circuito y tu cuenta</h2>
           <div className="dato"><span className="etq">email</span><span className="val">{yo?.email}</span></div>
@@ -630,42 +703,16 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
           <div className="dato"><span className="etq">circuito</span><span className="val">{yo?.circuito?.length ? yo.circuito.join(" → ") : "—"}</span></div>
           <div className="dato"><span className="etq">estado</span><span className="val mono">{activo ? "ACTIVA · JENC" : "OFF"}</span></div>
           <div className="dato"><span className="etq">último cambio</span><span className="val">{yo?.ultimo_cambio ? new Date(yo.ultimo_cambio * 1000).toLocaleString() : "—"}</span></div>
-
-          {activo && (
-            <div className="fila-btn" style={{ marginTop: 14 }}>
-              <button className="btn aviso" disabled={ocupado} onClick={() => accion(rotar, "circuito girado: nuevos saltos ✓")}>
-                🌀 Girar circuito
-              </button>
-              <button className="btn" disabled={ocupado} onClick={() => accion(desconectar_, "red desactivada")}>
-                ⏻ Apagar red
-              </button>
-            </div>
-          )}
         </div>
 
-        <div style={{ display: "grid", gap: 14, alignContent: "start" }}>
-          <AnilloJwt />
-          {activo ? (
-            <div className="tarjeta">
-              <h2 className="seccion">Nodos de tu circuito</h2>
-              {saltos.map((n, i) => (
-                <div key={i} className="dato-fila">
-                  <b className="mono" style={{ color: i === 2 ? "var(--acento-1)" : "var(--texto)" }}>{i + 1} · {n}</b>
-                  <span className="nota mono" style={{ fontSize: 11.5 }}>{i < 2 ? "reenvío ciego" : "exit · salida real"} · ChaCha20</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="tarjeta">
-              <h2 className="seccion">¿Qué pasa si activo?</h2>
-              <div className="lista-hechos">
-                <Hecho>Se eligen <b>3 nodos vivos al azar</b> y se abre tu circuito.</Hecho>
-                <Hecho>Aparece el comando SOCKS5 listo para copiar.</Hecho>
-                <Hecho>Podrás <b>comprobar</b> que internet te ve con otra IP.</Hecho>
-                <Hecho>Puedes girar el circuito sin cortar la sesión.</Hecho>
-              </div>
-            </div>
-          )}
+        <div className="tarjeta">
+          <h2 className="seccion">Privacidad · en claro</h2>
+          <div className="lista-hechos">
+            <Hecho>Se guarda: <b>email</b>, estado de tu circuito y cuándo cambió. Nada más.</Hecho>
+            <Hecho>No existe histórico de webs ni de destinos.</Hecho>
+            <Hecho>Los nodos reenvían sin leer: reenvío ciego con ChaCha20.</Hecho>
+            <Hecho>Puedes borrar la cuenta de golpe, sin periodo de gracia.</Hecho>
+          </div>
         </div>
       </div>
 

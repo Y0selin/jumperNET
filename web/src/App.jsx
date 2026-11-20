@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import GlifosFondo from "./components/GlifosFondo.jsx";
+import Nieve from "./components/Nieve.jsx";
 import Logo from "./components/Logo.jsx";
 import BotonModo from "./components/BotonModo.jsx";
 import Ajustes from "./components/Ajustes.jsx";
@@ -134,6 +135,8 @@ export default function App() {
   }
 
   const activo = !!yo?.activo;
+  const nombreCuenta = yo?.alias || (yo?.email || "invitado").split("@")[0];
+  const inicialCuenta = nombreCuenta.trim().charAt(0).toUpperCase();
 
   const navega = (id) => (
     <button key={id} className={`lateral-btn ${tab === id ? "activa" : ""}`} onClick={() => { setTab(id); setLateral(false); }}>
@@ -153,14 +156,25 @@ export default function App() {
   return (
     <>
       <GlifosFondo />
+      <Nieve tenue />
+      <div className="pn-aurora" aria-hidden><i /><i /><i /></div>
       <div className="cascara">
 
         {/* ───────── barra lateral ───────── */}
         <aside className={`lateral ${lateral ? "abierto" : ""}`}>
           <a className="lateral-marca" href="#/">
-            <Logo tam={34} />
-            <span className="nombre">Jumper<span>NAT</span><span className="cursor">_</span></span>
+            <Logo tam={36} />
+            <span className="nombre">Jumper<span>NET</span><span className="cursor">_</span></span>
           </a>
+
+          <div className="lateral-perfil">
+            <span className="lateral-avatar" aria-hidden>{inicialCuenta}</span>
+            <span className="lateral-perfil-txt">
+              <b>{nombreCuenta}</b>
+              <span className="mono">{yo?.plan || "free"} · {activo ? "en línea" : "red off"}</span>
+            </span>
+            <span className={`punto-vivo ${activo ? "" : "apagado"}`} aria-hidden />
+          </div>
 
           <div className="lateral-cuerpo">
             <div className="lateral-grupo">
@@ -201,9 +215,14 @@ export default function App() {
             </div>
           </div>
 
+          <a className="lateral-promo" href="#/tarifas">
+            <span className="lateral-promo-estrella" aria-hidden>✦</span>
+            <span><b>Diciembre en red</b><small>7 saltos Pro al precio de 3</small></span>
+          </a>
+
           <div className="lateral-pie">
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span className="punto-vivo" />
+              <span className={`punto-vivo ${activo ? "" : "apagado"}`} />
               {activo ? "red activa · 3 saltos" : "red apagada"}
             </span>
             <span style={{ color: "rgb(255 255 255 / .35)" }}>jumpernet.duckdns.org</span>
@@ -217,8 +236,9 @@ export default function App() {
           <header className={`barra-sup ${pegada ? "pegada" : ""}`}>
             <button className="hamburguesa" onClick={() => setLateral(true)} aria-label="Abrir menú">☰</button>
             <span className="prompt">
-              <b>{yo?.alias || yo?.email?.split("@")[0] || "invitado"}</b>@jumpernat:<i>~/{tab}</i>$ {PROMPT[tab]}
+              <b>{nombreCuenta}</b>@jumpernet:<i>~/{tab}</i>$ {PROMPT[tab]}
             </span>
+            <span className="pn-fecha mono" aria-hidden>{new Date().toLocaleDateString("es-ES", { weekday: "short", day: "2-digit", month: "short" })}</span>
             <span style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
               <BotonModo compacto />
               <span className={`chip ${activo ? "vivo" : "muerto"}`}>{activo ? "RED ACTIVA" : "RED OFF"}</span>
