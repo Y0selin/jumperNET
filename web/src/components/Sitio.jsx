@@ -4,6 +4,7 @@ import FondoRed from "./FondoRed.jsx";
 import Logo from "./Logo.jsx";
 import BotonModo from "./BotonModo.jsx";
 import Reproductor from "./Reproductor.jsx";
+import VideoModal from "./VideoModal.jsx";
 import { ENLACES } from "../lib/contenido.js";
 import { NOMBRES } from "../lib/equipo.js";
 import { baseRuta } from "../lib/router.js";
@@ -30,6 +31,7 @@ export default function Sitio({ ruta, enSesion, children }) {
   const [pegada, setPegada] = useState(false);
   const [arriba, setArriba] = useState(false);
   const [progreso, setProgreso] = useState(0);
+  const [videoAbierto, setVideoAbierto] = useState(false);
   const luz = useRef(null);
   const activa = baseRuta(ruta);
 
@@ -68,6 +70,15 @@ export default function Sitio({ ruta, enSesion, children }) {
     document.title = `${TITULOS[activa] || "JumperNET"} · JumperNET`;
   }, [activa]);
 
+  /* el hero y el reproductor pueden abrir el vídeo en grande */
+  useEffect(() => {
+    const abre = () => setVideoAbierto(true);
+    window.addEventListener("jumpernet-video", abre);
+    return () => window.removeEventListener("jumpernet-video", abre);
+  }, []);
+
+  useEffect(() => { setVideoAbierto(false); }, [activa]);
+
   /* spotlight: las tarjetas iluminan alrededor del cursor */
   useEffect(() => {
     const alMover = (e) => {
@@ -100,6 +111,12 @@ export default function Sitio({ ruta, enSesion, children }) {
 
         <div className="pp-nav-acciones">
           <span className="pp-nav-estado mono"><i aria-hidden /> {enSesion ? "sesión activa" : "red educativa"}</span>
+          <button type="button" className="pp-video-abrir" onClick={() => setVideoAbierto(true)}
+            aria-label="Ver el vídeo de portada de JumperNET" aria-haspopup="dialog">
+            <span className="pp-video-abrir-ico" aria-hidden>▶</span>
+            <span className="pp-video-abrir-txt">vídeo</span>
+            <i className="pp-video-abrir-punto" aria-hidden />
+          </button>
           <BotonModo />
           {enSesion ? (
             <a className="btn primario" href="#/panel">Abrir panel <span aria-hidden>→</span></a>
@@ -135,6 +152,7 @@ export default function Sitio({ ruta, enSesion, children }) {
       </nav>
 
       <Reproductor />
+      <VideoModal abierto={videoAbierto} cerrar={() => setVideoAbierto(false)} />
 
       <footer className="sp-pie">
         <div className="sp-pie-arriba">

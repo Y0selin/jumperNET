@@ -13,7 +13,7 @@ const raíz = join(aquí, "..");
 const salida = join(raíz, "public", "video");
 mkdirSync(salida, { recursive: true });
 
-const DURACION_MS = 25_200;
+const DURACION_MS = 30_000;
 const FPS = 24;
 
 const ejecutable = process.env.CHROMIUM

@@ -225,6 +225,8 @@ async function entrar(email, clave) {
 
 console.log("\n== 1 · INICIO ==");
 await pagina.goto(URL_APP, { waitUntil: "networkidle2" });
+await espera(700);
+await captura("01a-hero-claro");
 igual((await texto(".pp-marca")).includes("JumperNET"), true, "la marca JumperNET abre la portada");
 igual((await texto("h1")).toLowerCase().includes("no va sola"), true, "el hero promete el cambio de IP («no va sola»)");
 igual((await pagina.$$("canvas")).length >= 1, true, "fondo de glifos (canvas) presente");
@@ -267,6 +269,21 @@ igual((await pagina.$(".hn-panel")) !== null, true, "panel interactivo del circu
 igual((await pagina.$(".pp-dock")) !== null, true, "dock de navegación inferior presente");
 igual((await pagina.$(".fondo-red")) !== null, true, "fondo de red interactivo presente");
 await captura("01-inicio");
+
+console.log("\n== 1a·1 · CINE DESDE LA CABECERA ==");
+igual(await pagina.evaluate(() => document.documentElement.dataset.modo), "claro", "la interfaz abre en modo claro");
+igual(await pagina.$$eval(".pp-video-cap", (a) => a.length), 7, "el vídeo de portada tiene siete capítulos");
+igual((await pagina.$(".pp-video-sub")) !== null, true, "el reproductor muestra subtítulos");
+await pagina.click(".pp-video-abrir");
+await espera(1100);
+igual(await pagina.$eval(".video-modal", (e) => e.classList.contains("abierto")), true, "el botón de la cabecera abre el cine");
+igual(await pagina.$$eval(".video-modal-cap", (a) => a.length), 7, "el cine lista los siete capítulos");
+igual(await pagina.$eval(".video-modal video", (v) => v.videoWidth > 0), true, "el vídeo del cine carga");
+igual(await pagina.$eval(".video-modal-tiempo", (e) => e.textContent.includes("30 s")), true, "el cine muestra 30 s, no Infinity");
+await captura("01a-video-modal");
+await pagina.keyboard.press("Escape");
+await espera(500);
+igual(await pagina.$eval(".video-modal", (e) => !e.classList.contains("abierto")), true, "Escape cierra el cine");
 for (const frac of [0.4, 0.75, 1]) {
   await pagina.evaluate((f) => window.scrollTo(0, document.body.scrollHeight * f), frac);
   await espera(450);
@@ -274,6 +291,7 @@ for (const frac of [0.4, 0.75, 1]) {
 const revelados = (await pagina.$$(".revela.visto")).length, totalRevela = (await pagina.$$(".revela")).length;
 igual(revelados >= 3, true, `secciones reveladas al hacer scroll (${revelados}/${totalRevela})`);
 await pagina.evaluate(() => window.scrollTo(0, 0));
+await espera(450);
 
 console.log("\n== 1a · PÁGINAS PROPIAS (no anclas) ==");
 const enlacesNav = await pagina.$$eval(".dock-enlace", (as) => as.map((a) => a.getAttribute("href")));

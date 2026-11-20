@@ -14,11 +14,20 @@ export default function BotonModo({ compacto = false }) {
   const claro = modo === "claro";
   const etiqueta = claro ? "Cambiar a interfaz oscura" : "Cambiar a interfaz clara";
 
+  function cambia() {
+    const nuevo = claro ? "oscuro" : "claro";
+    const aplica = () => { aplicaModo(nuevo); guardaModo(nuevo); setModo(nuevo); };
+    const suave = typeof document.startViewTransition === "function"
+      && !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (suave) document.startViewTransition(aplica);
+    else aplica();
+  }
+
   return (
     <button
       type="button"
       className={`btn-modo ${claro ? "es-claro" : "es-oscuro"} ${compacto ? "compacto" : ""}`}
-      onClick={() => setModo(claro ? "oscuro" : "claro")}
+      onClick={cambia}
       aria-label={etiqueta}
       title={etiqueta}
     >

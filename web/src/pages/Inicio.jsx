@@ -144,10 +144,10 @@ export default function Inicio() {
             </a>
             <a className="btn grande" href="#/funciona">Cómo funciona</a>
             <button className="hn-play" type="button"
-              onClick={() => document.getElementById("video")?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+              onClick={() => window.dispatchEvent(new Event("jumpernet-video"))}>
               <span className="hn-play-ico" aria-hidden>▶</span>
               <span>Ver el vídeo</span>
-              <i className="mono">25 s</i>
+              <i className="mono">30 s</i>
             </button>
             <button className="hn-musica" type="button" onClick={poneMusica}
               aria-label="Poner la música de la portada">
@@ -272,7 +272,7 @@ export default function Inicio() {
 
       <section id="video" className="pp-seccion pp-video-seccion">
         <Revela className="pp-cab">
-          <span className="migas">el proyecto en 25 segundos</span>
+          <span className="migas">el proyecto en 30 segundos</span>
           <h2 className="pp-h2">Así viaja tu tráfico, <span className="texto-gradiente">de principio a fin</span></h2>
           <p className="pp-sub2 nota">
             El vídeo de portada lleva la música del proyecto y se reproduce solo al llegar aquí.

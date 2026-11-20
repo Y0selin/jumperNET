@@ -10,7 +10,7 @@
 <script>
 /* Guion visual del vídeo de portada. Se dibuja en un canvas de 1280x720 y
    generar-video.mjs lo graba con MediaRecorder (VP9) sin ffmpeg.
-   Escenas: problema -> circuito de 3 saltos -> salida validada -> interruptor -> registro. */
+   Escenas: marca -> problema -> 3 saltos -> salida -> interruptor -> cuenta -> equipo. */
 const W = 1280, H = 720;
 const cv = document.getElementById("lienzo");
 const real = cv.getContext("2d");
@@ -93,6 +93,31 @@ function fondo(t) {
     ctx.beginPath(); ctx.arc(sx, sy, 1.2 + (i % 3) * .5, 0, 7); ctx.fill();
   }
 
+  /* una red viva detrás de todo: nodos lentos y enlaces que respiran */
+  const red = [];
+  for (let i = 0; i < 18; i++) {
+    const nx = ((i * 199 + t * (7 + (i % 3) * 4)) % (W + 160)) - 80;
+    const ny = ((i * 113 + Math.sin(t * .34 + i * 1.7) * 34 + H) % (H + 160)) - 80;
+    red.push([nx, ny, i]);
+  }
+  ctx.save();
+  for (let i = 0; i < red.length; i++) {
+    for (let j = i + 1; j < red.length; j++) {
+      const dx = red[i][0] - red[j][0], dy = red[i][1] - red[j][1];
+      const d = Math.hypot(dx, dy);
+      if (d > 250) continue;
+      ctx.strokeStyle = "rgba(139,123,255," + ((1 - d / 250) * .11).toFixed(3) + ")";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(red[i][0], red[i][1]); ctx.lineTo(red[j][0], red[j][1]); ctx.stroke();
+    }
+  }
+  red.forEach(function (n) {
+    const r = 1.6 + (n[2] % 3) * .6;
+    ctx.fillStyle = n[2] % 3 === 0 ? "rgba(255,90,54,.32)" : "rgba(139,123,255,.26)";
+    ctx.beginPath(); ctx.arc(n[0], n[1], r, 0, 7); ctx.fill();
+  });
+  ctx.restore();
+
   const vg = ctx.createRadialGradient(W / 2, H / 2, 200, W / 2, H / 2, 780);
   vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.55)");
   ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
@@ -132,24 +157,45 @@ function paquete(x, y, color, etiqueta, escala) {
   ctx.restore();
 }
 
-/* marca: tres relés y un salto, el mismo dibujo que el logo de la web */
+/* marca: una «J» de circuito, el mismo dibujo que el logo de la web */
 function marca(x, y, escala, t) {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(escala, escala);
   const pulso = .5 + Math.sin((t || 0) * 2.2) * .5;
-  ctx.shadowColor = "rgba(255,90,54,.7)"; ctx.shadowBlur = 26 + pulso * 20;
+  ctx.shadowColor = "rgba(255,90,54,.65)"; ctx.shadowBlur = 28 + pulso * 22;
+  const tg = ctx.createLinearGradient(-62, -62, 62, 62);
+  tg.addColorStop(0, "#ff9a6f"); tg.addColorStop(.45, "#ff5a36"); tg.addColorStop(1, "#8b7bff");
   rr(-62, -62, 124, 124, 30);
-  ctx.fillStyle = "rgba(20,12,26,.97)"; ctx.strokeStyle = "rgba(255,90,54,.8)"; ctx.lineWidth = 2.6;
-  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = tg; ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = C.ac; ctx.lineWidth = 7; ctx.lineCap = "round"; ctx.lineJoin = "round";
-  ctx.beginPath(); ctx.moveTo(-30, 28); ctx.lineTo(-8, 5); ctx.lineTo(13, 15); ctx.lineTo(33, -20); ctx.stroke();
-  [[-30, 28, 5, C.ac], [-8, 5, 4, "#ffb09a"], [13, 15, 3.6, "#ffb09a"], [33, -20, 5, C.ac2]].forEach(function (n) {
-    ctx.beginPath(); ctx.arc(n[0], n[1], n[2], 0, 7); ctx.fillStyle = n[3]; ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,.5)"; ctx.lineWidth = 2.2;
+  rr(-59, -59, 118, 118, 27); ctx.stroke();
+
+  const s = 1.82, X = (v) => (v - 22) * s, Y = (v) => (v - 22) * s;
+  const ruta = () => {
+    ctx.beginPath();
+    ctx.moveTo(X(30.5), Y(9.5));
+    ctx.lineTo(X(30.5), Y(25.8));
+    ctx.bezierCurveTo(X(30.5), Y(32.2), X(25.9), Y(35.8), X(20.2), Y(35.8));
+    ctx.bezierCurveTo(X(15.2), Y(35.8), X(11.6), Y(33), X(10), Y(28.8));
+  };
+  ctx.strokeStyle = "#1a0a05"; ctx.lineWidth = 7.8; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ruta(); ctx.stroke();
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,246,238,.95)"; ctx.lineWidth = 2.8;
+  ctx.setLineDash([5, 62]); ctx.lineDashOffset = -((t || 0) * 42) % 67;
+  ruta(); ctx.stroke();
+  ctx.restore();
+
+  [[30.5, 9.5, 4.8, "#1a0a05"], [30.5, 21.6, 3.4, "#1a0a05"], [20.6, 35.5, 4.2, "#1a0a05"], [10.7, 28.9, 5.1, "#fff6ee"]].forEach(function (n) {
+    ctx.beginPath(); ctx.arc(X(n[0]), Y(n[1]), n[2], 0, 7); ctx.fillStyle = n[3]; ctx.fill();
   });
-  ctx.strokeStyle = C.ac2; ctx.lineWidth = 5;
-  ctx.beginPath(); ctx.moveTo(24, -27); ctx.lineTo(35, -24); ctx.lineTo(32, -12); ctx.stroke();
+  ctx.strokeStyle = "#4b2fc0"; ctx.lineWidth = 3.8; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(X(10.5), Y(29.6)); ctx.lineTo(X(5.9), Y(31.5));
+  ctx.moveTo(X(10.5), Y(29.6)); ctx.lineTo(X(9.3), Y(34.2)); ctx.stroke();
+  ctx.fillStyle = "#fff6ee";
+  ctx.beginPath(); ctx.arc(X(36.4), Y(17.4), 2.2, 0, 7); ctx.fill();
   ctx.restore();
 }
 
@@ -163,6 +209,19 @@ function e1(t) {
   const hg = ctx.createRadialGradient(cx, 250, 0, cx, 250, 260);
   hg.addColorStop(0, "rgba(255,90,54,.22)"); hg.addColorStop(1, "rgba(255,90,54,0)");
   ctx.fillStyle = hg; ctx.fillRect(0, 0, W, H);
+
+  /* órbitas y paquetes alrededor de la marca */
+  for (let i = 0; i < 3; i++) {
+    const radio = 150 + i * 38 + Math.sin(t * 1.2 + i) * 7;
+    ctx.strokeStyle = "rgba(255,90,54," + (.2 - i * .045) + ")";
+    ctx.lineWidth = 1.2; ctx.setLineDash([4, 12]);
+    ctx.beginPath(); ctx.arc(cx, 250, radio, 0, 7); ctx.stroke();
+    const ang = t * (1.1 + i * .35) + i * 2.1;
+    const px = cx + Math.cos(ang) * radio, py = 250 + Math.sin(ang) * radio;
+    ctx.fillStyle = i === 1 ? C.ac2 : C.ac;
+    ctx.beginPath(); ctx.arc(px, py, 3.6, 0, 7); ctx.fill();
+  }
+  ctx.setLineDash([]);
 
   ctx.save();
   ctx.translate(cx, 250);
@@ -341,10 +400,39 @@ function e6(t) {
   ctx.restore();
 }
 
-const TOTAL = 25.2;
+/* ───────── escena 7: el equipo detrás ───────── */
+function e7(t) {
+  const a = easeOut(seg(t, 26.2, 27));
+  ctx.save();
+  ctx.globalAlpha = a;
+  marca(W / 2, 184, .58, t);
+  txt("EQUIPO 2026", W / 2, 292, { size: 12, color: C.ac, font: MONO, align: "center", ls: 3.4 });
+  txt("Cinco cabezas, una red.", W / 2, 338, { size: 42, weight: "800", align: "center" });
+  const nombres = ["Adrián", "Rolando", "Fernando", "Alex", "Yosselin"];
+  nombres.forEach(function (n, i) {
+    const ap = easeOut(seg(t, 26.6 + i * .18, 27.25 + i * .18));
+    const x = W / 2 + (i - 2) * 202;
+    ctx.save();
+    ctx.globalAlpha = a * ap;
+    ctx.translate(0, (1 - ap) * 16);
+    ctx.strokeStyle = i % 2 ? "rgba(139,123,255,.55)" : "rgba(255,90,54,.55)";
+    ctx.lineWidth = 1.2;
+    rr(x - 88, 386, 176, 74, 18); ctx.stroke();
+    ctx.fillStyle = i % 2 ? "rgba(139,123,255,.09)" : "rgba(255,90,54,.09)"; ctx.fill();
+    txt(n, x, 416, { size: 20, weight: "700", align: "center" });
+    txt("0" + (i + 1), x, 442, { size: 9, color: C.mu, font: MONO, align: "center", ls: 2 });
+    ctx.restore();
+  });
+  txt("proyecto educativo ASIR · JumperNET", W / 2, 520,
+    { size: 13, color: C.mu, font: MONO, align: "center", ls: 1.5, alpha: easeOut(seg(t, 27.6, 28.4)) });
+  txt("gracias por ver", W / 2, 576, { size: 24, color: C.tx, align: "center", alpha: easeOut(seg(t, 28, 28.8)) });
+  ctx.restore();
+}
+
+const TOTAL = 30;
 const ESCENAS = [
   [0, 4.4, e1], [4.4, 9.6, e2], [9.6, 15.2, e3],
-  [15.2, 19.4, e4], [19.4, 22.6, e5], [22.6, 25.2, e6],
+  [15.2, 19.4, e4], [19.4, 22.6, e5], [22.6, 26.2, e6], [26.2, 30, e7],
 ];
 
 function dibuja(t) {
@@ -371,7 +459,7 @@ function dibuja(t) {
   ctx.fillStyle = "rgba(255,255,255,.07)"; ctx.fillRect(0, H - 6, W, 6);
   ctx.fillStyle = C.ac; ctx.fillRect(0, H - 6, W * p, 6);
   ctx.fillStyle = "rgba(255,255,255,.22)";
-  [0.174, 0.381, 0.603, 0.77, 0.896].forEach((m) => ctx.fillRect(W * m, H - 10, 1, 10));
+  ESCENAS.slice(1).forEach(([a]) => ctx.fillRect(W * (a / TOTAL), H - 10, 1, 10));
 }
 
 let t0 = 0, raf = 0;

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { CAPITULOS, DURACION } from "../lib/video.js";
 
 /* Vídeo de portada con música y capítulos.
    Sigue reproduciéndose solo (mudo) al entrar en pantalla; el sonido se
@@ -7,22 +8,14 @@ import { useEffect, useRef, useState } from "react";
    scripts/generar-video.mjs y vive en public/video/. */
 const BASE = import.meta.env.BASE_URL || "./";
 
-const CAPITULOS = [
-  { t: 0, n: "inicio" },
-  { t: 4.4, n: "el problema" },
-  { t: 9.6, n: "3 saltos" },
-  { t: 15.2, n: "la salida" },
-  { t: 19.4, n: "interruptor" },
-  { t: 22.6, n: "tu cuenta" },
-];
-
 export default function VideoPortada() {
   const caja = useRef(null);
   const video = useRef(null);
   const [jugando, setJugando] = useState(false);
   const [error, setError] = useState(false);
   const [conAudio, setConAudio] = useState(false);
-  const [dur, setDur] = useState(0);
+  const [cc, setCc] = useState(true);
+  const [dur, setDur] = useState(DURACION);
   const [tiempo, setTiempo] = useState(0);
 
   /* autoplay mudo solo cuando el vídeo está a la vista.
@@ -47,6 +40,7 @@ export default function VideoPortada() {
     }
     const obs = new IntersectionObserver(([e]) => {
       enVista = e.isIntersecting;
+      document.body.classList.toggle("video-en-vista", enVista && e.intersectionRatio > .5);
       if (enVista) {
         intenta();
         setTimeout(intenta, 500);
@@ -55,10 +49,14 @@ export default function VideoPortada() {
         v.pause();
         setJugando(false);
       }
-    }, { threshold: 0.12, rootMargin: "0px 0px -4% 0px" });
+    }, { threshold: [0.12, 0.55], rootMargin: "0px 0px -4% 0px" });
     obs.observe(caja.current);
     if (v.readyState >= 2) intenta();
-    return () => { montado = false; obs.disconnect(); };
+    return () => {
+      montado = false;
+      obs.disconnect();
+      document.body.classList.remove("video-en-vista");
+    };
   }, []);
 
   useEffect(() => {
@@ -112,6 +110,7 @@ export default function VideoPortada() {
 
   const pct = dur ? Math.min(100, (tiempo / dur) * 100) : 0;
   const capActivo = CAPITULOS.reduce((a, c, i) => (tiempo + 0.15 >= c.t ? i : a), 0);
+  const cap = CAPITULOS[capActivo];
 
   return (
     <div className="pp-video-bloque">
@@ -127,11 +126,17 @@ export default function VideoPortada() {
           preload="metadata"
           onClick={alterna}
           onError={() => setError(true)}
-          aria-label="Vídeo de portada: cómo funciona JumperNET en 25 segundos, con música"
+          aria-label="Vídeo de portada: cómo funciona JumperNET en 30 segundos, con música"
         />
 
         {!error && (
           <>
+            {cc && (
+              <p className="pp-video-sub" aria-live="polite">
+                <span className="mono">CC</span> {cap.d}
+              </p>
+            )}
+
             <button
               type="button"
               className="pp-video-play"
@@ -154,9 +159,16 @@ export default function VideoPortada() {
 
             <figcaption className="pp-video-pie">
               <span className="pp-video-tag mono">
-                <span className="punto-vivo" /> 25 s · música de portada · texto en pantalla
+                <span className="punto-vivo" /> {DURACION} s · música + subtítulos
               </span>
               <span className="pp-video-controles">
+                <button type="button" className={`pp-video-btn ${cc ? "on" : ""}`}
+                  onClick={() => setCc((v) => !v)} aria-pressed={cc}
+                  aria-label="Mostrar u ocultar subtítulos">CC</button>
+                <button type="button" className="pp-video-btn"
+                  onClick={() => window.dispatchEvent(new Event("jumpernet-video"))}>
+                  ⛶ grande
+                </button>
                 <button type="button" className="pp-video-btn" onClick={repetir} aria-label="Repetir el vídeo">↺ repetir</button>
                 <a className="pp-video-btn" href={`${BASE}video/portada.webm`} download>⬇ descargar</a>
               </span>
