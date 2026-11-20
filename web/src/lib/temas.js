@@ -1,5 +1,7 @@
 /* Temas del Diseñador: cada tema es un conjunto de variables CSS que se
    aplican en vivo sobre document.documentElement. Persiste en localStorage. */
+import { useEffect, useState } from "react";
+
 const CLAVE = "jumpernat-tema-v2";
 
 export const PRESETS = {
@@ -106,14 +108,14 @@ export function cargaTema() {
 export function temaPorId(id) {  return JSON.parse(JSON.stringify(PRESETS[id] || PRESETS["navidad-clara"])); }
 
 export function useTemas() {
-  const [tema, setTema] = React.useState(() => {
+  const [tema, setTema] = useState(() => {
     try {
       const persisted = localStorage.getItem(CLAVE);
       return persisted ? JSON.parse(persisted) : PRESETS["navidad-clara"];
     } catch { return PRESETS["navidad-clara"]; }
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     document.dispatchEvent(new Event("toggle-tema"));
     aplicaTema(tema);
   }, [tema]);

@@ -12,15 +12,13 @@ export default function BotonModo({ compacto = false }) {
   }, [modo]);
 
   const claro = modo === "claro";
-  const etiqueta = claro ? "Cambiar a interfaz oscura" : "Cambiar a interfaz clara";
+  const etiqueta = claro ? "Cambiar a la noche azul" : "Cambiar al día claro";
 
   function cambia() {
     const nuevo = claro ? "oscuro" : "claro";
-    const aplica = () => { aplicaModo(nuevo); guardaModo(nuevo); setModo(nuevo); };
-    const suave = typeof document.startViewTransition === "function"
-      && !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (suave) document.startViewTransition(aplica);
-    else aplica();
+    aplicaModo(nuevo);
+    guardaModo(nuevo);
+    setModo(nuevo);
   }
 
   return (
@@ -32,7 +30,7 @@ export default function BotonModo({ compacto = false }) {
       title={etiqueta}
     >
       <span className="btn-modo-ico" aria-hidden>{claro ? "☀" : "☾"}</span>
-      <span className="btn-modo-txt">{claro ? "claro" : "oscuro"}</span>
+      <span className="btn-modo-txt">{claro ? "día" : "noche"}</span>
     </button>
   );
 }
