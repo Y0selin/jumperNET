@@ -35,6 +35,7 @@ export default function Proyecto() {
         <div className="sp-acciones">
           <a className="btn primario" href="#/acceso/registro">▸ Probar con una cuenta</a>
           <a className="btn" href="#/funciona">Cómo funciona</a>
+          <a className="btn" href="#/equipo">El equipo</a>
           <a className="btn" href="#/dudas">Dudas y límites</a>
         </div>
       </header>

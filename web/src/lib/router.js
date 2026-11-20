@@ -33,9 +33,16 @@ export function useRuta() {
 
   useEffect(() => {
     if (!location.hash) history.replaceState(null, "", "#/");
+    /* cada página empieza arriba: con scroll suave global, un scrollTo(0,0)
+       normal se queda a medias al cambiar de ruta desde el pie */
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
     const alCambiar = () => {
       setRuta(rutaActual());
+      const raiz = document.documentElement;
+      const antes = raiz.style.scrollBehavior;
+      raiz.style.scrollBehavior = "auto";
       window.scrollTo(0, 0);
+      raiz.style.scrollBehavior = antes;
     };
     window.addEventListener("hashchange", alCambiar);
     return () => window.removeEventListener("hashchange", alCambiar);

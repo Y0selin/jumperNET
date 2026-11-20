@@ -265,6 +265,7 @@ igual(parseFloat(estiloPaquete.dur) > 0, true, "duración del paquete válida ("
 igual(await pagina.$eval(".pp-nav", (e) => getComputedStyle(e).position), "fixed", "barra superior fija del sitio");
 igual((await pagina.$(".hn-panel")) !== null, true, "panel interactivo del circuito en el hero");
 igual((await pagina.$(".pp-dock")) !== null, true, "dock de navegación inferior presente");
+igual((await pagina.$(".fondo-red")) !== null, true, "fondo de red interactivo presente");
 await captura("01-inicio");
 for (const frac of [0.4, 0.75, 1]) {
   await pagina.evaluate((f) => window.scrollTo(0, document.body.scrollHeight * f), frac);
@@ -276,7 +277,7 @@ await pagina.evaluate(() => window.scrollTo(0, 0));
 
 console.log("\n== 1a · PÁGINAS PROPIAS (no anclas) ==");
 const enlacesNav = await pagina.$$eval(".dock-enlace", (as) => as.map((a) => a.getAttribute("href")));
-igual(enlacesNav.length, 5, "el dock tiene 5 páginas (sencillo)");
+igual(enlacesNav.length, 6, "el dock tiene 6 páginas (sencillo)");
 igual(enlacesNav.includes("#/proyecto") && enlacesNav.includes("#/tarifas"), true, "los enlaces apuntan a rutas propias, no a anclas");
 await pagina.click('.dock-enlace[href="#/proyecto"]');
 await espera(700);
@@ -293,6 +294,19 @@ igual(pasoDemo >= 2, true, `la demo mueve el paquete por los saltos (paso ${paso
 await pagina.click(".ds-capas-btn");
 igual(await pagina.$eval(".ds-capas-btn", (e) => e.textContent.includes("Ver capas")), true, "la demo permite ocultar las capas");
 await captura("01a-demo");
+
+console.log("\n== 1a·2 · EL EQUIPO Y LA MARCA ==");
+await pagina.evaluate(() => { location.hash = "#/equipo"; });
+await espera(800);
+igual(await pagina.evaluate(() => location.hash), "#/equipo", "«Equipo» tiene su propia URL");
+igual((await texto("h1")).includes("Cinco personas"), true, "la página del equipo se presenta con las cinco personas");
+igual(await pagina.$$eval(".eq-persona", (p) => p.length), 5, "las cinco fichas del equipo están en la página");
+igual((await cuerpo()).includes("Yosselin") && (await cuerpo()).includes("Adrián"), true, "los nombres del equipo aparecen en la marca");
+igual(await pagina.evaluate(() => document.querySelector(".dock-enlace.activa .dock-txt")?.textContent || null), "Equipo", "el dock marca «Equipo» como página activa");
+await pagina.click(".eq-punto");
+await espera(250);
+igual(await pagina.$eval(".eq-logo-foco", (e) => e.className.includes("es-01")), true, "el logo se explica por piezas al tocarlo");
+await captura("01a-equipo");
 
 await pagina.click('.dock-enlace[href="#/usos"]');
 await espera(700);
@@ -363,7 +377,7 @@ igual(await pagina.$eval(".pp-dock", (e) => {
   const r = e.getBoundingClientRect();
   return r.width > 300 && r.top > 700 && r.bottom <= 845;
 }), true, "dock fijo y visible en móvil");
-igual(await pagina.$$eval(".dock-enlace", (a) => a.length), 5, "el dock conserva las cinco páginas en móvil");
+igual(await pagina.$$eval(".dock-enlace", (a) => a.length), 6, "el dock conserva las seis páginas en móvil");
 igual(await pagina.evaluate(() => [...document.querySelectorAll(".dock-txt")].every((e) => e.getBoundingClientRect().width > 0)), true, "etiquetas legibles en el dock móvil");
 igual(await pagina.$eval(".pp-nav", (e) => e.getBoundingClientRect().height > 0), true, "barra superior visible en móvil");
 igual(await pagina.evaluate(() => !!document.querySelector('.pp-nav-acciones a[href="#/acceso/login"]')), true, "«Entrar» sigue accesible en móvil");

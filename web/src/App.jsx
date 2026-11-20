@@ -11,6 +11,7 @@ import Admin from "./components/Admin.jsx";
 import Sitio from "./components/Sitio.jsx";
 import Inicio from "./pages/Inicio.jsx";
 import Proyecto from "./pages/Proyecto.jsx";
+import EquipoPagina from "./pages/EquipoPagina.jsx";
 import Usos from "./pages/Usos.jsx";
 import Funciona from "./pages/Funciona.jsx";
 import TarifasPagina from "./pages/TarifasPagina.jsx";
@@ -100,6 +101,7 @@ export default function App() {
     let pagina = <Inicio />;
     if (activa === "/usos") pagina = <Usos />;
     else if (activa === "/proyecto") pagina = <Proyecto />;
+    else if (activa === "/equipo") pagina = <EquipoPagina />;
     else if (activa === "/funciona") pagina = <Funciona />;
     else if (activa === "/tarifas") pagina = <TarifasPagina />;
     else if (activa === "/dudas") pagina = <Dudas />;
@@ -164,6 +166,7 @@ export default function App() {
             <div className="lateral-grupo">
               <div className="lateral-titulo">// público</div>
               <a className="lateral-btn" href="#/"><span className="ico">⌂</span><span>Inicio</span></a>
+              <a className="lateral-btn" href="#/equipo"><span className="ico">✦</span><span>El equipo</span></a>
               <a className="lateral-btn" href="#/funciona"><span className="ico">⌁</span><span>Cómo funciona</span></a>
               <a className="lateral-btn" href="#/dudas"><span className="ico">?</span><span>Dudas</span></a>
               <button className={`lateral-btn ${tab === "descargas" ? "activa" : ""}`} onClick={() => { setTab("descargas"); setLateral(false); }}>
@@ -285,6 +288,8 @@ export default function App() {
                 JumperNET · 3 saltos · ChaCha20-Poly1305 · api: jumpernet.duckdns.org
                 <br />
                 <span style={{ opacity: .7 }}>proyecto educativo · la red solo se activa cuando tú lo decides</span>
+                <br />
+                <span style={{ opacity: .55 }}>equipo 2026 · Adrián, Rolando, Fernando, Alex y Yosselin</span>
               </footer>
             </div>
           </main>

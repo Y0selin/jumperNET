@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import GlifosFondo from "./GlifosFondo.jsx";
+import FondoRed from "./FondoRed.jsx";
 import Logo from "./Logo.jsx";
 import BotonModo from "./BotonModo.jsx";
 import Reproductor from "./Reproductor.jsx";
 import { ENLACES } from "../lib/contenido.js";
+import { NOMBRES } from "../lib/equipo.js";
 import { baseRuta } from "../lib/router.js";
 
 /* Marco del sitio público.
@@ -14,6 +16,7 @@ import { baseRuta } from "../lib/router.js";
 const TITULOS = {
   "/": "Portada",
   "/proyecto": "Qué es JumperNET",
+  "/equipo": "El equipo",
   "/usos": "Para qué sirve",
   "/funciona": "Cómo funciona",
   "/tarifas": "Tarifas",
@@ -81,6 +84,7 @@ export default function Sitio({ ruta, enSesion, children }) {
   return (
     <div className="pp sp">
       <GlifosFondo />
+      <FondoRed />
       <div className="pp-luz" ref={luz} aria-hidden />
 
       <header className={`pp-nav ${pegada ? "pegada" : ""}`}>
@@ -138,7 +142,10 @@ export default function Sitio({ ruta, enSesion, children }) {
             <Logo tam={34} />
             <div>
               <div className="pp-marca-txt">Jumper<span>NET</span></div>
-              <div className="nota mono">red de anonimato por 3 saltos · proyecto educativo</div>
+              <div className="nota mono">red de anonimato por 3 saltos · equipo 2026</div>
+              <div className="sp-pie-firma mono">
+                por <a href="#/equipo">{NOMBRES}</a>
+              </div>
             </div>
           </div>
           <div className="sp-pie-legal nota mono">
@@ -169,7 +176,7 @@ export default function Sitio({ ruta, enSesion, children }) {
         </div>
 
         <p className="nota mono sp-pie-final">
-          © {new Date().getFullYear()} JumperNET · hecho para aprender cómo viaja (y cómo se protege) una conexión
+          © {new Date().getFullYear()} JumperNET · creado por {NOMBRES} · hecho para aprender cómo viaja (y cómo se protege) una conexión
         </p>
       </footer>
 

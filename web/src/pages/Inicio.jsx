@@ -3,7 +3,9 @@ import Revela from "../components/Revela.jsx";
 import VideoPortada from "../components/VideoPortada.jsx";
 import MapaCircuito from "../components/MapaCircuito.jsx";
 import CircuitoHero from "../components/CircuitoHero.jsx";
+import Logo from "../components/Logo.jsx";
 import { FRASES, PIEZAS } from "../lib/contenido.js";
+import { EQUIPO, NOMBRES } from "../lib/equipo.js";
 import { nodos as nodosApi } from "../lib/api.js";
 
 /* Portada nueva. La primera pantalla es un escenario: titular editorial,
@@ -120,7 +122,7 @@ export default function Inicio() {
 
         <div className="hn-hero-txt">
           <span className="hn-eyebrow">
-            <span className="punto-vivo" /> proxy SOCKS5 · 3 saltos · la enciendes tú
+            <span className="punto-vivo" /> jumpernet · proxy SOCKS5 · 3 saltos · la enciendes tú
           </span>
 
           <h1 className="hn-titulo">
@@ -160,6 +162,19 @@ export default function Inicio() {
             <div><dt className="mono">salida</dt><dd>80 / 443</dd></div>
             <div><dt className="mono">histórico</dt><dd>0</dd></div>
           </dl>
+
+          <a className="hn-firma" href="#/equipo"
+            aria-label={`Conocer al equipo que ha creado JumperNET: ${NOMBRES}`}>
+            <span className="hn-firma-avatares" aria-hidden>
+              {EQUIPO.map((p) => (
+                <i key={p.nombre} data-tono={p.tono}>{p.nombre.slice(0, 1)}</i>
+              ))}
+            </span>
+            <span className="hn-firma-txt">
+              Hecho por <b>{NOMBRES}</b>
+              <span className="hn-firma-link">la marca y el equipo →</span>
+            </span>
+          </a>
         </div>
 
         <div className="hn-hero-visual">
@@ -184,6 +199,19 @@ export default function Inicio() {
           ))}
         </div>
       </div>
+
+      <section id="esquema" className="pp-seccion sp-mapa-sec">
+        <Revela className="pp-cab">
+          <span className="migas">empieza aquí · en diez segundos</span>
+          <h2 className="pp-h2">Tú, tres relés y <span className="texto-gradiente">la salida</span></h2>
+          <p className="pp-sub2 nota">
+            Esto es JumperNET: tu conexión entra en un proxy, cruza tres nodos que solo
+            reenvían y sale a internet con otra IP. Toca cada parada o lanza el paquete
+            para ver qué sabe de ti cada salto.
+          </p>
+        </Revela>
+        <Revela retardo={1}><MapaCircuito /></Revela>
+      </section>
 
       <section className="pp-seccion">
         <Revela className="pp-cab">
@@ -217,18 +245,6 @@ export default function Inicio() {
           <a className="btn" href="#/proyecto">Ver el proyecto completo <span>→</span></a>
           <a className="btn" href="#/funciona">Cómo funciona, paso a paso <span>→</span></a>
         </div>
-      </section>
-
-      <section id="esquema" className="pp-seccion sp-mapa-sec">
-        <Revela className="pp-cab">
-          <span className="migas">el esquema, en diez segundos</span>
-          <h2 className="pp-h2">Tu conexión pasa por <span className="texto-gradiente">cinco casillas</span></h2>
-          <p className="pp-sub2 nota">
-            Si es la primera vez que oyes hablar de JumperNET, empieza aquí: toca cada parada
-            para ver qué sabe de ti y lanza el paquete para verlo cruzar el circuito.
-          </p>
-        </Revela>
-        <Revela retardo={1}><MapaCircuito /></Revela>
       </section>
 
       <section className="pp-seccion">
@@ -306,6 +322,30 @@ export default function Inicio() {
           ))}
         </div>
       </section>
+
+      <Revela className="sp-equipo-teaser tarjeta">
+        <div className="sp-equipo-cab">
+          <div className="sp-equipo-marca">
+            <Logo tam={46} />
+            <span className="sp-equipo-logo">Jumper<span>NET</span></span>
+          </div>
+          <span className="migas">la marca y el equipo</span>
+          <h2 className="pp-h2">Cinco personas, <span className="texto-gradiente">una red</span></h2>
+          <p className="nota">
+            JumperNET lo firma <b>{NOMBRES}</b>. La marca es el propio circuito: tres relés
+            y un salto hacia la salida.
+          </p>
+          <a className="btn" href="#/equipo">Conocer al equipo <span aria-hidden>→</span></a>
+        </div>
+        <div className="sp-equipo-gente" aria-label="Equipo fundador de JumperNET">
+          {EQUIPO.map((p) => (
+            <a key={p.nombre} href="#/equipo" className="sp-equipo-mini" data-tono={p.tono}>
+              <i aria-hidden>{p.nombre.slice(0, 1)}</i>
+              <span>{p.nombre}</span>
+            </a>
+          ))}
+        </div>
+      </Revela>
 
       <Revela className="sp-banda">
         <div>

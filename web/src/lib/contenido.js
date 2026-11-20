@@ -14,6 +14,7 @@ export const FRASES = [
 export const ENLACES = [
   { ruta: "/usos", texto: "Para qué sirve", corto: "Usos", ico: "◎" },
   { ruta: "/proyecto", texto: "Proyecto", corto: "Proyecto", ico: "◈" },
+  { ruta: "/equipo", texto: "El equipo", corto: "Equipo", ico: "✦" },
   { ruta: "/funciona", texto: "Cómo funciona", corto: "Funciona", ico: "⌁" },
   { ruta: "/tarifas", texto: "Tarifas", corto: "Tarifas", ico: "◇" },
   { ruta: "/dudas", texto: "Dudas", corto: "Dudas", ico: "?" },
