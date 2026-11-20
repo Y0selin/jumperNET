@@ -1078,3 +1078,11 @@ html[data-modo="claro"] .pp .hn-sello { border-color: #b1802f; }
 .pp-marca:hover svg { filter: drop-shadow(0 0 12px rgb(255 90 54 / .5)); }
 .hn-marca-palabra:hover i { text-shadow: 0 0 24px rgb(255 90 54 / .55); transform: translateY(-2px); transition: transform .25s ease, text-shadow .25s ease; }
 .hn-acciones .btn:hover, .hn-acciones .btn.primario:hover { box-shadow: 0 12px 34px rgb(255 90 54 / .28); transform: translateY(-2px); }
+
+/* ─────────── animación de entrada del hero ─────────── */
+@keyframes hn-entrada {
+  from { opacity: 0; transform: translateY(30px) scale(.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.hn-hero-visual { animation: hn-entrada .9s cubic-bezier(.2,.8,.2,1) .2s both; }
+.hn-hero-txt { animation: hn-entrada .9s cubic-bezier(.2,.8,.2,1) both; }

@@ -201,6 +201,13 @@ export default function Inicio() {
             con una cuenta gratuita y sin instalar nada extra.
           </p>
 
+          <p className="hn-lead hn-lead-3">
+            La red se enciende solo cuando tú lo decides. Mientras tanto, los nodos siguen
+            vivos y el panel te enseña la latencia real, el estado de cada salto y la IP
+            que saldría a internet. Sin promesas de anonimato total: solo un circuito de
+            tres saltos que puedes mirar por dentro.
+          </p>
+
           <div className="hn-acciones">
             <a className="btn primario grande" href="#/acceso/registro">
               Crear cuenta gratis <span aria-hidden>→</span>
