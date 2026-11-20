@@ -15,7 +15,7 @@ html[data-modo="claro"] {
   --acento-1: #c85133;
   --acento-2: #245b47;
   --acento-3: #b1802f;
-  --texto: #17283B;
+  --texto: #14283E;
   --texto-suave: #5a6b7c;
   --tinta: #FFFFFF;
   --acento-txt: #a53e25;
@@ -31,7 +31,7 @@ html[data-modo="claro"] {
 }
 
 html[data-modo="claro"] body {
-  background: #F5F9FC;
+  background: #FFFFFF;
   color: var(--texto);
 }
 html[data-modo="claro"] body::before {
@@ -154,7 +154,7 @@ html[data-modo="claro"] .hn-guirnalda path { stroke: rgb(23 53 43 / .3); }
   border: 2px dashed #b1802f;
   border-radius: 8px;
   background: #FFFFFF;
-  color: #17283B;
+  color: #14283E;
   text-align: center;
   line-height: 1;
   transform: rotate(5deg);
@@ -181,7 +181,7 @@ html[data-modo="claro"] .pp .pp-nav.pegada {
   box-shadow: 0 14px 30px -30px rgb(23 53 43 / .45);
   backdrop-filter: blur(18px) saturate(130%);
 }
-html[data-modo="claro"] .pp .pp-marca-txt { color: #17283B; }
+html[data-modo="claro"] .pp .pp-marca-txt { color: #14283E; }
 html[data-modo="claro"] .pp .pp-marca-txt span,
 html[data-modo="claro"] .pp .pp-marca .cursor { color: #b3482d; }
 html[data-modo="claro"] .pp .pp-nav-estado {
@@ -190,12 +190,12 @@ html[data-modo="claro"] .pp .pp-nav-estado {
   border-color: #dfd2bf;
 }
 html[data-modo="claro"] .pp .pp-entrar { color: #4f5e55; }
-html[data-modo="claro"] .pp .pp-entrar:hover { color: #17283B; background: rgb(36 91 71 / .06); }
+html[data-modo="claro"] .pp .pp-entrar:hover { color: #14283E; background: rgb(36 91 71 / .06); }
 html[data-modo="claro"] .pp .pp-video-abrir,
 html[data-modo="claro"] .pp .btn-modo {
   background: #fffaf2;
   border-color: #d8c9b5;
-  color: #17283B;
+  color: #14283E;
 }
 html[data-modo="claro"] .pp .pp-video-abrir:hover,
 html[data-modo="claro"] .pp .btn-modo:hover { background: #fff; border-color: #b3482d; color: #a53e25; }
@@ -203,7 +203,7 @@ html[data-modo="claro"] .pp .btn-modo-ico { background: rgb(200 81 51 / .13); }
 html[data-modo="claro"] .pp .btn {
   background: #fffaf2;
   border-color: #d0c0aa;
-  color: #17283B;
+  color: #14283E;
   box-shadow: 0 8px 18px -18px rgb(23 53 43 / .45);
 }
 html[data-modo="claro"] .pp .btn:hover { background: #fff; border-color: #b3482d; color: #a53e25; }
@@ -226,7 +226,7 @@ html[data-modo="claro"] .pp .pp-dock {
   box-shadow: 0 24px 55px -32px rgb(23 53 43 / .5), inset 0 1px 0 #fff;
 }
 html[data-modo="claro"] .pp .dock-enlace { color: #5a6b7c; }
-html[data-modo="claro"] .pp .dock-enlace:hover { background: rgb(36 91 71 / .06); color: #17283B; }
+html[data-modo="claro"] .pp .dock-enlace:hover { background: rgb(36 91 71 / .06); color: #14283E; }
 html[data-modo="claro"] .pp .dock-enlace.activa {
   background: linear-gradient(135deg, #167D68, #0f5a4a);
   color: #FFFFFF;
@@ -254,7 +254,7 @@ html[data-modo="claro"] .hn-aro-a {
 html[data-modo="claro"] .hn-aro-b { border-color: rgb(36 91 71 / .18); }
 html[data-modo="claro"] .hn-constelacion { color: rgb(165 62 37 / .62); }
 html[data-modo="claro"] .pp .hn-titulo {
-  color: #17283B;
+  color: #14283E;
   font-size: clamp(50px, 6.2vw, 90px);
   line-height: .92;
 }
@@ -268,21 +268,21 @@ html[data-modo="claro"] .pp .hn-rotativa,
 html[data-modo="claro"] .pp .hn-rotativa .pp-maquina { color: #a56f24; }
 html[data-modo="claro"] .pp .hn-rotativa .cursor { color: #c85133; }
 html[data-modo="claro"] .pp .hn-lead { color: #4e5e55; }
-html[data-modo="claro"] .pp .hn-lead b { color: #17283B; }
+html[data-modo="claro"] .pp .hn-lead b { color: #14283E; }
 html[data-modo="claro"] .pp .hn-eyebrow {
   background: #fffaf2;
   border-color: #d8c9b5;
   color: #526157;
 }
 html[data-modo="claro"] .pp .hn-play { color: #4e5e55; }
-html[data-modo="claro"] .pp .hn-play:hover { background: rgb(36 91 71 / .06); color: #17283B; }
-html[data-modo="claro"] .pp .hn-play-ico { border-color: #cdbda8; color: #17283B; }
+html[data-modo="claro"] .pp .hn-play:hover { background: rgb(36 91 71 / .06); color: #14283E; }
+html[data-modo="claro"] .pp .hn-play-ico { border-color: #cdbda8; color: #14283E; }
 html[data-modo="claro"] .pp .hn-cifras { border-top-color: #d8c9b5; }
 html[data-modo="claro"] .pp .hn-cifras dt { color: #67736a; opacity: 1; }
-html[data-modo="claro"] .pp .hn-cifras dd { color: #17283B; }
+html[data-modo="claro"] .pp .hn-cifras dd { color: #14283E; }
 html[data-modo="claro"] .pp .hn-firma { color: #5a6b7c; }
-html[data-modo="claro"] .pp .hn-firma:hover { color: #17283B; }
-html[data-modo="claro"] .pp .hn-firma-txt b { color: #17283B; }
+html[data-modo="claro"] .pp .hn-firma:hover { color: #14283E; }
+html[data-modo="claro"] .pp .hn-firma-txt b { color: #14283E; }
 html[data-modo="claro"] .pp .hn-scroll { color: #5a6b7c; }
 html[data-modo="claro"] .pp .hn-scroll i { border-color: #cdbda8; }
 
@@ -357,7 +357,7 @@ html[data-modo="claro"] .pp .hn-paquete { background: #b1802f; box-shadow: 0 0 1
 html[data-modo="claro"] .pp .hn-nodo {
   border-color: #d8c9b5;
   background: #FFFFFF;
-  color: #17283B;
+  color: #14283E;
 }
 html[data-modo="claro"] .pp .hn-nodo:hover { border-color: #c85133; background: #fff; }
 html[data-modo="claro"] .pp .hn-nodo-n { color: rgb(23 53 43 / .4); }
@@ -376,10 +376,10 @@ html[data-modo="claro"] .pp .hn-ficha {
 }
 html[data-modo="claro"] .pp .hn-ficha-cab { color: #6b756c; }
 html[data-modo="claro"] .pp .hn-ficha-dos span { color: #a53e25; }
-html[data-modo="claro"] .pp .hn-ficha-dos p { color: #17283B; }
+html[data-modo="claro"] .pp .hn-ficha-dos p { color: #14283E; }
 html[data-modo="claro"] .pp .hn-off-nota { color: #a53e25; }
 html[data-modo="claro"] .pp .hn-panel-pie { color: #6b756c; }
-html[data-modo="claro"] .pp .hn-panel-pie b { color: #17283B; }
+html[data-modo="claro"] .pp .hn-panel-pie b { color: #14283E; }
 html[data-modo="claro"] .pp .hn-globo { background: #FFFFFF; border-color: #d8c9b5; color: #5a6b7c; }
 html[data-modo="claro"] .pp .hn-globo-a { color: #a53e25; border-color: rgb(200 81 51 / .3); }
 html[data-modo="claro"] .pp .hn-pie-visual { color: #6b756c; }
@@ -395,15 +395,15 @@ html[data-modo="claro"] .cascara .lateral {
   border-right-color: #d8c9b5;
 }
 html[data-modo="claro"] .cascara .lateral-marca {
-  color: #17283B;
+  color: #14283E;
   border-bottom-color: #e1d4c1;
 }
 html[data-modo="claro"] .cascara .lateral-marca .nombre span { color: #b3482d; }
 html[data-modo="claro"] .cascara .lateral-titulo { color: #a53e25; }
 html[data-modo="claro"] .cascara .lateral-btn { color: #526157; }
-html[data-modo="claro"] .cascara .lateral-btn:hover { background: rgb(36 91 71 / .06); color: #17283B; }
+html[data-modo="claro"] .cascara .lateral-btn:hover { background: rgb(36 91 71 / .06); color: #14283E; }
 html[data-modo="claro"] .cascara .lateral-btn.activa {
-  color: #17283B;
+  color: #14283E;
   background: linear-gradient(90deg, rgb(36 91 71 / .14), transparent);
   border-color: rgb(36 91 71 / .35);
   box-shadow: inset 3px 0 0 #245b47;
@@ -463,7 +463,7 @@ html[data-modo="claro"] .pn-cab {
     #FFFFFF;
   box-shadow: 0 30px 65px -52px rgb(23 53 43 / .5);
 }
-html[data-modo="claro"] .pn-h1 { color: #17283B; }
+html[data-modo="claro"] .pn-h1 { color: #14283E; }
 html[data-modo="claro"] .pn-h1 em {
   color: #FF6347;
   background: none;
@@ -480,7 +480,7 @@ html[data-modo="claro"] .pn-orbe.off { opacity: .78; background: radial-gradient
 html[data-modo="claro"] .pn-orbe-anillo { border-color: rgb(36 91 71 / .3); }
 html[data-modo="claro"] .pn-orbe-anillo.b { border-color: rgb(183 128 53 / .3); }
 html[data-modo="claro"] .pn-orbe-anillo.c { border-color: rgb(200 81 51 / .28); }
-html[data-modo="claro"] .pn-orbe-nucleo b { color: #17283B; }
+html[data-modo="claro"] .pn-orbe-nucleo b { color: #14283E; }
 html[data-modo="claro"] .pn-orbe-pie { color: #a53e25; }
 html[data-modo="claro"] .pn-cuenta-resumen,
 html[data-modo="claro"] .pn-acciones,
@@ -496,7 +496,7 @@ html[data-modo="claro"] .cascara .stat {
   background: #FFFFFF;
   border-color: #d8c9b5;
 }
-html[data-modo="claro"] .cascara .stat .val { color: #17283B; }
+html[data-modo="claro"] .cascara .stat .val { color: #14283E; }
 html[data-modo="claro"] .cascara .stat.ok .val { color: #245b47; }
 html[data-modo="claro"] .cascara .stat.info .val { color: #b1802f; }
 html[data-modo="claro"] .cascara .stat.aviso .val { color: #a53e25; }
@@ -509,7 +509,7 @@ html[data-modo="claro"] .pn-switch {
   background: linear-gradient(155deg, #FFFFFF, #f8f0e3 62%, #FFFFFF);
 }
 html[data-modo="claro"] .pn-switch-cab { border-bottom-color: #e1d4c1; }
-html[data-modo="claro"] .pn-switch-cab h2.seccion { color: #17283B; }
+html[data-modo="claro"] .pn-switch-cab h2.seccion { color: #14283E; }
 html[data-modo="claro"] .pn-switch-copy .nota { color: #526157; }
 html[data-modo="claro"] .pn-switch-datos b { color: #245b47; }
 html[data-modo="claro"] .pn-switch-datos small { color: #67736a; }
@@ -534,11 +534,11 @@ html[data-modo="claro"] .pn-fecha { color: #67736a; }
 html[data-modo="claro"] .cascara .btn {
   background: #FFFFFF;
   border-color: #d0c0aa;
-  color: #17283B;
+  color: #14283E;
 }
 html[data-modo="claro"] .cascara .btn:hover { background: #fff; border-color: #b3482d; color: #a53e25; }
 html[data-modo="claro"] .cascara .btn.primario { color: #FFFFFF; }
-html[data-modo="claro"] .cascara .campo { background: #FFFFFF; border-color: #d0c0aa; color: #17283B; }
+html[data-modo="claro"] .cascara .campo { background: #FFFFFF; border-color: #d0c0aa; color: #14283E; }
 html[data-modo="claro"] .cascara .campo::placeholder { color: #8b9187; }
 html[data-modo="claro"] .cascara .kbd { background: #f2e9dc; box-shadow: 0 2px 0 #d6c7b2; }
 html[data-modo="claro"] .cascara .link-externa:hover { background: rgb(36 91 71 / .06); }
@@ -793,7 +793,7 @@ html[data-modo="claro"] .pn-diag-punto.aviso { background: #b1802f; }
   color: var(--texto-suave);
 }
 .hn-lema em { font-style: italic; }
-html[data-modo="claro"] .pp .hn-marca-palabra { color: #17283B; }
+html[data-modo="claro"] .pp .hn-marca-palabra { color: #14283E; }
 html[data-modo="claro"] .pp .hn-marca-palabra i:nth-child(n+7) { color: #FF6347; }
 html[data-modo="claro"] .pp .hn-lema { color: #4e5e55; }
 html[data-anim="off"] .hn-marca-palabra i { animation: none; }

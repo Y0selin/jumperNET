@@ -4,7 +4,6 @@ import VideoPortada from "../components/VideoPortada.jsx";
 import MapaCircuito from "../components/MapaCircuito.jsx";
 import CircuitoHero from "../components/CircuitoHero.jsx";
 import Logo from "../components/Logo.jsx";
-import CampoNodos from "../components/CampoNodos.jsx";
 import { BandaHoy, PildoraHoy, SelloHoy } from "../components/Hoy.jsx";
 import { VERSION, EDICION, PUBLICADA, NOVEDADES } from "../lib/version.js";
 import { FRASES, PIEZAS } from "../lib/contenido.js";
