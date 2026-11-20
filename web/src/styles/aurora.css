@@ -370,7 +370,7 @@ body::before {
   padding: clamp(12px, 2vw, 28px) 0 clamp(24px, 4vw, 48px);
 }
 .hn-aurora { position: absolute; inset: -8% -2% -6% -4%; z-index: -1; pointer-events: none; }
-.hn-aurora i { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .55; animation: hn-flota 16s ease-in-out infinite; }
+.hn-aurora i { position: absolute; border-radius: 50%; filter: blur(100px); opacity: .65; animation: hn-flota 16s ease-in-out infinite; }
 .hn-aurora i:nth-child(1) {
   width: 540px; height: 540px; left: -8%; top: -14%;
   background: radial-gradient(circle, rgb(255 90 54 / .55), transparent 66%);

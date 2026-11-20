@@ -1072,3 +1072,9 @@ html[data-modo="claro"] .pp .hn-sello { border-color: #b1802f; }
   z-index: 0; opacity: .75; pointer-events: auto; cursor: crosshair;
 }
 .hn-hero > *:not(.campo-nodos) { position: relative; z-index: 1; }
+
+/* ─────────── mejoras visuales portada ─────────── */
+.pp-marca:hover .pp-marca-txt { text-shadow: 0 0 18px rgb(255 90 54 / .45); }
+.pp-marca:hover svg { filter: drop-shadow(0 0 12px rgb(255 90 54 / .5)); }
+.hn-marca-palabra:hover i { text-shadow: 0 0 24px rgb(255 90 54 / .55); transform: translateY(-2px); transition: transform .25s ease, text-shadow .25s ease; }
+.hn-acciones .btn:hover, .hn-acciones .btn.primario:hover { box-shadow: 0 12px 34px rgb(255 90 54 / .28); transform: translateY(-2px); }
