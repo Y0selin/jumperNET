@@ -9,6 +9,7 @@ import Nieve from "./Nieve.jsx";
 import { ENLACES } from "../lib/contenido.js";
 import { NOMBRES } from "../lib/equipo.js";
 import { baseRuta } from "../lib/router.js";
+import { VERSION } from "../lib/version.js";
 
 /* Marco del sitio público.
    Navegación nueva: barra superior fina (marca + cuenta) y un dock inferior
@@ -102,8 +103,9 @@ export default function Sitio({ ruta, enSesion, children }) {
 
       <header className={`pp-nav ${pegada ? "pegada" : ""}`}>
         <a className="pp-marca" href="#/" aria-label="JumperNET, ir a la portada">
-          <Logo tam={38} />
+          <Logo tam={40} />
           <span className="pp-marca-txt">Jumper<span>NET</span><i className="cursor">_</i></span>
+          <span className="pp-marca-ver mono">v{VERSION}</span>
         </a>
 
         <div className="pp-nav-centro" aria-hidden>
@@ -196,7 +198,7 @@ export default function Sitio({ ruta, enSesion, children }) {
         </div>
 
         <p className="nota mono sp-pie-final">
-          © {new Date().getFullYear()} JumperNET · creado por {NOMBRES} · hecho para aprender cómo viaja (y cómo se protege) una conexión
+          © {new Date().getFullYear()} JumperNET · v{VERSION} · creado por {NOMBRES} · hecho para aprender cómo viaja (y cómo se protege) una conexión
         </p>
       </footer>
 

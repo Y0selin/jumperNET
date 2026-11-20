@@ -23,6 +23,8 @@ import { useRuta, baseRuta, ir } from "./lib/router.js";
 import { me, setToken, getToken } from "./lib/api.js";
 import { aplicaTema, cargaTema } from "./lib/temas.js";
 import { aplicaModo, cargaModo } from "./lib/modo.js";
+import { datosHoy } from "./lib/fecha.js";
+import { VERSION } from "./lib/version.js";
 
 const NAV_SESION = [
   { grupo: "red", items: [
@@ -135,6 +137,7 @@ export default function App() {
   }
 
   const activo = !!yo?.activo;
+  const hoy = datosHoy();
   const nombreCuenta = yo?.alias || (yo?.email || "invitado").split("@")[0];
   const inicialCuenta = nombreCuenta.trim().charAt(0).toUpperCase();
 
@@ -215,10 +218,13 @@ export default function App() {
             </div>
           </div>
 
-          <a className="lateral-promo" href="#/tarifas">
-            <span className="lateral-promo-estrella" aria-hidden>✦</span>
-            <span><b>Navidad en red</b><small>7 saltos Pro al precio de 3</small></span>
-          </a>
+          <div className="lateral-promo lateral-hoy" role="note" aria-label={`Hoy es ${hoy.completa}`}>
+            <span className="lateral-hoy-dia mono" aria-hidden>{hoy.numero}</span>
+            <span>
+              <b>{hoy.dia}</b>
+              <small>{hoy.mes} {hoy.anio} · semana {hoy.semana}</small>
+            </span>
+          </div>
 
           <div className="lateral-pie">
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -238,7 +244,9 @@ export default function App() {
             <span className="prompt">
               <b>{nombreCuenta}</b>@jumpernet:<i>~/{tab}</i>$ {PROMPT[tab]}
             </span>
-            <span className="pn-fecha mono" aria-hidden>{new Date().toLocaleDateString("es-ES", { weekday: "short", day: "2-digit", month: "short" })}</span>
+            <span className="pn-fecha mono" title={hoy.completa}>
+              {hoy.diaCorto} {hoy.numero} {hoy.mesCorto} · S{hoy.semana}
+            </span>
             <span style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
               <BotonModo compacto />
               <span className={`chip ${activo ? "vivo" : "muerto"}`}>{activo ? "RED ACTIVA" : "RED OFF"}</span>
@@ -305,7 +313,7 @@ export default function App() {
               )}
 
               <footer className="nota mono" style={{ textAlign: "center", marginTop: 44, fontSize: 10.5 }}>
-                JumperNET · 3 saltos · ChaCha20-Poly1305 · api: jumpernet.duckdns.org
+                JumperNET v{VERSION} · 3 saltos · ChaCha20-Poly1305 · api: jumpernet.duckdns.org
                 <br />
                 <span style={{ opacity: .7 }}>proyecto educativo · la red solo se activa cuando tú lo decides</span>
                 <br />

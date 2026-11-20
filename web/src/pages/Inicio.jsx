@@ -4,6 +4,8 @@ import VideoPortada from "../components/VideoPortada.jsx";
 import MapaCircuito from "../components/MapaCircuito.jsx";
 import CircuitoHero from "../components/CircuitoHero.jsx";
 import Logo from "../components/Logo.jsx";
+import { BandaHoy, PildoraHoy, SelloHoy } from "../components/Hoy.jsx";
+import { VERSION, EDICION, PUBLICADA, NOVEDADES } from "../lib/version.js";
 import { FRASES, PIEZAS } from "../lib/contenido.js";
 import { EQUIPO, NOMBRES } from "../lib/equipo.js";
 import { nodos as nodosApi } from "../lib/api.js";
@@ -37,12 +39,7 @@ const LUCES_GUIRNALDA = [
   { x: 97, y: 11, c: "#71c6a8", d: "-5.5s" },
 ];
 
-function diasParaNavidad() {
-  const hoy = new Date();
-  const ano = hoy.getMonth() === 11 && hoy.getDate() > 25 ? hoy.getFullYear() + 1 : hoy.getFullYear();
-  const navidad = new Date(ano, 11, 25);
-  return Math.max(0, Math.ceil((navidad - hoy) / 86400000));
-}
+const LETRAS = "JumperNET".split("");
 
 function Typewriter({ frases, velocidad = 46 }) {
   const [txt, setTxt] = useState("");
@@ -98,10 +95,7 @@ export default function Inicio() {
   const [sinApi, setSinApi] = useState(false);
   const [abierta, setAbierta] = useState(-1);
   const [recarga, setRecarga] = useState(0);
-  const diasNavidad = diasParaNavidad();
-  const cuentaNavidad = diasNavidad === 0
-    ? "hoy · 25/12"
-    : `faltan ${diasNavidad} ${diasNavidad === 1 ? "día" : "días"}`;
+  const [onda, setOnda] = useState(0);   // repetir la entrada del nombre al pulsarlo
 
   useEffect(() => {
     let montado = true;
@@ -171,20 +165,24 @@ export default function Inicio() {
         </div>
 
         <div className="hn-hero-txt">
-          <a className="hn-promo" href="#/tarifas">
-            <span className="hn-promo-estrella" aria-hidden>✦</span>
-            <span className="hn-promo-txt"><b>Navidad en red</b><span>7 saltos Pro al precio de 3</span></span>
-            <span className="hn-promo-tag mono">{cuentaNavidad}</span>
-            <span className="hn-promo-flecha" aria-hidden>→</span>
-          </a>
+          <PildoraHoy />
 
           <span className="hn-eyebrow">
-            <span className="punto-vivo" /> jumpernet · edición de diciembre · proxy SOCKS5 · 3 saltos
+            <span className="punto-vivo" /> jumpernet v{VERSION} · proxy SOCKS5 · 3 saltos
           </span>
 
-          <h1 className="hn-titulo">
-            <span>Tu conexión</span>
-            <em>no va sola.</em>
+          <h1 className="hn-titulo hn-titulo-marca" aria-label={`JumperNET, ${EDICION}. Tu conexión no va sola.`}>
+            <button
+              type="button"
+              className="hn-marca-palabra"
+              onClick={() => setOnda((o) => o + 1)}
+              title="Pulsa para repetir la entrada del nombre"
+            >
+              {LETRAS.map((letra, i) => (
+                <i key={`${onda}-${i}`} style={{ "--i": i }} aria-hidden="true">{letra}</i>
+              ))}
+            </button>
+            <span className="hn-lema">tu conexión <em>no va sola</em></span>
           </h1>
 
           <p className="hn-rotativa mono"><Typewriter frases={FRASES} /></p>
@@ -240,7 +238,7 @@ export default function Inicio() {
         </div>
 
         <div className="hn-hero-visual">
-          <span className="hn-sello mono" aria-hidden="true"><small>Navidad</small><b>25</b><small>dic</small></span>
+          <SelloHoy />
           <span className="hn-globo hn-globo-a mono" aria-hidden>JENC</span>
           <span className="hn-globo hn-globo-b mono" aria-hidden>sin logs</span>
           <span className="hn-globo hn-globo-c mono" aria-hidden>exit 80/443</span>
@@ -248,6 +246,13 @@ export default function Inicio() {
           <span className="hn-pie-visual mono">toca una parada · enciende o apaga la red</span>
         </div>
       </section>
+
+      <Revela className="pp-hoy tarjeta">
+        <BandaHoy vivos={vivos} sinApi={sinApi} edicion={EDICION} />
+        <a className="btn primario grande pp-hoy-cta" href="#/panel">
+          Ver el panel de red <span aria-hidden>→</span>
+        </a>
+      </Revela>
 
       <div className="pp-cinta" aria-hidden>
         <div className="pp-cinta-pista">
@@ -385,6 +390,25 @@ export default function Inicio() {
           ))}
         </div>
       </section>
+
+      <Revela className="pp-nov tarjeta">
+        <div className="pp-nov-cab">
+          <span className="migas">nota de versión</span>
+          <h2 className="pp-h2">Edición <span className="texto-gradiente">2.1</span></h2>
+          <p className="nota">
+            Publicada el {PUBLICADA}. Esto es lo que cambia respecto a la 2.0:
+          </p>
+        </div>
+        <ol className="pp-nov-lista">
+          {NOVEDADES.map((n, i) => (
+            <li key={n}>
+              <span className="mono">{String(i + 1).padStart(2, "0")}</span>
+              <span>{n}</span>
+            </li>
+          ))}
+        </ol>
+        <span className="pp-nov-ver mono" aria-hidden>v{VERSION}</span>
+      </Revela>
 
       <Revela className="sp-equipo-teaser tarjeta">
         <div className="sp-equipo-cab">

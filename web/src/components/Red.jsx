@@ -6,6 +6,95 @@ import { Stat, Tuberia, AnilloJwt, Hecho } from "./Piezas.jsx";
 import Nodos from "./Nodos.jsx";
 import Diagnostico from "./Diagnostico.jsx";
 import Revela from "./Revela.jsx";
+import { TarjetaHoy } from "./Hoy.jsx";
+import { haceCuanto } from "../lib/fecha.js";
+
+const CLAVE_LOG = "jumpernet-actividad";
+
+function leeLog() {
+  try {
+    const bruto = JSON.parse(localStorage.getItem(CLAVE_LOG) || "[]");
+    return Array.isArray(bruto) ? bruto.slice(0, 12) : [];
+  } catch { return []; }
+}
+
+function guardaLog(lista) {
+  try { localStorage.setItem(CLAVE_LOG, JSON.stringify(lista.slice(0, 12))); } catch { /* modo privado */ }
+}
+
+/* ── chispa de latencia: las últimas medidas reales de la API ── */
+function ChispaLatencia({ muestras }) {
+  const v = muestras.filter((n) => n != null);
+  const ult = v.length ? v[v.length - 1] : null;
+  const medio = v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null;
+  const pico = v.length ? Math.max(...v) : null;
+  const W = 240, H = 54;
+  const bajo = v.length ? Math.min(...v) : 0;
+  const rango = Math.max(1, (pico ?? 1) - bajo);
+  const puntos = v.map((n, i) => [
+    (i / Math.max(1, v.length - 1)) * W,
+    H - 5 - ((n - bajo) / rango) * (H - 14),
+  ]);
+  const linea = puntos.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" ");
+  const area = puntos.length > 1 ? `${linea} L${W} ${H} L0 ${H} Z` : "";
+
+  return (
+    <div className="tarjeta pn-chispa">
+      <div className="pn-mini-cab">
+        <span className="pn-kicker">latencia de la API</span>
+        <span className="chip mono">{ult != null ? `${ult} ms` : "…"}</span>
+      </div>
+      {v.length > 1 ? (
+        <svg className="pn-chispa-svg" viewBox={`0 0 ${W} ${H}`} role="img"
+          aria-label={`Latencia de la API: ahora ${ult} ms, media ${medio} ms, pico ${pico} ms`}>
+          <path className="pn-chispa-area" d={area} />
+          <path className="pn-chispa-linea" d={linea} />
+        </svg>
+      ) : (
+        <p className="nota" style={{ fontSize: 12 }}>Recogiendo las primeras medidas…</p>
+      )}
+      <div className="pn-chispa-pie mono">
+        <span>media <b>{medio ?? "—"} ms</b></span>
+        <span>pico <b>{pico ?? "—"} ms</b></span>
+        <span>{v.length} medidas</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── actividad: lo que has hecho en el panel, guardado solo en tu navegador ── */
+function Actividad({ log, alLimpiar }) {
+  const [, latido] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => latido((t) => t + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="tarjeta pn-actividad">
+      <div className="pn-mini-cab">
+        <span className="pn-kicker">actividad reciente</span>
+        {log.length > 0 && (
+          <button type="button" className="pn-log-limpiar mono" onClick={alLimpiar}>limpiar</button>
+        )}
+      </div>
+      {log.length ? (
+        <ol className="pn-log">
+          {log.map((x, i) => (
+            <li key={`${x.t}-${i}`} className={x.tipo === "error" ? "mal" : ""}>
+              <span className="mono">{haceCuanto(x.t)}</span>
+              <span>{x.texto}</span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="nota" style={{ fontSize: 12.5 }}>
+          Aquí se apuntan los encendidos, giros y apagados que hagas. Se guarda solo en este
+          navegador: nada viaja al servidor.
+        </p>
+      )}
+    </div>
+  );
+}
 
 /* ── interruptor de red grande ── */
 function Interruptor({ activo, ocupado, alCambiar }) {
@@ -184,15 +273,17 @@ function ContadorVivos({ yo }) {
    nada de cifras decorativas. Además, mientras la pestaña está abierta, envía
    el latido de tu equipo (POST /nodos/usuario) para que tu nodo personal
    aparezca y se mantenga vivo en «ver todos los nodos». */
-function TablonVivo({ yo, aviso }) {
+function TablonVivo({ yo, aviso, alMedir }) {
   const [v, setV] = useState(null);           // {yo, listaNodos, vivos}
   const [fallo, setFallo] = useState(null);   // último error del polling
   useEffect(() => {
     let vida = true;
     async function lata() {
       try {
+        const t0 = performance.now();
         const [meD, lista, vivos] = await Promise.all([me(), nodosApi().catch(() => []), nodosVivos().catch(() => null)]);
         if (!vida) return;
+        alMedir?.(Math.round(performance.now() - t0));
         setV({ yo: meD, lista, vivos });
         setFallo(null);
         try { await miNodo(); } catch { /* el latido de tu equipo es best-effort */ }
@@ -365,17 +456,31 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
   const [avisaExt, setAvisaExt] = useState(false);
   const [saltosSel, setSel] = useState(3);   // nº deseado de saltos (plan pro)
   const [modoSel, setModo] = useState("todos"); // "todos" | "externos"
+  const [muestras, setMuestras] = useState([]); // latencias medidas de la API
+  const [log, setLog] = useState(leeLog);      // actividad local del panel
   const divMapa = useRef(null);
   const mapa = useRef(null);
   const capa = useRef(null);
+
+  const apunta = (texto, tipo = "ok") => {
+    const item = { t: Date.now(), texto, tipo };
+    setLog((l) => {
+      const nuevo = [item, ...l].slice(0, 12);
+      guardaLog(nuevo);
+      return nuevo;
+    });
+  };
+  const mideLatencia = (ms) => setMuestras((m) => [...m.slice(-59), ms]);
 
   async function refrescar(silent = true) {
     setOcu(true);
     try {
       const t0 = performance.now();
       const datos = await me();
+      const ms = Math.round(performance.now() - t0);
       setYo(datos); alRecargar?.(datos);
-      setLat(Math.round(performance.now() - t0));
+      setLat(ms);
+      mideLatencia(ms);
       if (datos.activo) { try { const s = await salida(); setIpSalida(s.ip_salida); } catch { /* seguimos */ } }
     } catch (e) { if (!silent) aviso(e.message, "error"); }
     finally { setOcu(false); }
@@ -449,9 +554,16 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
 
   async function accion(fn, msg) {
     setOcu(true);
-    try { await fn(); aviso(msg, "ok"); if (fn === conectar) setAvisaExt(true); await refrescar(); }
-    catch (e) { aviso(e.message, "error"); }
-    finally { setOcu(false); }
+    try {
+      await fn();
+      aviso(msg, "ok");
+      apunta(msg);
+      if (fn === conectar) setAvisaExt(true);
+      await refrescar();
+    } catch (e) {
+      aviso(e.message, "error");
+      apunta(e.message, "error");
+    } finally { setOcu(false); }
   }
 
   async function comprobarAhora() {
@@ -568,7 +680,7 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
             <SelectorSaltos yo={yo} saltosSel={saltosSel} setSel={setSel} ocupado={ocupado} />
           </div>
 
-          <TablonVivo yo={yo} aviso={aviso} />
+          <TablonVivo yo={yo} aviso={aviso} alMedir={mideLatencia} />
 
           {/* ── verificación real del circuito ── */}
           <Revela className="tarjeta pn-verificacion">
@@ -714,7 +826,11 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
             <p className="nota">Girar cambia los relés sin cerrar la sesión. Apagar corta el circuito al instante.</p>
           </div>
 
+          <TarjetaHoy activo={activo} desde={yo?.ultimo_cambio} />
+
           <AnilloJwt />
+
+          <ChispaLatencia muestras={muestras} />
 
           <div className="tarjeta pn-que-pasa">
             <h2 className="seccion">¿Qué pasa si activo?</h2>
@@ -765,6 +881,11 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
             <Hecho>Puedes borrar la cuenta de golpe, sin periodo de gracia.</Hecho>
           </div>
         </div>
+
+        <Actividad
+          log={log}
+          alLimpiar={() => { setLog([]); guardaLog([]); aviso("actividad local borrada", "ok"); }}
+        />
       </div>
 
     </div>
