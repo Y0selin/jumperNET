@@ -101,6 +101,12 @@ export default function Sitio({ ruta, enSesion, children }) {
       <Nieve />
       <div className="pp-luz" ref={luz} aria-hidden />
 
+      <div className="nieve" aria-hidden>
+        {Array.from({ length: 40 }).map((_, i) => (
+          <span key={i} className="copo" style={{ left: `${(i * 2.5) % 100}%`, animationDelay: `${(i * 0.3) % 8}s`, animationDuration: `${6 + (i % 5)}s` }} />
+        ))}
+      </div>
+
       <header className={`pp-nav ${pegada ? "pegada" : ""}`}>
         <a className="pp-marca" href="#/" aria-label="JumperNET, ir a la portada">
           <Logo tam={40} />

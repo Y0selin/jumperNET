@@ -1126,3 +1126,28 @@ html[data-modo="claro"] .pp .hn-sello { border-color: #b1802f; }
   letter-spacing: .12em;
   border: 1px solid rgb(255 90 54 / .35);
 }
+
+/* ─────────── copos de nieve ─────────── */
+.nieve {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+.copo {
+  position: absolute;
+  top: -20px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 255 255 / .9), rgb(180 220 255 / .4));
+  box-shadow: 0 0 6px rgb(255 255 255 / .6);
+  animation: copo-cae linear infinite;
+}
+@keyframes copo-cae {
+  0% { transform: translateY(-20px) translateX(0); opacity: 0; }
+  10% { opacity: .9; }
+  90% { opacity: .9; }
+  100% { transform: translateY(100vh) translateX(30px); opacity: 0; }
+}

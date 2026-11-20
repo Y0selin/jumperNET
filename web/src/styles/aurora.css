@@ -62,17 +62,19 @@ body::before {
 /* ─────────── estructura ─────────── */
 .pp .pp-main {
   width: 100%;
-  max-width: 1280px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 0 clamp(18px, 4.4vw, 46px) 40px;
+  padding: 0 clamp(24px, 4vw, 60px) 40px;
   position: relative;
   z-index: 2;
 }
 .pp .sp-pagina {
   padding-top: 112px;
   padding-bottom: 56px;
-  max-width: 1200px;
+  max-width: 100%;
   margin: 0 auto;
+  padding-left: clamp(24px, 4vw, 60px);
+  padding-right: clamp(24px, 4vw, 60px);
 }
 .sp-cargando { padding: 140px 0; text-align: center; color: var(--texto-suave); }
 
@@ -363,12 +365,11 @@ body::before {
   isolation: isolate;
   overflow: clip;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
   align-items: center;
-  justify-items: center;
-  text-align: center;
-  gap: clamp(30px, 5vw, 66px);
+  gap: clamp(40px, 6vw, 80px);
   min-height: calc(100dvh - 80px);
+  width: 100%;
   padding: clamp(12px, 2vw, 28px) 0 clamp(24px, 4vw, 48px);
 }
 .hn-aurora { position: absolute; inset: -8% -2% -6% -4%; z-index: -1; pointer-events: none; }
@@ -435,7 +436,7 @@ body::before {
 .hn-lead { margin: 14px 0 0; max-width: 53ch; font-size: 14.5px; line-height: 1.75; color: var(--texto-suave); }
 .hn-lead b { color: var(--texto); font-weight: 600; }
 
-.hn-acciones { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; margin-top: 28px; }
+.hn-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 28px; }
 .hn-play {
   display: inline-flex;
   align-items: center;
@@ -467,7 +468,7 @@ body::before {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  margin: 34px auto 0;
+  margin: 34px 0 0;
   padding-top: 18px;
   border-top: 1px solid rgb(255 255 255 / .09);
   max-width: 520px;
@@ -1536,8 +1537,6 @@ html[data-modo="claro"] .fondo-red { opacity: .82; }
   align-items: center;
   gap: 11px;
   margin-top: 26px;
-  margin-left: auto;
-  margin-right: auto;
   max-width: 100%;
   color: var(--texto-suave);
   text-decoration: none;
