@@ -1,7 +1,47 @@
 export const API_URL = "https://jumpernet.duckdns.org";
 
-export function getToken() { return localStorage.getItem("token"); }
-export function setToken(t) { t ? localStorage.setItem("token", t) : localStorage.removeItem("token"); }
+const CLAVE_USUARIO = "jumpernet-usuario-v1";
+/* Respaldo en memoria: algunos navegadores privados bloquean localStorage.
+   La sesión sigue funcionando en esa pestaña aunque no pueda persistir. */
+let tokenMemoria = null;
+let usuarioMemoria = null;
+
+export function getToken() {
+  try { return localStorage.getItem("token") ?? tokenMemoria; }
+  catch { return tokenMemoria; }
+}
+export function setToken(t) {
+  tokenMemoria = t || null;
+  try {
+    if (t) localStorage.setItem("token", t);
+    else { localStorage.removeItem("token"); olvidaUsuario(); }
+  } catch { if (!t) olvidaUsuario(); }
+}
+
+/* La ficha mínima de la cuenta se guarda junto al token. Así el número de
+   usuario y el alias sobreviven a una recarga o a un /me lento, y el panel
+   nunca se queda en blanco esperando a la API. */
+export function getUsuarioGuardado() {
+  try {
+    const u = JSON.parse(localStorage.getItem(CLAVE_USUARIO) || "null");
+    if (u && typeof u === "object" && u.id != null) return u;
+  } catch { /* almacenamiento bloqueado */ }
+  return usuarioMemoria;
+}
+export function guardaUsuario(u) {
+  if (!u || u.id == null) return;
+  const recorte = {
+    id: u.id, email: u.email, alias: u.alias, plan: u.plan,
+    activo: u.activo, circuito: u.circuito, saltos_max: u.saltos_max,
+  };
+  usuarioMemoria = recorte;
+  try { localStorage.setItem(CLAVE_USUARIO, JSON.stringify(recorte)); }
+  catch { /* almacenamiento bloqueado: se conserva en memoria */ }
+}
+export function olvidaUsuario() {
+  usuarioMemoria = null;
+  try { localStorage.removeItem(CLAVE_USUARIO); } catch { /* sin persistencia */ }
+}
 export function decodificaJwt(token) {
   try {
     const [h, p] = token.split(".");
@@ -23,7 +63,11 @@ export async function api(metodo, ruta, cuerpo, autorizado = true) {
   let datos = null;
   try { datos = await resp.json(); } catch { /* sin cuerpo */ }
   if (resp.status === 401 && autorizado && token) { setToken(null); window.location.reload(); }
-  if (!resp.ok) throw new Error((datos && datos.detail) || `HTTP ${resp.status}`);
+  if (!resp.ok) {
+    const err = new Error((datos && datos.detail) || `HTTP ${resp.status}`);
+    err.estado = resp.status;
+    throw err;
+  }
   return { datos, ms, estado: resp.status };
 }
 

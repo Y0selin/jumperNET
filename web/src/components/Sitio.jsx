@@ -24,6 +24,7 @@ const TITULOS = {
   "/dudas": "Dudas",
   "/recursos": "Recursos",
   "/descargas": "Descargas",
+  "/video": "El viaje en vídeo",
   "/acceso": "Entrar o crear cuenta",
   "/panel": "Panel",
 };
@@ -171,6 +172,7 @@ export default function Sitio({ ruta, enSesion, children }) {
             <a href="https://github.com/y0selin/jumperNET" target="_blank" rel="noreferrer">GitHub ↗</a>
             <a href="#/dudas">Preguntas frecuentes</a>
             <a href="#/descargas">Descargas</a>
+            <a href="#/video">El viaje en vídeo</a>
           </div>
         </div>
 

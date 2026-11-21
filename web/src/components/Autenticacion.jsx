@@ -17,7 +17,7 @@ export default function Autenticacion({ alEntrar, aviso, modoInicial = "login", 
 
   useEffect(() => { setModo(modoInicial); setError(""); }, [modoInicial]);
 
-  const correo = email.trim();
+  const correo = email.trim().toLowerCase();
   const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correo);
 
   /* fuerza de contraseña (solo en registro): 0 vacía · -1 corta · 1 aceptable · 2 buena */
@@ -39,6 +39,10 @@ export default function Autenticacion({ alEntrar, aviso, modoInicial = "login", 
     const msg = (e0?.message || "").toLowerCase();
     if (msg.includes("ya esta registrado") || msg.includes("ya está registrado"))
       return { texto: "ese correo ya tiene cuenta — cámbiate a «Entrar»", cambio: "login" };
+    if (msg.includes("bloqueada")) return { texto: "cuenta bloqueada temporalmente por varios intentos: espera 5 minutos" };
+    if (msg.includes("demasiados registros")) return { texto: "demasiados registros desde esta conexión: espera unos minutos" };
+    if (msg.includes("servicio lleno") || msg.includes("limite de usuarios"))
+      return { texto: "el servicio ha alcanzado su límite de cuentas — avisa al equipo" };
     if (msg.includes("demasiados")) return { texto: "demasiados intentos seguidos: espera un par de minutos y reintenta" };
     if (msg.includes("credenciales") || msg.includes("no válidas") || msg.includes("no validas"))
       return { texto: "correo o contraseña incorrectos (o la cuenta no existe: créala primero)" };
@@ -117,6 +121,7 @@ export default function Autenticacion({ alEntrar, aviso, modoInicial = "login", 
               correo
             </label>
             <input id="jn-email" className="campo" type="email" required autoComplete="username" autoFocus={autoenfocar}
+              autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="email"
               aria-invalid={!!email && !emailValido}
               placeholder="tu@correo.com" value={email} onChange={(e) => setEmail(e.target.value)} />
             {!!email && !emailValido && modo === "registro" && (
@@ -128,6 +133,7 @@ export default function Autenticacion({ alEntrar, aviso, modoInicial = "login", 
             </label>
             <div className="campo-caja">
               <input id="jn-pass" ref={refClave} className="campo" type={ver ? "text" : "password"} required
+                autoCapitalize="none" autoCorrect="off" spellCheck={false}
                 aria-invalid={modo === "registro" && pass.length >= 1 && pass.length < 8}
                 autoComplete={modo === "login" ? "current-password" : "new-password"}
                 onKeyUp={(e0) => setCapsLock(e0.getModifierState?.("CapsLock") || false)}

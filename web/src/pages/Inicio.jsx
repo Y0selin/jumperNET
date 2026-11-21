@@ -3,6 +3,7 @@ import Revela from "../components/Revela.jsx";
 import VideoPortada from "../components/VideoPortada.jsx";
 import MapaCircuito from "../components/MapaCircuito.jsx";
 import CircuitoHero from "../components/CircuitoHero.jsx";
+import Comparador from "../components/Comparador.jsx";
 import Logo from "../components/Logo.jsx";
 import { BandaHoy, PildoraHoy, SelloHoy } from "../components/Hoy.jsx";
 import { VERSION, EDICION, PUBLICADA, NOVEDADES } from "../lib/version.js";
@@ -21,6 +22,7 @@ const DESTINOS = [
   { r: "/tarifas", n: "04", t: "Tarifas", d: "Tres velocidades: 3 saltos gratis, hasta 7 en Pro y un plan a medida para equipos.", ico: "◇" },
   { r: "/descargas", n: "05", t: "Descargas", d: "La extensión para tu navegador, el navegador completo para Windows y Linux, y GitHub Releases.", ico: "⬇" },
   { r: "/dudas", n: "06", t: "Dudas", d: "La IP, la latencia, lo que se guarda de ti y en qué se diferencia (y en qué no) de Tor.", ico: "?" },
+  { r: "/video", n: "07", t: "El viaje en vídeo", d: "El recorrido completo, con las cuatro paradas explicadas y tiempo para entender qué pasa en cada una.", ico: "▶" },
 ];
 
 /* Luces de la guirnalda: posición sobre el cable, color y retardo. */
@@ -157,7 +159,7 @@ export default function Inicio() {
           <PildoraHoy />
 
           <span className="hn-eyebrow">
-            <span className="punto-vivo" /> jumpernet v{VERSION} · proxy SOCKS5 · 3 saltos
+            <span className="punto-vivo" /> jumpernet v{VERSION} · {vivos?.total != null ? `${vivos.total} nodos vivos` : "red en vivo"} · 3 saltos
           </span>
 
           <h1 className="hn-titulo hn-titulo-marca" aria-label={`JumperNET, ${EDICION}. Tu conexión no va sola.`}>
@@ -182,18 +184,11 @@ export default function Inicio() {
             red y sin encenderse hasta que tú lo pides.
           </p>
 
-          <p className="hn-lead hn-lead-2">
-            Puedes girar el circuito, ver qué sabe cada salto de ti, lanzar un paquete real
-            y comprobar la IP que ve el destino. Todo desde el navegador o desde la terminal,
-            con una cuenta gratuita y sin instalar nada extra.
-          </p>
-
-          <p className="hn-lead hn-lead-3">
-            La red se enciende solo cuando tú lo decides. Mientras tanto, los nodos siguen
-            vivos y el panel te enseña la latencia real, el estado de cada salto y la IP
-            que saldría a internet. Sin promesas de anonimato total: solo un circuito de
-            tres saltos que puedes mirar por dentro.
-          </p>
+          <ul className="hn-puntos">
+            <li><span className="hn-punto-ico" aria-hidden>⟳</span><div><b>Gira el circuito</b><span>Cambia los tres relés sin cortar la sesión.</span></div></li>
+            <li><span className="hn-punto-ico" aria-hidden>⏻</span><div><b>Tú decides</b><span>La red llega apagada; el interruptor es tuyo.</span></div></li>
+            <li><span className="hn-punto-ico" aria-hidden>◎</span><div><b>Compruébalo</b><span>Lanza una petición y mira la IP que ve el destino.</span></div></li>
+          </ul>
 
           <div className="hn-acciones">
             <a className="btn primario grande" href="#/acceso/registro">
@@ -291,6 +286,18 @@ export default function Inicio() {
         </a>
       </Revela>
 
+      <section id="diferencia" className="pp-seccion pp-cmp-sec">
+        <Revela className="pp-cab">
+          <span className="migas">la diferencia, sin tecnicismos</span>
+          <h2 className="pp-h2">Lo que la web ve <span className="texto-gradiente">cuando navegas</span></h2>
+          <p className="pp-sub2 nota">
+            Cambia entre ir directo y pasar por JumperNET. El escenario y el resultado
+            se actualizan a la vez para que se entienda en un vistazo, sin leer párrafos.
+          </p>
+        </Revela>
+        <Revela retardo={1}><Comparador /></Revela>
+      </section>
+
       <div className="pp-cinta" aria-hidden>
         <div className="pp-cinta-pista">
           {[0, 1].map((k) => (
@@ -385,30 +392,12 @@ export default function Inicio() {
           </p>
         </Revela>
         <Revela retardo={1}><VideoPortada /></Revela>
-      </section>
-
-      <section id="demo" className="pp-seccion pp-video-seccion">
-        <Revela className="pp-cab">
-          <span className="migas">descubre jumpernet en acción</span>
-          <h2 className="pp-h2">El viaje <span className="texto-gradiente">completo</span></h2>
-          <p className="pp-sub2 nota">
-            Un recorrido en vídeo del proyecto: cómo se monta el circuito, cómo se enciende
-            y qué ve cada salto. Reprodúcelo con controles y a pantalla completa.
+        <Revela retardo={2} className="pp-video-puente">
+          <p className="nota">
+            Este es el resumen de 30 segundos. Si quieres el recorrido largo, con las
+            paradas explicadas y más contexto, está en su propia página.
           </p>
-        </Revela>
-        <Revela retardo={1}>
-          <div className="tarjeta" style={{ padding: 0, overflow: "hidden", borderRadius: 20 }}>
-            <video
-              controls
-              preload="metadata"
-              playsInline
-              poster={`${import.meta.env.BASE_URL || "./"}video/portada.jpg`}
-              style={{ display: "block", width: "100%", height: "auto", background: "#000" }}
-            >
-              <source src={`${import.meta.env.BASE_URL || "./"}video/JumperNET_El_Viaje.mp4`} type="video/mp4" />
-              Tu navegador no puede reproducir este vídeo.
-            </video>
-          </div>
+          <a className="btn" href="#/video">Ver el viaje completo <span aria-hidden>→</span></a>
         </Revela>
       </section>
 

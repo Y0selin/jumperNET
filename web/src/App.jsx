@@ -19,9 +19,10 @@ import Funciona from "./pages/Funciona.jsx";
 import TarifasPagina from "./pages/TarifasPagina.jsx";
 import Dudas from "./pages/Dudas.jsx";
 import DescargasPagina from "./pages/DescargasPagina.jsx";
+import VideoPagina from "./pages/VideoPagina.jsx";
 import Acceso from "./pages/Acceso.jsx";
 import { useRuta, baseRuta, ir } from "./lib/router.js";
-import { me, setToken, getToken } from "./lib/api.js";
+import { me, setToken, getToken, getUsuarioGuardado, guardaUsuario } from "./lib/api.js";
 import { aplicaTema, cargaTema } from "./lib/temas.js";
 import { aplicaModo, cargaModo } from "./lib/modo.js";
 import { datosHoy } from "./lib/fecha.js";
@@ -54,15 +55,34 @@ export default function App() {
   const activa = baseRuta(ruta);
   const esPanel = activa === "/panel";
 
-  const [yo, setYo] = useState(null);
+  const [yo, setYo] = useState(() => (getToken() ? getUsuarioGuardado() : null));
+  const [cargandoCuenta, setCargandoCuenta] = useState(() => !!getToken());
   const [tab, setTab] = useState("red");
   const [toasts, setToasts] = useState([]);
   const [lateral, setLateral] = useState(false);   // menú móvil del panel
   const [pegada, setPegada] = useState(false);     // topbar con scroll
 
+  /* la ficha guardada pinta el panel al instante; /me la refresca después.
+     Si la API falla, no borramos el número de cuenta ni la sesión. */
+  function cargaCuenta() {
+    if (!getToken()) { setYo(null); setCargandoCuenta(false); return Promise.resolve(null); }
+    setCargandoCuenta(true);
+    return me()
+      .then((d) => { setYo(d); guardaUsuario(d); return d; })
+      .catch(() => {
+        const guardado = getUsuarioGuardado();
+        if (guardado) setYo(guardado);
+        return null;
+      })
+      .finally(() => setCargandoCuenta(false));
+  }
+
   /* primero el tema guardado y después el modo: el modo manda en la paleta */
   useEffect(() => { aplicaTema(cargaTema()); aplicaModo(cargaModo()); }, []);
-  useEffect(() => { if (getToken()) me().then(setYo).catch(() => {}); }, []);
+  useEffect(() => {
+    if (!getToken()) { setCargandoCuenta(false); return; }
+    cargaCuenta();
+  }, []);
   useEffect(() => {
     const alScroll = () => setPegada(window.scrollY > 12);
     window.addEventListener("scroll", alScroll, { passive: true });
@@ -92,14 +112,18 @@ export default function App() {
     setToasts((ts) => [...ts, { id, texto, tipo }]);
     setTimeout(() => setToasts((ts) => ts.filter((t) => t.id !== id)), 3600);
   }
-  function salir() { setToken(null); setYo(null); setLateral(false); ir("/"); }
+  function salir() { setToken(null); setYo(null); setCargandoCuenta(false); setLateral(false); ir("/"); }
   function alEntrar() {
+    setCargandoCuenta(true);
     me().then((d) => {
       const nombre = d?.alias || (d?.email || "").split("@")[0] || "tú";
-      setYo(d); setTab("red"); ir("/panel");
-      aviso(`Hola, ${nombre} · sesión iniciada`);
+      setYo(d); guardaUsuario(d); setTab("red"); ir("/panel");
+      aviso(`Hola, ${nombre} · cuenta #${d.id}`);
     })
-      .catch(() => aviso("no se pudo cargar tu cuenta", "error"));
+      .catch(() => {
+        aviso("la cuenta está creada, pero no se pudo cargar el panel — reintenta", "error");
+      })
+      .finally(() => setCargandoCuenta(false));
   }
 
   const enSesion = !!yo && !!getToken();
@@ -115,6 +139,7 @@ export default function App() {
     else if (activa === "/tarifas") pagina = <TarifasPagina />;
     else if (activa === "/dudas") pagina = <Dudas />;
     else if (activa === "/descargas") pagina = <DescargasPagina />;
+    else if (activa === "/video") pagina = <VideoPagina />;
     else if (activa === "/acceso") {
       pagina = <Acceso modo={ruta.includes("registro") ? "registro" : "login"} alEntrar={alEntrar} aviso={aviso} />;
     }
@@ -135,9 +160,21 @@ export default function App() {
 
   if (!getToken()) return null;
   if (!yo) {
-    return (
+    if (cargandoCuenta) return (
       <Sitio ruta="/panel" enSesion={false}>
         <div className="sp-cargando">Cargando tu panel…</div>
+      </Sitio>
+    );
+    return (
+      <Sitio ruta="/panel" enSesion={false}>
+        <div className="sp-cargando sp-cargando-error">
+          <b>No se pudo cargar tu cuenta</b>
+          <p>Tu sesión sigue guardada. La API puede haber tardado o no estar disponible ahora mismo.</p>
+          <div className="fila-btn">
+            <button className="btn primario" onClick={cargaCuenta}>Reintentar</button>
+            <button className="btn" onClick={salir}>Salir</button>
+          </div>
+        </div>
       </Sitio>
     );
   }
@@ -177,10 +214,9 @@ export default function App() {
           </a>
 
           <div className="lateral-perfil">
-            <span className="lateral-avatar" aria-hidden>{inicialCuenta}</span>
-            <span className="lateral-perfil-txt">
+            <span className="lateral-avatar" aria-hidden>{inicialCuenta}</span>              <span className="lateral-perfil-txt">
               <b>{nombreCuenta}</b>
-              <span className="mono">{yo?.plan || "free"} · {activo ? "en línea" : "red off"}</span>
+              <span className="mono">#{yo?.id ?? "—"} · {yo?.plan || "free"} · {activo ? "en línea" : "red off"}</span>
             </span>
             <span className={`punto-vivo ${activo ? "" : "apagado"}`} aria-hidden />
           </div>
@@ -284,7 +320,7 @@ export default function App() {
                 </div>
               )}
 
-              {tab === "red" && <Red yo={yo} alRecargar={setYo} aviso={aviso} />}
+              {tab === "red" && <Red yo={yo} alRecargar={(d) => { setYo(d); guardaUsuario(d); }} aviso={aviso} />}
 
               {tab === "nodos" && (
                 <div className="apa">
@@ -301,7 +337,7 @@ export default function App() {
               )}
 
               {tab === "cuenta" && (
-                <Cuenta yo={yo} aviso={aviso} alSalir={salir} irRed={() => setTab("red")} alRecargar={setYo} />
+                <Cuenta yo={yo} aviso={aviso} alSalir={salir} irRed={() => setTab("red")} alRecargar={(d) => { setYo(d); guardaUsuario(d); }} />
               )}
 
               {tab === "ajustes" && (
