@@ -1,5 +1,5 @@
 # JumperNET — red de anonimización por 3 saltos (proyecto ASIR)
-
+Integrantes: Alejandro Garcia Sanchéz-Mohedas,Adrián Garcia Lopez, Fernando Muela Bravo, Yoselin Adreina Quintero Lara y Rolando Castro Patiño.
 Proyecto final de ASIR: una red de anonimización con **circuito de 3 saltos**, entrada
 **SOCKS5 autenticada**, **API de gestión por HTTPS** y nodos en **Docker**.
 El usuario crea una cuenta, enciende su red cuando quiere y ve en vivo por dónde
