@@ -316,7 +316,7 @@ export default function Nodos({ yo, aviso, compacta = false, segundos = 8 }) {
         </div>
 
         {vista !== "tabla" || compacta ? (
-          <TarjetasNodos lista={visibles} yo={yo} papel={papel} cargando={cargando} />
+          <TarjetasNodos lista={visibles} yo={yo} papel={papel} cargando={cargando} bloque={bloque} />
         ) : (
           <TablaNodos lista={visibles} papel={papel} cargando={cargando} />
         )}
@@ -341,7 +341,7 @@ function saludLat(m) {
   return { etiqueta: `${m} ms · lento`, color: "#ffb454", ancho: Math.max(8, 100 - m) };
 }
 
-function TarjetasNodos({ lista, yo, papel, cargando }) {
+function TarjetasNodos({ lista, yo, papel, cargando, bloque }) {
   const activo = !!yo?.activo;
   const esGestion = yo?.rol === "admin" || yo?.rol === "moderador";
   return (

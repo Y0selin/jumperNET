@@ -3,14 +3,16 @@ import Logo from "./Logo.jsx";
 import BotonModo from "./BotonModo.jsx";
 import Reproductor from "./Reproductor.jsx";
 import VideoModal from "./VideoModal.jsx";
+import Nieve from "./Nieve.jsx";
 import { ENLACES } from "../lib/contenido.js";
 import { NOMBRES } from "../lib/equipo.js";
 import { baseRuta } from "../lib/router.js";
 import { VERSION } from "../lib/version.js";
 
-/* Marco del sitio público, edición plano técnico.
-   Una sola barra de cabecera con la navegación numerada; en móvil la
-   navegación baja a un dock de alto contraste. */
+/* Marco del sitio público.
+   Navegación nueva: barra superior fina (marca + cuenta) y un dock inferior
+   flotante con las cinco páginas. El dock es la única navegación entre
+   páginas, tanto en escritorio como en móvil, y marca la página activa. */
 
 const TITULOS = {
   "/": "Portada",
@@ -26,8 +28,6 @@ const TITULOS = {
   "/panel": "Panel",
 };
 
-const NAV = [...ENLACES, { ruta: "/descargas", texto: "Descargas", corto: "Descargas", ico: "↓" }];
-
 export default function Sitio({ ruta, enSesion, children }) {
   const [pegada, setPegada] = useState(false);
   const [arriba, setArriba] = useState(false);
@@ -37,7 +37,7 @@ export default function Sitio({ ruta, enSesion, children }) {
 
   useEffect(() => {
     const alScroll = () => {
-      setPegada(window.scrollY > 10);
+      setPegada(window.scrollY > 14);
       setArriba(window.scrollY > 620);
       const max = document.documentElement.scrollHeight - window.innerHeight;
       setProgreso(max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0);
@@ -51,82 +51,82 @@ export default function Sitio({ ruta, enSesion, children }) {
     document.title = `${TITULOS[activa] || "JumperNET"} · JumperNET`;
   }, [activa]);
 
+  /* el hero y el reproductor pueden abrir el vídeo en grande */
   useEffect(() => {
     const abre = () => setVideoAbierto(true);
     window.addEventListener("jumpernet-video", abre);
     return () => window.removeEventListener("jumpernet-video", abre);
   }, []);
 
-  useEffect(() => setVideoAbierto(false), [activa]);
+  useEffect(() => { setVideoAbierto(false); }, [activa]);
+
+  /* spotlight: las tarjetas iluminan alrededor del cursor */
+  useEffect(() => {
+    const alMover = (e) => {
+      const t = e.target && e.target.closest ? e.target.closest(".tarjeta, .hn-panel") : null;
+      if (!t) return;
+      const r = t.getBoundingClientRect();
+      t.style.setProperty("--mx", `${e.clientX - r.left}px`);
+      t.style.setProperty("--my", `${e.clientY - r.top}px`);
+    };
+    window.addEventListener("pointermove", alMover, { passive: true });
+    return () => window.removeEventListener("pointermove", alMover);
+  }, []);
 
   return (
-    <div className="sp sx">
-      <header className={`sx-cab ${pegada ? "is-pegada" : ""}`}>
-        <a
-          className={`sx-marca ${activa === "/" ? "is-activa" : ""}`}
-          href="#/"
-          aria-label="JumperNET, ir a la portada"
-          aria-current={activa === "/" ? "page" : undefined}
-        >
-          <Logo tam={30} />
-          <span className="sx-marca-txt">Jumper<span>NET</span></span>
-          <span className="sx-marca-v">v{VERSION}</span>
+    <div className="pp sp">
+      <Nieve />
+
+      <header className={`pp-nav ${pegada ? "pegada" : ""}`}>
+        <a className="pp-marca" href="#/" aria-label="JumperNET, ir a la portada">
+          <Logo tam={40} />
+          <span className="pp-marca-txt">Jumper<span>NET</span><i className="cursor">_</i></span>
+          <span className="pp-marca-ver mono">v{VERSION}</span>
         </a>
 
-        <nav className="sx-nav" aria-label="Páginas del sitio">
-          {NAV.map((e, i) => (
-            <a
-              key={e.ruta}
-              href={`#${e.ruta}`}
-              className={activa === e.ruta ? "is-activa" : ""}
-              aria-current={activa === e.ruta ? "page" : undefined}
-            >
-              <b aria-hidden>{String(i + 1).padStart(2, "0")}</b>
-              {e.corto}
-            </a>
-          ))}
-        </nav>
+        <div className="pp-nav-centro" aria-hidden>
+          <span className="pp-nav-seccion mono">// {TITULOS[activa] || "jumpernet"}</span>
+          <span className="pp-nav-linea" />
+        </div>
 
-        <div className="sx-acciones">
-          <span className="sx-status mono"><i aria-hidden /> {enSesion ? "SESIÓN ACTIVA" : "RED EDUCATIVA"}</span>
-          <button
-            type="button"
-            className="sx-video-btn"
-            onClick={() => setVideoAbierto(true)}
-            aria-label="Ver el vídeo de portada de JumperNET"
-            aria-haspopup="dialog"
-          >
-            <span aria-hidden>▶</span> vídeo
+        <div className="pp-nav-acciones">
+          <span className="pp-nav-badge mono" aria-hidden>EN VIVO</span>
+          <span className="pp-nav-estado mono"><i aria-hidden /> {enSesion ? "sesión activa" : "red educativa"}</span>
+          <button type="button" className="pp-video-abrir" onClick={() => setVideoAbierto(true)}
+            aria-label="Ver el vídeo de portada de JumperNET" aria-haspopup="dialog">
+            <span className="pp-video-abrir-ico" aria-hidden>▶</span>
+            <span className="pp-video-abrir-txt">vídeo</span>
+            <i className="pp-video-abrir-punto" aria-hidden />
           </button>
-          <BotonModo compacto />
+          <BotonModo />
           {enSesion ? (
-            <a className="sx-btn sx-btn--fill" href="#/panel">Panel <span aria-hidden>→</span></a>
+            <a className="btn primario" href="#/panel">Abrir panel <span aria-hidden>→</span></a>
           ) : (
             <>
-              <a className="sx-entrar" href="#/acceso/login">Entrar</a>
-              <a className="sx-btn sx-btn--fill" href="#/acceso/registro">Crear cuenta</a>
+              <a className="pp-entrar" href="#/acceso/login">Entrar</a>
+              <a className="btn primario" href="#/acceso/registro">
+                <span className="larga">Crear cuenta</span>
+                <span className="corta">Crear</span>
+              </a>
             </>
           )}
         </div>
 
-        <span className="sx-progreso" style={{ transform: `scaleX(${progreso})` }} aria-hidden />
+        <span className="pp-progreso" style={{ transform: `scaleX(${progreso})` }} aria-hidden />
       </header>
 
-      <main className="sx-main sp-main">
+      <main className="pp-main sp-main">
         <div className="sp-pagina" key={activa}>{children}</div>
       </main>
 
-      <nav className="sx-dock" aria-label="Páginas del sitio en móvil">
-        <div className="sx-dock-lista">
-          {NAV.map((e, i) => (
-            <a
-              key={e.ruta}
-              href={`#${e.ruta}`}
-              className={activa === e.ruta ? "is-activa" : ""}
-              aria-current={activa === e.ruta ? "page" : undefined}
-            >
-              <span className="sx-dock-n" aria-hidden>{String(i + 1).padStart(2, "0")}</span>
-              {e.corto}
+      <nav className="pp-dock" aria-label="Páginas del sitio">
+        <div className="dock-lista">
+          {ENLACES.map((e) => (
+            <a key={e.ruta} href={`#${e.ruta}`}
+              className={`dock-enlace ${activa === e.ruta ? "activa" : ""}`}
+              aria-current={activa === e.ruta ? "page" : undefined}>
+              <span className="dock-ico" aria-hidden>{e.ico}</span>
+              <span className="dock-txt">{e.corto}</span>
             </a>
           ))}
         </div>
@@ -135,54 +135,53 @@ export default function Sitio({ ruta, enSesion, children }) {
       <Reproductor />
       <VideoModal abierto={videoAbierto} cerrar={() => setVideoAbierto(false)} />
 
-      <footer className="sx-pie">
-        <div className="sx-pie-word" aria-hidden>JUMPERNET</div>
-        <div className="sx-pie-top">
-          <div className="sx-pie-marca">
-            <span className="sx-kicker">RED SOCKS5 · 3 SALTOS · 2026</span>
-            <p className="sx-pie-lema">Tu conexión<br />no va sola.</p>
-            <p className="sx-pie-meta mono">ChaCha20-Poly1305 · salida 80/443 · sin histórico</p>
+      <footer className="sp-pie">
+        <div className="sp-pie-arriba">
+          <div className="sp-pie-marca">
+            <Logo tam={34} />
+            <div>
+              <div className="pp-marca-txt">Jumper<span>NET</span></div>
+              <div className="nota mono">red de anonimato por 3 saltos · equipo 2026</div>
+              <div className="sp-pie-firma mono">
+                por <a href="#/equipo">{NOMBRES}</a>
+              </div>
+            </div>
           </div>
-
-          <nav className="sx-pie-cols" aria-label="Enlaces del pie">
-            <div>
-              <span className="sx-pie-tit">navegar</span>
-              {ENLACES.slice(0, 4).map((e) => (
-                <a key={e.ruta} href={`#${e.ruta}`}>{e.texto}</a>
-              ))}
-            </div>
-            <div>
-              <span className="sx-pie-tit">más</span>
-              {ENLACES.slice(4).map((e) => (
-                <a key={e.ruta} href={`#${e.ruta}`}>{e.texto}</a>
-              ))}
-              <a href="https://jumpernet.duckdns.org/docs/" target="_blank" rel="noreferrer">Documentación ↗</a>
-            </div>
-            <div>
-              <span className="sx-pie-tit">tu cuenta</span>
-              <a href="#/acceso/login">Entrar</a>
-              <a href="#/acceso/registro">Crear cuenta</a>
-              <a href="#/panel">Panel de red</a>
-              <a href="#/tarifas">Planes</a>
-              <a href="#/descargas">Descargas</a>
-            </div>
-          </nav>
+          <div className="sp-pie-legal nota mono">
+            jumpernet.duckdns.org · API HTTPS · los saltos son lógicos, no geográficos ·
+            no es anonimato de grado onion
+          </div>
         </div>
 
-        <div className="sx-pie-bottom">
-          <span>© {new Date().getFullYear()} JUMPERNET · V{VERSION}</span>
-          <span>HECHO POR {NOMBRES}</span>
-          <span>LOS SALTOS SON LÓGICOS, NO GEOGRÁFICOS</span>
+        <div className="sp-pie-columnas">
+          <div>
+            <span className="sp-pie-tit mono">páginas</span>
+            {ENLACES.map((e) => <a key={e.ruta} href={`#${e.ruta}`}>{e.texto}</a>)}
+          </div>
+          <div>
+            <span className="sp-pie-tit mono">tu cuenta</span>
+            <a href="#/acceso/login">Entrar</a>
+            <a href="#/acceso/registro">Crear cuenta</a>
+            <a href="#/panel">Panel de red</a>
+            <a href="#/tarifas">Planes</a>
+          </div>
+          <div>
+            <span className="sp-pie-tit mono">recursos</span>
+            <a href="https://jumpernet.duckdns.org/docs/" target="_blank" rel="noreferrer">Documentación ↗</a>
+            <a href="https://github.com/y0selin/jumperNET" target="_blank" rel="noreferrer">GitHub ↗</a>
+            <a href="#/dudas">Preguntas frecuentes</a>
+            <a href="#/descargas">Descargas</a>
+          </div>
         </div>
+
+        <p className="nota mono sp-pie-final">
+          © {new Date().getFullYear()} JumperNET · v{VERSION} · creado por {NOMBRES} · hecho para aprender cómo viaja (y cómo se protege) una conexión
+        </p>
       </footer>
 
-      <button
-        className={`sx-arriba ${arriba ? "visible" : ""}`}
+      <button className={`pp-arriba ${arriba ? "visible" : ""}`}
         onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        aria-label="Volver arriba"
-      >
-        ↑
-      </button>
+        aria-label="Volver arriba">↑</button>
     </div>
   );
 }

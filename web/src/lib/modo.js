@@ -1,32 +1,30 @@
-/* Modo de interfaz: azul técnico por defecto, variante clara opcional.
-   Escribe la paleta en <html> para que todo el sitio cambie de golpe.
-   Clave nueva para estrenar la identidad sin heredar preferencias viejas. */
+/* Modo de interfaz: claro por defecto, oscuro opcional.
+   Escribe la paleta en <html> (igual que el Diseñador) para que toda la
+   plataforma —sitio público y panel— cambie de golpe y sin recargar. */
 
-import { useEffect, useState } from "react";
-
-const CLAVE = "jumpernet-modo-v2";
+const CLAVE = "jumpernet-modo-v1";
 
 export const MODOS = {
-  oscuro: {
-    nombre: "Noche",
-    color: "#0A12B8",
+  claro: {
+    nombre: "Claro",
+    color: "#FFFFFF",
     vars: {
-      "--bg-1": "#0A12B8", "--bg-2": "#060C80",
-      "--panel": "10, 18, 168", "--panel-sol": "223, 255, 63",
-      "--borde": "#4B5BFF", "--acento-1": "#DFFF3F",
-      "--acento-2": "#FF5CA8", "--acento-3": "#6FF2FF",
-      "--texto": "#F4F6FF", "--texto-suave": "#B9C3FF",
+      "--bg-1": "#FFFFFF", "--bg-2": "#EFF8FF",
+      "--panel": "255, 255, 255", "--panel-sol": "22, 125, 104",
+      "--borde": "#dce8f2", "--acento-1": "#FF6347",
+      "--acento-2": "#167D68", "--acento-3": "#D6A84B",
+      "--texto": "#14283E", "--texto-suave": "#3a5068",
     },
   },
-  claro: {
-    nombre: "Día",
-    color: "#F3F5FF",
+  oscuro: {
+    nombre: "Oscuro",
+    color: "#0B1320",
     vars: {
-      "--bg-1": "#F3F5FF", "--bg-2": "#E4E8FF",
-      "--panel": "255, 255, 255", "--panel-sol": "20, 40, 224",
-      "--borde": "#B4BDF2", "--acento-1": "#1428E0",
-      "--acento-2": "#D6006F", "--acento-3": "#007A86",
-      "--texto": "#0A0F5C", "--texto-suave": "#4B55A8",
+      "--bg-1": "#0B1320", "--bg-2": "#111B2E",
+      "--panel": "17, 27, 46", "--panel-sol": "255, 99, 71",
+      "--borde": "#2A3A55", "--acento-1": "#FF6347",
+      "--acento-2": "#33D6C0", "--acento-3": "#D6A84B",
+      "--texto": "#E8F0F8", "--texto-suave": "#A8B8CC",
     },
   },
 };
@@ -36,7 +34,7 @@ export function cargaModo() {
     const m = localStorage.getItem(CLAVE);
     if (m === "oscuro" || m === "claro") return m;
   } catch { /* almacenamiento bloqueado */ }
-  return "oscuro";
+  return "claro";
 }
 
 export function guardaModo(modo) {
@@ -44,7 +42,7 @@ export function guardaModo(modo) {
 }
 
 export function aplicaModo(modo) {
-  const m = modo === "claro" ? "claro" : "oscuro";
+  const m = modo === "oscuro" ? "oscuro" : "claro";
   const html = document.documentElement;
   html.dataset.modo = m;
   html.style.colorScheme = m;
@@ -52,14 +50,4 @@ export function aplicaModo(modo) {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute("content", MODOS[m].color);
   return m;
-}
-
-/* Hook de React para usar el modo en componentes. */
-export function useModo() {
-  const [modo, setModo] = useState(cargaModo);
-  useEffect(() => {
-    aplicaModo(modo);
-    guardaModo(modo);
-  }, [modo]);
-  return { modo, setModo };
 }

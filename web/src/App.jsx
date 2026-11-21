@@ -25,7 +25,6 @@ import { me, setToken, getToken } from "./lib/api.js";
 import { aplicaTema, cargaTema } from "./lib/temas.js";
 import { aplicaModo, cargaModo } from "./lib/modo.js";
 import { datosHoy } from "./lib/fecha.js";
-import Bienvenida from "./components/Bienvenida.jsx";
 import { VERSION } from "./lib/version.js";
 
 const NAV_SESION = [
@@ -60,7 +59,6 @@ export default function App() {
   const [toasts, setToasts] = useState([]);
   const [lateral, setLateral] = useState(false);   // menú móvil del panel
   const [pegada, setPegada] = useState(false);     // topbar con scroll
-  const [bienvenida, setBienvenida] = useState(null); // sorpresa al iniciar sesión
 
   /* primero el tema guardado y después el modo: el modo manda en la paleta */
   useEffect(() => { aplicaTema(cargaTema()); aplicaModo(cargaModo()); }, []);
@@ -97,9 +95,9 @@ export default function App() {
   function salir() { setToken(null); setYo(null); setLateral(false); ir("/"); }
   function alEntrar() {
     me().then((d) => {
+      const nombre = d?.alias || (d?.email || "").split("@")[0] || "tú";
       setYo(d); setTab("red"); ir("/panel");
-      setBienvenida(d?.alias || (d?.email || "").split("@")[0] || "tú");
-      setTimeout(() => setBienvenida(null), 3200);
+      aviso(`Hola, ${nombre} · sesión iniciada`);
     })
       .catch(() => aviso("no se pudo cargar tu cuenta", "error"));
   }
@@ -331,8 +329,6 @@ export default function App() {
           </main>
         </div>
       </div>
-
-      {bienvenida && <Bienvenida nombre={bienvenida} />}
 
       {/* avisos */}
       <div className="sp-toasts fijos">
