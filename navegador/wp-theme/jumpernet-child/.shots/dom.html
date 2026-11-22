@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="es" data-jn-tema="claro" style="color-scheme: light;"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>JumperNET · vista de prueba</title><link rel="stylesheet" href="style.css"></head><body class="home jn-navidad"><div class="wp-site-blocks"><header class="wp-block-group"><div class="wp-block-group"><h1 class="wp-block-site-title"><a href="#">JumperNET</a></h1><nav class="wp-block-navigation"><ul><li><a href="#">Inicio</a></li><li><a href="#">Documentación</a></li><li><a href="#">Arquitectura</a></li><li><a href="#">Guía</a></li></ul></nav></div></header><main class="wp-block-group"><article><div class="wp-block-post-content-is-layout-flow wp-block-post-content"><div class="jn-hero"><figure class="jn-hero-video" data-jn-cine="" data-jn-corte="30"><div class="jn-hero-video__marco"><video class="jn-cine__video" src="./assets/el-viaje.mp4" autoplay="" muted="" loop="" playsinline="" preload="metadata"></video><span class="jn-hero-video__tag">▷ así viaja tu tráfico · 30 s</span><div class="jn-hero-video__pie"><button type="button" data-jn-play="" aria-label="Reproducir">▶</button><button type="button" data-jn-sonido="" aria-label="Activar sonido">🔇</button><button type="button" data-jn-pantalla="" aria-label="Pantalla completa">⛶</button><span class="jn-cine__tiempo">0:00 / 0:30</span></div></div><figcaption>corte de 30 s · la película completa, abajo</figcaption></figure><span class="jn-badge">red educativa · v2.0</span><h1 class="wp-block-post-title jn-titulo">Jumper<span>NET</span></h1><p class="jn-sub">Documentación abierta de una red educativa de tres saltos: cómo viaja tu tráfico, qué ve cada nodo y por qué el camino importa.</p><div class="jn-stats"><div><b>3</b><span>saltos por defecto</span></div><div><b>JENC</b><span>cifrado por capas</span></div><div><b>7:16</b><span>el documental</span></div></div></div><section class="jn-cine jn-reveal" id="el-viaje" data-jn-cine=""><div class="jn-cine__cab"><span class="jn-cine__tag">▷ el viaje · 7 min</span><h2>El viaje completo, <em>de principio a fin</em></h2><p>Siete minutos dentro de la red: cómo se encienden los nodos, cómo salta el paquete y qué ve cada salto.</p></div><div class="jn-cine__marco"><video class="jn-cine__video" src="./assets/el-viaje.mp4" muted="" playsinline="" preload="metadata"></video><div class="jn-cine__velo" aria-hidden="true"></div><div class="jn-cine__controles"><button type="button" data-jn-play="" aria-label="Reproducir">▶</button><button type="button" data-jn-sonido="" aria-label="Activar sonido">🔇</button><button type="button" data-jn-pantalla="" aria-label="Pantalla completa">⛶</button><div class="jn-cine__barra" role="presentation"><i style="transform: scaleX(0);"></i></div><span class="jn-cine__tiempo">0:00 / 7:15</span></div></div></section><div class="jn-exp" id="experiencia">
+
+<section class="jn-bloque jn-reveal" id="red" aria-labelledby="red-tit">
+	<header class="jn-bloque__cab">
+		<span class="jn-kicker"><b>01</b> mapa de la red</span>
+		<h2 class="jn-bloque__tit" id="red-tit">La red, <em>de un vistazo</em></h2>
+		<p class="jn-bloque__intro">Cinco piezas, un circuito. Toca un nodo para ver qué papel juega y qué información tiene —y cuál no— en cada salto.</p>
+	</header>
+	<div class="jn-mapa" data-jn-mapa="">
+		<div class="jn-mapa__lienzo">
+			<svg class="jn-mapa__svg" viewBox="0 0 760 380" role="group" aria-label="Circuito educativo de tres saltos">
+				<g class="jn-mapa__trama" aria-hidden="true">
+					<path d="M10 60 Q 190 130 370 70 T 750 100"></path>
+					<path d="M10 330 Q 190 260 370 320 T 750 290"></path>
+					<circle cx="40" cy="110" r="3"></circle><circle cx="700" cy="320" r="3"></circle>
+					<circle cx="360" cy="40" r="3"></circle><circle cx="420" cy="345" r="3"></circle>
+				</g>
+				<g class="jn-mapa__enlaces" aria-hidden="true">
+					<path data-enlace="tu-s1" d="M60 210 L225 100"></path>
+					<path data-enlace="s1-s2" d="M225 100 L390 245"></path>
+					<path data-enlace="s2-s3" d="M390 245 L555 120"></path>
+					<path data-enlace="s3-destino" d="M555 120 L690 225"></path>
+				</g>
+				<g class="jn-mapa__nodo is-activo" data-nodo="tu" tabindex="0" role="button" aria-label="Tú, el origen" aria-pressed="true">
+					<circle class="jn-mapa__halo" cx="60" cy="210" r="30"></circle>
+					<circle class="jn-mapa__punto" cx="60" cy="210" r="13"></circle>
+					<text x="60" y="258">tú</text>
+				</g>
+				<g class="jn-mapa__nodo" data-nodo="s1" tabindex="0" role="button" aria-label="Salto 1" aria-pressed="false">
+					<circle class="jn-mapa__halo" cx="225" cy="100" r="30"></circle>
+					<circle class="jn-mapa__punto" cx="225" cy="100" r="13"></circle>
+					<text x="225" y="66">salto 1</text>
+				</g>
+				<g class="jn-mapa__nodo" data-nodo="s2" tabindex="0" role="button" aria-label="Salto 2" aria-pressed="false">
+					<circle class="jn-mapa__halo" cx="390" cy="245" r="30"></circle>
+					<circle class="jn-mapa__punto" cx="390" cy="245" r="13"></circle>
+					<text x="390" y="294">salto 2</text>
+				</g>
+				<g class="jn-mapa__nodo" data-nodo="s3" tabindex="0" role="button" aria-label="Salto 3" aria-pressed="false">
+					<circle class="jn-mapa__halo" cx="555" cy="120" r="30"></circle>
+					<circle class="jn-mapa__punto" cx="555" cy="120" r="13"></circle>
+					<text x="555" y="86">salto 3</text>
+				</g>
+				<g class="jn-mapa__nodo" data-nodo="destino" tabindex="0" role="button" aria-label="Destino" aria-pressed="false">
+					<circle class="jn-mapa__halo" cx="690" cy="225" r="30"></circle>
+					<circle class="jn-mapa__punto" cx="690" cy="225" r="13"></circle>
+					<text x="690" y="274">destino</text>
+				</g>
+			</svg>
+		</div>
+		<div class="jn-mapa__lista" role="group" aria-label="Nodos del circuito">
+			<button type="button" data-nodo="tu" aria-pressed="true" class="is-activo">tú · origen</button>
+			<button type="button" data-nodo="s1" aria-pressed="false">salto 1</button>
+			<button type="button" data-nodo="s2" aria-pressed="false">salto 2</button>
+			<button type="button" data-nodo="s3" aria-pressed="false">salto 3</button>
+			<button type="button" data-nodo="destino" aria-pressed="false">destino</button>
+		</div>
+		<aside class="jn-ficha" data-jn-ficha="" aria-live="polite">
+			<div class="jn-ficha__vista" data-nodo-vista="tu">
+				<span class="jn-ficha__etiqueta">nodo · origen</span>
+				<h3>Tú</h3>
+				<p>Aquí empieza todo: tu navegador elige el destino y entrega la petición al primer salto.</p>
+				<dl class="jn-ficha__datos">
+					<div><dt>ve</dt><dd>el destino final; el contenido antes de cifrarse</dd></div>
+					<div><dt>no ve</dt><dd>qué camino recorrerá por dentro</dd></div>
+				</dl>
+			</div>
+			<div class="jn-ficha__vista" data-nodo-vista="s1" hidden="">
+				<span class="jn-ficha__etiqueta">nodo · salto 1</span>
+				<h3>Salto 1</h3>
+				<p>Recibe el paquete, retira su capa y lo reenvía al salto 2. No necesita saber qué hay dentro.</p>
+				<dl class="jn-ficha__datos">
+					<div><dt>ve</dt><dd>tu IP; el salto 2; que el paquete va cifrado</dd></div>
+					<div><dt>no ve</dt><dd>el destino final; el contenido</dd></div>
+				</dl>
+			</div>
+			<div class="jn-ficha__vista" data-nodo-vista="s2" hidden="">
+				<span class="jn-ficha__etiqueta">nodo · salto 2</span>
+				<h3>El intermedio</h3>
+				<p>Es el tramo que más separa el origen del destino: conoce a sus vecinos, no a los extremos.</p>
+				<dl class="jn-ficha__datos">
+					<div><dt>ve</dt><dd>el salto 1 y el salto 3; el paquete cifrado</dd></div>
+					<div><dt>no ve</dt><dd>tu IP; el destino; el contenido</dd></div>
+				</dl>
+			</div>
+			<div class="jn-ficha__vista" data-nodo-vista="s3" hidden="">
+				<span class="jn-ficha__etiqueta">nodo · salto 3</span>
+				<h3>Salto 3</h3>
+				<p>Cierra el circuito: recibe del salto 2 y entrega en el destino, sin ver el contenido.</p>
+				<dl class="jn-ficha__datos">
+					<div><dt>ve</dt><dd>el salto 2; el destino; el paquete cifrado</dd></div>
+					<div><dt>no ve</dt><dd>tu IP; el contenido</dd></div>
+				</dl>
+			</div>
+			<div class="jn-ficha__vista" data-nodo-vista="destino" hidden="">
+				<span class="jn-ficha__etiqueta">nodo · destino</span>
+				<h3>El destino</h3>
+				<p>Descifra la petición y responde. La respuesta vuelve por el mismo circuito.</p>
+				<dl class="jn-ficha__datos">
+					<div><dt>ve</dt><dd>la petición descifrada; la IP del salto 3</dd></div>
+					<div><dt>no ve</dt><dd>tu IP real; el camino completo</dd></div>
+				</dl>
+			</div>
+		</aside>
+	</div>
+	<p class="jn-aviso">Mapa educativo. No representa la topología real ni el estado de los nodos.</p>
+</section>
+
+<section class="jn-bloque jn-reveal" id="viaje" aria-labelledby="viaje-tit">
+	<header class="jn-bloque__cab">
+		<span class="jn-kicker"><b>02</b> simulador · tres saltos</span>
+		<h2 class="jn-bloque__tit" id="viaje-tit">El viaje de <em>un paquete</em></h2>
+		<p class="jn-bloque__intro">Una petición, tres saltos y una respuesta. Inicia el recorrido y observa cómo cambia lo que cada tramo sabe.</p>
+	</header>
+	<div class="jn-viaje" data-jn-viaje="">
+		<div class="jn-viaje__mandos">
+			<button type="button" class="jn-btn" data-jn-viaje-play="">iniciar viaje</button>
+			<button type="button" class="jn-btn jn-btn--fantasma" data-jn-viaje-reset="">reiniciar</button>
+			<span class="jn-viaje__estado" data-jn-viaje-estado="">en espera</span>
+		</div>
+		<div class="jn-viaje__carril">
+			<div class="jn-viaje__riel" aria-hidden="true"></div>
+			<div class="jn-viaje__paquete" data-jn-paquete="" aria-hidden="true" style="--p: 0;"><span>▣</span></div>
+			<ol class="jn-viaje__paradas">
+				<li data-parada="0" class="is-actual"><b>tú</b><span>petición</span></li>
+				<li data-parada="1"><b>salto 1</b><span>capa 1</span></li>
+				<li data-parada="2"><b>salto 2</b><span>capa 2</span></li>
+				<li data-parada="3"><b>salto 3</b><span>capa 3</span></li>
+				<li data-parada="4"><b>destino</b><span>respuesta</span></li>
+			</ol>
+		</div>
+		<div class="jn-viaje__barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progreso del viaje"><i data-jn-viaje-barra="" style="transform: scaleX(0);"></i></div>
+		<div class="jn-viaje__narracion">
+			<div class="jn-viaje__etapa" data-etapa="0">
+				<span class="jn-viaje__num">00</span>
+				<h3>Todo empieza en tu navegador</h3>
+				<p>La aplicación no se conecta al destino: entrega la petición al primer salto mediante SOCKS5. Ahí comienza el circuito.</p>
+			</div>
+			<div class="jn-viaje__etapa" data-etapa="1" hidden="">
+				<span class="jn-viaje__num">01</span>
+				<h3>Salto 1 · la primera capa</h3>
+				<p>El salto 1 sabe de dónde viene el paquete y a quién debe reenviarlo. Abre su capa, no el contenido.</p>
+			</div>
+			<div class="jn-viaje__etapa" data-etapa="2" hidden="">
+				<span class="jn-viaje__num">02</span>
+				<h3>Salto 2 · el tramo ciego</h3>
+				<p>El salto intermedio no conoce ni tu IP ni el destino final. Solo a sus dos vecinos.</p>
+			</div>
+			<div class="jn-viaje__etapa" data-etapa="3" hidden="">
+				<span class="jn-viaje__num">03</span>
+				<h3>Salto 3 · la entrega</h3>
+				<p>El último salto entrega el paquete al destino. Sabe a quién lo entrega, no qué lleva dentro.</p>
+			</div>
+			<div class="jn-viaje__etapa" data-etapa="4" hidden="">
+				<span class="jn-viaje__num">04</span>
+				<h3>Destino · la respuesta</h3>
+				<p>El destino descifra la petición y responde. La respuesta vuelve por el mismo camino y el circuito se cierra.</p>
+			</div>
+		</div>
+		<div class="jn-viaje__pistas">
+			<span><b>1</b> inicia el viaje</span>
+			<span><b>2</b> sigue el paquete</span>
+			<span><b>3</b> reinicia cuando quieras</span>
+		</div>
+	</div>
+	<p class="jn-aviso">Simulación educativa. No abre conexiones reales ni envía tráfico.</p>
+</section>
+
+<section class="jn-bloque jn-reveal" id="cifrado" aria-labelledby="cifrado-tit">
+	<header class="jn-bloque__cab">
+		<span class="jn-kicker"><b>03</b> cifrado por saltos</span>
+		<h2 class="jn-bloque__tit" id="cifrado-tit">Qué ve <em>cada salto</em></h2>
+		<p class="jn-bloque__intro">El contenido y el camino se protegen por capas. Elige un punto del circuito y comprueba qué se ve desde ahí.</p>
+	</header>
+	<div class="jn-cif" data-jn-cif="" data-vista="tu">
+		<div class="jn-cif__tabs" role="tablist" aria-label="Punto de vista">
+			<button type="button" role="tab" aria-selected="true" data-vista-btn="tu">tú</button>
+			<button type="button" role="tab" aria-selected="false" data-vista-btn="s1">salto 1</button>
+			<button type="button" role="tab" aria-selected="false" data-vista-btn="s2">salto 2</button>
+			<button type="button" role="tab" aria-selected="false" data-vista-btn="s3">salto 3</button>
+			<button type="button" role="tab" aria-selected="false" data-vista-btn="destino">destino</button>
+		</div>
+		<div class="jn-cif__panel">
+			<div class="jn-cif__sobre" aria-hidden="true">
+				<div class="jn-cif__capa jn-cif__capa--1"><span>destino</span></div>
+				<div class="jn-cif__capa jn-cif__capa--2"><span>siguiente salto</span></div>
+				<div class="jn-cif__capa jn-cif__capa--3"><span>contenido</span><b>JENC</b></div>
+			</div>
+			<div class="jn-cif__fichas">
+				<div class="jn-cif__ficha" data-vista="tu">
+					<span class="jn-ficha__etiqueta">punto de vista · origen</span>
+					<h3>Tú</h3>
+					<p>Conoces el destino y el contenido. Lo que no ves es el camino que tomará por dentro.</p>
+					<dl class="jn-ficha__datos">
+						<div><dt>visible</dt><dd>destino final; contenido sin cifrar</dd></div>
+						<div><dt>oculto</dt><dd>la ruta interna entre saltos</dd></div>
+					</dl>
+				</div>
+				<div class="jn-cif__ficha" data-vista="s1" hidden="">
+					<span class="jn-ficha__etiqueta">punto de vista · salto 1</span>
+					<h3>Salto 1</h3>
+					<p>Tu dirección y el siguiente salto. El contenido sigue cerrado y el destino final no aparece.</p>
+					<dl class="jn-ficha__datos">
+						<div><dt>visible</dt><dd>tu IP; salto 2; el sobre cifrado</dd></div>
+						<div><dt>oculto</dt><dd>destino final; contenido</dd></div>
+					</dl>
+				</div>
+				<div class="jn-cif__ficha" data-vista="s2" hidden="">
+					<span class="jn-ficha__etiqueta">punto de vista · salto 2</span>
+					<h3>Salto 2</h3>
+					<p>El tramo intermedio. Solo conoce a sus vecinos; no sabe quién empezó ni quién recibe.</p>
+					<dl class="jn-ficha__datos">
+						<div><dt>visible</dt><dd>salto 1; salto 3; el sobre cifrado</dd></div>
+						<div><dt>oculto</dt><dd>tu IP; destino final; contenido</dd></div>
+					</dl>
+				</div>
+				<div class="jn-cif__ficha" data-vista="s3" hidden="">
+					<span class="jn-ficha__etiqueta">punto de vista · salto 3</span>
+					<h3>Salto 3</h3>
+					<p>El último tramo. Sabe a quién entregar y de dónde viene el paquete; el contenido no se abre aquí.</p>
+					<dl class="jn-ficha__datos">
+						<div><dt>visible</dt><dd>salto 2; destino; el sobre cifrado</dd></div>
+						<div><dt>oculto</dt><dd>tu IP; contenido</dd></div>
+					</dl>
+				</div>
+				<div class="jn-cif__ficha" data-vista="destino" hidden="">
+					<span class="jn-ficha__etiqueta">punto de vista · destino</span>
+					<h3>Destino</h3>
+					<p>Recibe la petición descifrada. Ve la IP del último salto, no la tuya ni el camino completo.</p>
+					<dl class="jn-ficha__datos">
+						<div><dt>visible</dt><dd>contenido; IP del salto 3</dd></div>
+						<div><dt>oculto</dt><dd>tu IP real; la ruta completa</dd></div>
+					</dl>
+				</div>
+			</div>
+		</div>
+		<p class="jn-aviso">Modelo educativo simplificado de JENC, el cifrado por capas de JumperNET.</p>
+	</div>
+</section>
+
+<section class="jn-bloque jn-reveal" id="comparar" aria-labelledby="comparar-tit">
+	<header class="jn-bloque__cab">
+		<span class="jn-kicker"><b>04</b> comparador</span>
+		<h2 class="jn-bloque__tit" id="comparar-tit">Directa o <em>en tres saltos</em></h2>
+		<p class="jn-bloque__intro">Una conexión directa es más corta; una de tres saltos reparte lo que cada intermediario sabe. No hay una mejor para todo.</p>
+	</header>
+	<div class="jn-comp" data-jn-comp="" data-activo="saltos">
+		<div class="jn-comp__conmutador" role="group" aria-label="Resaltar una conexión">
+			<button type="button" data-jn-comp-btn="directa" aria-pressed="false">directa</button>
+			<button type="button" data-jn-comp-btn="saltos" aria-pressed="true">tres saltos</button>
+		</div>
+		<div class="jn-comp__lados">
+			<article class="jn-comp__lado" data-comp="directa">
+				<span class="jn-kicker">sin intermediarios</span>
+				<h3>Conexión directa</h3>
+				<ul>
+					<li>El destino ve tu IP real.</li>
+					<li>Tu operador ve a qué destino te conectas.</li>
+					<li>Un solo tramo: menos latencia.</li>
+					<li>No reparte la confianza entre nodos.</li>
+				</ul>
+			</article>
+			<article class="jn-comp__lado" data-comp="saltos">
+				<span class="jn-kicker">tres saltos</span>
+				<h3>Circuito JumperNET</h3>
+				<ul>
+					<li>El destino ve la IP de un salto, no la tuya.</li>
+					<li>Ningún salto ve a la vez origen, destino y contenido.</li>
+					<li>Tres tramos: más latencia que una conexión directa.</li>
+					<li>La confianza se reparte entre varios operadores.</li>
+				</ul>
+			</article>
+		</div>
+		<div class="jn-tabla-envoltura">
+			<table class="jn-tabla">
+				<caption class="jn-visually-hidden">Comparación cualitativa entre conexión directa y de tres saltos</caption>
+				<thead><tr><th scope="col">criterio</th><th scope="col">directa</th><th scope="col">tres saltos</th></tr></thead>
+				<tbody>
+					<tr><th scope="row">tu IP</th><td>la ve el destino</td><td>la ve el salto 1</td></tr>
+					<tr><th scope="row">destino</th><td>lo ve tu operador</td><td>lo ve el salto 3</td></tr>
+					<tr><th scope="row">contenido</th><td>según el cifrado de la web</td><td>cifrado por capas entre saltos</td></tr>
+					<tr><th scope="row">latencia</th><td>menor</td><td>mayor</td></tr>
+					<tr><th scope="row">confianza</th><td>en un solo camino</td><td>repartida entre nodos</td></tr>
+				</tbody>
+			</table>
+		</div>
+		<p class="jn-aviso">Comparación cualitativa. No son medidas de rendimiento de esta instalación.</p>
+	</div>
+</section>
+
+<section class="jn-bloque jn-reveal" id="estado" aria-labelledby="estado-tit">
+	<header class="jn-bloque__cab">
+		<span class="jn-kicker"><b>05</b> estado</span>
+		<h2 class="jn-bloque__tit" id="estado-tit">La instalación, <em>en datos</em></h2>
+		<p class="jn-bloque__intro">Datos reales de esta instalación de WordPress, no métricas de la red.</p>
+	</header>
+	<div class="jn-estado" data-jn-estado="">
+		<div class="jn-estado__rejilla">
+			<div class="jn-estado__dato jn-reveal"><span>entradas publicadas</span><b>24</b></div>
+			<div class="jn-estado__dato jn-reveal"><span>páginas</span><b>24</b></div>
+			<div class="jn-estado__dato jn-reveal"><span>archivos</span><b>18</b></div>
+			<div class="jn-estado__dato jn-reveal"><span>comentarios</span><b>7</b></div>
+			<div class="jn-estado__dato jn-reveal"><span>tema activo</span><b>v2.0.0</b></div>
+			<div class="jn-estado__dato jn-reveal"><span>vídeo</span><b>disponible</b></div>
+			<div class="jn-estado__dato jn-reveal"><span>modo</span><b data-jn-modo="">claro</b></div>
+			<div class="jn-estado__dato jn-reveal"><span>generado</span><b class="jn-estado__fecha">21 Nov 2026 · 10:14</b></div>
+		</div>
+		<p class="jn-aviso">Instantánea del sitio, generada al cargar la página. No hay monitorización de nodos remotos.</p>
+	</div>
+</section>
+
+<section class="jn-bloque jn-reveal" id="terminal" aria-labelledby="terminal-tit">
+	<header class="jn-bloque__cab">
+		<span class="jn-kicker"><b>06</b> terminal</span>
+		<h2 class="jn-bloque__tit" id="terminal-tit">Comandos, <em>sin sustos</em></h2>
+		<p class="jn-bloque__intro">Comandos que se usan con un proxy SOCKS5, explicados sin ejecutar nada. Todo ocurre en tu navegador.</p>
+	</header>
+	<div class="jn-term" data-jn-term="">
+		<div class="jn-term__barra" aria-hidden="true"><i></i><i></i><i></i><span>consola educativa · simulada</span></div>
+		<div class="jn-term__salida" data-jn-term-salida="" aria-live="polite">
+			<p class="jn-term__bienvenida">JumperNET · consola educativa
+Escribe «help» para ver los comandos disponibles.
+Nada de lo que escribas sale de tu navegador.</p>
+		</div>
+		<form class="jn-term__linea" data-jn-term-form="">
+			<label class="jn-visually-hidden" for="jn-term-input">Comando</label>
+			<span aria-hidden="true">$</span>
+			<input id="jn-term-input" data-jn-term-input="" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="help">
+			<button type="submit">ejecutar</button>
+		</form>
+	</div>
+	<p class="jn-aviso">Los resultados son ejemplos ilustrativos, no la salida de una ejecución real.</p>
+</section>
+
+<section class="jn-bloque jn-reveal" id="glosario" aria-labelledby="glosario-tit">
+	<header class="jn-bloque__cab">
+		<span class="jn-kicker"><b>07</b> glosario</span>
+		<h2 class="jn-bloque__tit" id="glosario-tit">Diez palabras <em>para seguir</em></h2>
+		<p class="jn-bloque__intro">Lo justo para leer la documentación sin frenarte. Filtra o abre el término que te interese.</p>
+	</header>
+	<div class="jn-glos" data-jn-glos="">
+		<div class="jn-glos__filtro">
+			<label class="jn-visually-hidden" for="jn-glos-buscar">Buscar un término</label>
+			<input id="jn-glos-buscar" data-jn-glos-buscar="" type="search" placeholder="filtrar: cifrado, salto, DNS…">
+			<span data-jn-glos-cuenta="">10 términos</span>
+		</div>
+		<div class="jn-glos__lista">
+			<details class="jn-glos__item"><summary><b>salto</b><span>relay</span></summary><p>Nodo que recibe un paquete y lo reenvía al siguiente punto del circuito. En JumperNET hay tres por defecto.</p></details>
+			<details class="jn-glos__item"><summary><b>SOCKS5</b><span>protocolo</span></summary><p>Permite que una aplicación entregue su conexión a un proxy sin que ella misma hable con el destino.</p></details>
+			<details class="jn-glos__item"><summary><b>JENC</b><span>cifrado del proyecto</span></summary><p>Cifrado por capas: cada salto abre únicamente la capa que le corresponde y desconoce el resto.</p></details>
+			<details class="jn-glos__item"><summary><b>paquete</b><span>unidad de datos</span></summary><p>Bloque pequeño de información que viaja por la red. Los paquetes no llevan el vídeo entero: se reparten.</p></details>
+			<details class="jn-glos__item"><summary><b>nodo</b><span>punto del circuito</span></summary><p>Cualquier equipo que participa: tu origen, un salto o el destino. Cada nodo tiene un papel distinto.</p></details>
+			<details class="jn-glos__item"><summary><b>metadatos</b><span>lo que rodea al contenido</span></summary><p>Origen, destino, hora o tamaño. Aunque el contenido vaya cifrado, parte de los metadatos sigue siendo visible.</p></details>
+			<details class="jn-glos__item"><summary><b>DNS</b><span>nombres → direcciones</span></summary><p>Traduce un nombre como <code>ejemplo.test</code> a una dirección IP. Resolverlo por el proxy evita fugas.</p></details>
+			<details class="jn-glos__item"><summary><b>túnel</b><span>conexión encapsulada</span></summary><p>Una conexión dentro de otra. El túnel transporta el tráfico sin que el camino intermedio lo interprete.</p></details>
+			<details class="jn-glos__item"><summary><b>latencia</b><span>tiempo de ida y vuelta</span></summary><p>Lo que tarda una respuesta en volver. Más saltos suele significar más latencia, aunque depende de la ruta.</p></details>
+			<details class="jn-glos__item"><summary><b>extremo a extremo</b><span>cifrado</span></summary><p>Solo el origen y el destino pueden abrir el contenido. Los intermediarios lo transportan sin leerlo.</p></details>
+		</div>
+	</div>
+</section>
+
+<section class="jn-bloque jn-reveal" id="preguntas" aria-labelledby="preguntas-tit">
+	<header class="jn-bloque__cab">
+		<span class="jn-kicker"><b>08</b> preguntas</span>
+		<h2 class="jn-bloque__tit" id="preguntas-tit">Lo que <em>suele preguntarse</em></h2>
+		<p class="jn-bloque__intro">Respuestas cortas. Si necesitas el detalle, la documentación está a un clic.</p>
+	</header>
+	<div class="jn-faq">
+		<details class="jn-faq__item"><summary>¿JumperNET guarda mi tráfico?</summary><p>Esta web es la documentación del proyecto: no opera la red ni recibe tu tráfico. Lo que hace el circuito real se describe en la documentación técnica.</p></details>
+		<details class="jn-faq__item"><summary>¿Cuántos saltos usa el circuito?</summary><p>Tres por defecto. El origen conoce el primero, el primero al segundo y así hasta el destino; cada tramo sabe lo mínimo.</p></details>
+		<details class="jn-faq__item"><summary>¿Puedo usar el navegador sin la extensión?</summary><p>Sí. La extensión facilita el día a día, pero un cliente SOCKS5 configurado a mano también puede usar el circuito.</p></details>
+		<details class="jn-faq__item"><summary>¿Qué pasa si un salto falla?</summary><p>El circuito se reconstruye con otro nodo disponible. La guía de problemas y soluciones explica cómo detectarlo.</p></details>
+		<details class="jn-faq__item"><summary>¿El cifrado oculta que me conecto?</summary><p>Oculta el contenido y reparte el camino, pero no vuelve invisible el hecho de que hay tráfico. Ningún sistema serio promete eso.</p></details>
+		<details class="jn-faq__item"><summary>¿Por dónde empiezo?</summary><p>Por la guía de primeros pasos y, si quieres el contexto, por «Qué es JumperNET y por qué existe».</p></details>
+	</div>
+</section>
+
+<section class="jn-bloque jn-reveal" id="bajo-el-capo" aria-labelledby="capo-tit">
+	<header class="jn-bloque__cab">
+		<span class="jn-kicker"><b>09</b> bajo el capó</span>
+		<h2 class="jn-bloque__tit" id="capo-tit">Cómo está <em>hecha esta web</em></h2>
+		<p class="jn-bloque__intro">Sin dependencias externas ni efectos de escaparate: piezas estándar, movimiento medido y datos que se pueden comprobar.</p>
+	</header>
+	<div class="jn-cap">
+		<div class="jn-cap__col">
+			<div class="jn-cap__chips">
+				<span>WordPress</span><span>Twenty Twenty-Four</span><span>SOCKS5</span><span>JENC</span><span>SVG + Canvas</span><span>prefers-reduced-motion</span>
+			</div>
+			<p class="jn-cap__nota">El tema es hijo: el contenido sigue siendo editable desde WordPress y las experiencias se añaden solo en la portada. El vídeo se sirve desde <code>assets/</code> sin servicios externos.</p>
+			<p class="jn-cap__enlaces"><a class="jn-btn" href="#">empezar por la guía</a> <a class="jn-btn jn-btn--fantasma" href="#">ver toda la documentación</a></p>
+		</div>
+		<div class="jn-cap__col">
+			<h3 class="jn-cap__tit">bitácora</h3>
+			<ol class="jn-bitacora">
+				<li><b>v2.0.0</b><span>modo claro/oscuro, fondo de red, portada editorial y experiencias educativas.</span></li>
+				<li><b>v1.3.0</b><span>vídeo junto al título y película completa en la portada.</span></li>
+				<li><b>v1.2.0</b><span>intro cinematográfica, cabecera nueva y panel de inicio.</span></li>
+			</ol>
+		</div>
+	</div>
+</section>
+
+<section class="jn-bloque jn-bloque--navidad jn-reveal" id="navidad" aria-labelledby="navidad-tit">
+	<div class="jn-nav">
+		<div class="jn-nav__arbol jn-reveal" aria-hidden="true">
+			<svg viewBox="0 0 320 310">
+				<g class="jn-nav__ramas">
+					<path d="M55 250 L80 205 M105 250 L80 205 M105 250 L130 205 M155 250 L130 205 M155 250 L180 205 M205 250 L180 205 M205 250 L230 205 M255 250 L230 205"></path>
+					<path d="M80 205 L105 160 M130 205 L105 160 M130 205 L155 160 M180 205 L155 160 M180 205 L205 160 M230 205 L205 160"></path>
+					<path d="M105 160 L130 115 M155 160 L130 115 M155 160 L180 115 M205 160 L180 115"></path>
+					<path d="M130 115 L155 78 M180 115 L155 78"></path>
+					<path class="jn-nav__tronco" d="M155 250 L155 292"></path>
+				</g>
+				<g class="jn-nav__nodos">
+					<circle cx="55" cy="250" r="6"></circle><circle cx="105" cy="250" r="6"></circle><circle cx="155" cy="250" r="6"></circle><circle cx="205" cy="250" r="6"></circle><circle cx="255" cy="250" r="6"></circle>
+					<circle cx="80" cy="205" r="6"></circle><circle cx="130" cy="205" r="6"></circle><circle cx="180" cy="205" r="6"></circle><circle cx="230" cy="205" r="6"></circle>
+					<circle cx="105" cy="160" r="6"></circle><circle cx="155" cy="160" r="6"></circle><circle cx="205" cy="160" r="6"></circle>
+					<circle cx="130" cy="115" r="6"></circle><circle cx="180" cy="115" r="6"></circle>
+					<circle class="jn-nav__corona" cx="155" cy="78" r="7"></circle>
+				</g>
+				<path class="jn-nav__estrella" d="M160 20 l6 15 16 2 -12 11 3 16 -13 -9 -13 9 3 -16 -12 -11 16 -2z"></path>
+			</svg>
+		</div>
+		<div class="jn-nav__texto">
+			<span class="jn-kicker">temporada · 2026</span>
+			<h2 class="jn-bloque__tit" id="navidad-tit">Un árbol hecho <em>de nodos</em></h2>
+			<p>Cada luz es una conexión y cada rama un tramo. La red no se apaga en fiestas: solo cambia de ambiente.</p>
+			<p class="jn-nav__saludo">Felices fiestas</p>
+			<span class="jn-nav__firma">desde la documentación de JumperNET</span>
+		</div>
+	</div>
+</section>
+
+</div></div></article></main><footer class="wp-block-group"><p>JumperNET · documentación abierta · hecho para aprender cómo viaja una conexión.</p></footer></div><div class="jn-fabs" role="group" aria-label="Controles del sitio"><button type="button" class="jn-fab" data-jn-tema-btn="" aria-pressed="false" aria-label="Cambiar a modo oscuro"><span class="jn-fab__icono" aria-hidden="true">◐</span><span class="jn-fab__txt">oscuro</span></button><button type="button" class="jn-fab jn-fab--tour" data-jn-tour-ini=""><span aria-hidden="true">→</span><span class="jn-fab__txt">recorrido</span></button></div><div class="jn-tour" data-jn-tour="" hidden="" aria-live="polite"><span class="jn-tour__paso" data-jn-tour-paso="">1 / 6</span><p class="jn-tour__txt" data-jn-tour-txt="">La portada completa, en un minuto.</p><div class="jn-tour__mandos"><button type="button" class="jn-btn jn-btn--mini" data-jn-tour-next="">siguiente</button><button type="button" class="jn-btn jn-btn--fantasma jn-btn--mini" data-jn-tour-fin="">salir</button></div></div><script>window.JN={video:"assets/el-viaje.mp4",portada:true,navidad:true,version:"2.0.0",corte:30};</script><script src="assets/jn-sitio.js"></script><canvas id="jn-red" aria-hidden="true" width="1440" height="813" style="width: 1440px; height: 813px;"></canvas><canvas id="jn-nieve" aria-hidden="true" width="1440" height="813" style="width: 1440px; height: 813px;"></canvas></body></html>
