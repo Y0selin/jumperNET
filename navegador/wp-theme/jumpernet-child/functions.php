@@ -2,7 +2,7 @@
 /*
  * JumperNET · tema hijo de Twenty Twenty-Four.
  *
- * v3.0.0 — «la red se puede explorar»
+ * v3.1.0 — «la red se siente»
  *  · Portada luminosa a dos columnas con el vídeo como protagonista y
  *    reproductor propio (sonido, progreso, pantalla completa).
  *  · Bienvenida interactiva de tres nodos, una vez por navegador y con
@@ -17,7 +17,7 @@
  */
 
 if (!defined('JN_VERSION')) {
-	define('JN_VERSION', '3.0.0');
+	define('JN_VERSION', '3.1.0');
 }
 
 /* ─── temporada navideña (solo define el valor inicial) ─── */
@@ -57,6 +57,9 @@ add_action('wp_head', function () {
 		var tema = 'claro';
 		var navidad = '<?php echo esc_js($navidad_inicial); ?>';
 		try {
+			if (localStorage.getItem('jn-intro-v31')) {
+				raiz.className += ' jn-intro-visto';
+			}
 			var guardado = localStorage.getItem('jn-tema');
 			if (guardado === 'claro' || guardado === 'oscuro') {
 				tema = guardado;
@@ -93,6 +96,26 @@ function jn_url_acceso() {
 }
 function jn_url_registro() {
 	return is_user_logged_in() ? admin_url() : wp_registration_url();
+}
+
+/* nombre real de la cuenta: nunca un nombre inventado */
+function jn_nombre_usuario($usuario = null) {
+	$usuario = $usuario ? $usuario : wp_get_current_user();
+	if (!$usuario || empty($usuario->ID)) {
+		return '';
+	}
+	$nombre = trim((string) $usuario->first_name);
+	if ($nombre === '') {
+		$nombre = trim((string) $usuario->display_name);
+	}
+	if ($nombre === '') {
+		$nombre = trim((string) $usuario->user_login);
+	}
+	return $nombre;
+}
+
+function jn_url_perfil() {
+	return admin_url('profile.php');
 }
 
 /* ─── símbolo de marca: tres saltos y una órbita ─── */
@@ -268,6 +291,13 @@ function jn_reproductor($args = array()) {
 		. '<input class="jn-rep__vol" data-jn-rep-vol type="range" min="0" max="1" step="0.05" value="0.85" aria-label="Volumen">'
 		. '<button type="button" class="jn-rep__btn" data-jn-rep-full aria-label="Pantalla completa">' . jn_icono_reproductor('pantalla') . '</button>'
 		. '</div>'
+		. ($corte > 0
+			? '<div class="jn-rep__fin" data-jn-rep-fin hidden>'
+				. '<span class="jn-rep__fin-txt"><b>Ahora descubre cómo funciona por dentro.</b><small>El paquete, los tres nodos y lo que ve cada salto.</small></span>'
+				. '<a class="jn-btn jn-btn--pr jn-btn--mini" href="#como-funciona">Explorar los tres saltos</a>'
+				. '<button type="button" class="jn-rep__fin-repetir" data-jn-rep-fin-repetir>↻ volver a ver</button>'
+				. '</div>'
+			: '')
 		. '</div>';
 	if ($a['nota']) {
 		$html .= '<figcaption class="jn-rep__nota">' . wp_kses_post($a['nota']) . '</figcaption>';
@@ -340,6 +370,7 @@ function jn_bloque_barra() {
 		. '<a class="jn-menu-movil jn-btn jn-btn--pr" href="' . esc_url(jn_url_registro()) . '">Crear cuenta gratis</a>'
 		. '</nav>'
 		. '<div class="jn-barra__acciones">'
+		. '<button type="button" class="jn-icono-btn jn-icono-btn--guia" data-jn-tour-abrir aria-label="Abrir la visita guiada" title="Visita guiada"><span aria-hidden="true">?</span><span class="jn-visually-hidden">Visita guiada</span></button>'
 		. '<button type="button" class="jn-icono-btn" data-jn-tema-btn aria-pressed="false" aria-label="Cambiar a modo oscuro" title="Tema claro / oscuro">'
 		. '<span class="jn-icono-btn__tema" aria-hidden="true"></span><span class="jn-visually-hidden">Cambiar de tema</span>'
 		. '</button>'
@@ -347,7 +378,7 @@ function jn_bloque_barra() {
 		. '<span aria-hidden="true">✦</span><span class="jn-visually-hidden">Decoración navideña</span>'
 		. '</button>'
 		. ($registrado
-			? '<a class="jn-btn jn-btn--mini jn-btn--ghost" href="' . esc_url(admin_url()) . '">Mi panel</a>'
+			? '<a class="jn-btn jn-btn--mini jn-btn--ghost" href="#cuenta">Mi panel</a>'
 			: '<a class="jn-barra__acceso" href="' . esc_url(wp_login_url(home_url('/'))) . '">Acceder</a>')
 		. '<a class="jn-btn jn-btn--mini jn-btn--pr jn-barra__registro" href="' . esc_url(jn_url_registro()) . '">' . ($registrado ? 'Ir al escritorio' : 'Crear cuenta gratis') . '</a>'
 		. '</div>'
@@ -436,6 +467,86 @@ function jn_insertar_tras_hero($html, $bloque) {
 	return $html . $bloque;
 }
 
+/* ─── intro cinematográfica: cuatro segundos, una sola vez ─── */
+function jn_bloque_intro() {
+	if (!is_front_page()) {
+		return;
+	}
+	?>
+	<div class="jn-intro" data-jn-intro role="dialog" aria-modal="true" aria-label="Introducción a JumperNET">
+		<button type="button" class="jn-intro__saltar" data-jn-intro-saltar>Saltar intro <kbd>Esc</kbd></button>
+		<div class="jn-intro__escena">
+			<div class="jn-intro__marca">
+				<?php echo jn_logo_svg('jn-logo--intro'); ?>
+				<span class="jn-intro__nombre">Jumper<b>NET</b></span>
+				<small>red educativa de tres saltos</small>
+			</div>
+			<svg class="jn-intro__red" viewBox="0 0 660 200" aria-hidden="true" focusable="false">
+				<defs>
+					<linearGradient id="jn-intro-linea" x1="0" y1="0" x2="1" y2="0">
+						<stop offset="0" stop-color="#087f68"/>
+						<stop offset=".55" stop-color="#0aa88a"/>
+						<stop offset="1" stop-color="#d6a84b"/>
+					</linearGradient>
+				</defs>
+				<path class="jn-intro__trazo" d="M78 112 C 178 112 178 58 288 58 S 408 142 512 142" fill="none" stroke="url(#jn-intro-linea)" stroke-width="2" stroke-linecap="round" pathLength="1"/>
+				<g class="jn-intro__nodos">
+					<g class="jn-intro__nodo" style="--jn-nodo-delay:.55s">
+						<circle cx="78" cy="112" r="18" class="jn-intro__halo"/>
+						<circle cx="78" cy="112" r="7"/>
+						<text x="78" y="143" text-anchor="middle">origen</text>
+					</g>
+					<g class="jn-intro__nodo" style="--jn-nodo-delay:1.05s">
+						<circle cx="288" cy="58" r="22" class="jn-intro__halo"/>
+						<circle cx="288" cy="58" r="8"/>
+						<text x="288" y="25" text-anchor="middle">salto 2</text>
+					</g>
+					<g class="jn-intro__nodo" style="--jn-nodo-delay:1.55s">
+						<circle cx="512" cy="142" r="18" class="jn-intro__halo"/>
+						<circle cx="512" cy="142" r="7"/>
+						<text x="512" y="173" text-anchor="middle">destino</text>
+					</g>
+				</g>
+				<circle class="jn-intro__chispa" r="4.5" fill="#fff">
+					<animateMotion dur="1.35s" begin="1.85s" fill="freeze" path="M78 112 C 178 112 178 58 288 58 S 408 142 512 142"/>
+				</circle>
+			</svg>
+			<p class="jn-intro__frase">Tu conexión <em>no va sola</em>.</p>
+			<p class="jn-intro__pie">tres saltos · tres capas · una explicación</p>
+		</div>
+		<div class="jn-intro__barra" aria-hidden="true"><i></i></div>
+	</div>
+	<?php
+}
+add_action('wp_body_open', 'jn_bloque_intro', 4);
+
+/* ─── visita guiada: seis paradas, una tarjeta ─── */
+function jn_bloque_visita() {
+	if (!is_front_page()) {
+		return;
+	}
+	?>
+	<div class="jn-tour" data-jn-tour hidden>
+		<div class="jn-tour__foco" data-jn-tour-foco aria-hidden="true"></div>
+		<section class="jn-tour__tarjeta" role="dialog" aria-modal="true" aria-labelledby="jn-tour-tit" aria-describedby="jn-tour-txt" tabindex="-1" data-jn-tour-tarjeta>
+			<div class="jn-tour__top">
+				<span class="jn-tour__paso" data-jn-tour-paso>parada 1 de 6</span>
+				<button type="button" class="jn-tour__cerrar" data-jn-tour-cerrar aria-label="Saltar la visita guiada">Saltar <span aria-hidden="true">×</span></button>
+			</div>
+			<span class="jn-tour__kicker" data-jn-tour-kicker>la red</span>
+			<h2 class="jn-tour__tit" id="jn-tour-tit" data-jn-tour-tit>Bienvenido a JumperNET</h2>
+			<p class="jn-tour__txt" id="jn-tour-txt" data-jn-tour-txt>Una red educativa de tres saltos. Aquí puedes ver cómo viaja una conexión sin abrir ninguna conexión real.</p>
+			<div class="jn-tour__puntos" data-jn-tour-puntos aria-hidden="true"></div>
+			<div class="jn-tour__mandos">
+				<button type="button" class="jn-btn jn-btn--mini jn-btn--ghost" data-jn-tour-prev>Anterior</button>
+				<button type="button" class="jn-btn jn-btn--mini jn-btn--pr" data-jn-tour-next>Siguiente</button>
+			</div>
+		</section>
+	</div>
+	<?php
+}
+add_action('wp_footer', 'jn_bloque_visita', 4);
+
 /* ─── bienvenida interactiva ─── */
 function jn_bloque_bienvenida() {
 	if (!is_front_page()) {
@@ -490,29 +601,179 @@ function jn_bloque_bienvenida() {
 				<p class="jn-welcome__visual-pie">El paquete no salta solo: recorre un circuito.</p>
 			</div>
 			<div class="jn-welcome__texto">
-				<span class="jn-kicker">bienvenida · primera visita</span>
-				<h2 class="jn-welcome__tit" id="jn-welcome-tit">Bienvenido a <em>JumperNET</em></h2>
-				<p class="jn-welcome__sub">Tu conexión no va sola. Descubre cómo viajan tus datos a través de tres saltos.</p>
+				<span class="jn-kicker">primera visita · menos de un minuto</span>
+				<h2 class="jn-welcome__tit" id="jn-welcome-tit">¿Es tu primera vez <em>en JumperNET</em>?</h2>
+				<p class="jn-welcome__sub">Te enseñamos cómo funciona en menos de un minuto. Seis paradas cortas, sin registrar nada.</p>
 				<ul class="jn-welcome__puntos">
-					<li><b>01</b> Un circuito de tres saltos, explicado paso a paso.</li>
-					<li><b>02</b> Un paquete que viaja contigo y un simulador interactivo.</li>
-					<li><b>03</b> Documentación y terminal educativa, sin ejecutar nada real.</li>
+					<li><b>01</b> Qué es JumperNET y por qué existe.</li>
+					<li><b>02</b> El vídeo, el simulador y el laboratorio.</li>
+					<li><b>03</b> Recursos, ayuda y tu panel personal.</li>
 				</ul>
 				<div class="jn-welcome__acciones">
-					<button type="button" class="jn-btn jn-btn--pr" data-jn-bienvenida-explorar>Explorar JumperNET</button>
-					<button type="button" class="jn-btn jn-btn--ghost" data-jn-bienvenida-demo><span aria-hidden="true">▶</span> Ver demostración de 30 segundos</button>
+					<button type="button" class="jn-btn jn-btn--pr" data-jn-bienvenida-tour>Empezar recorrido</button>
+					<button type="button" class="jn-btn jn-btn--ghost" data-jn-bienvenida-explorar>Explorar por mi cuenta</button>
 				</div>
-				<label class="jn-welcome__check">
-					<input type="checkbox" data-jn-bienvenida-off checked>
-					<span>No volver a mostrarla</span>
-				</label>
-				<p class="jn-welcome__pista">Puedes cerrarla con <kbd>Esc</kbd> y recuperarla desde el pie de página.</p>
+				<p class="jn-welcome__pista">Puedes repetir la visita desde la cabecera o desde <a href="#preguntas">Ayuda</a>. Cierra con <kbd>Esc</kbd>.</p>
 			</div>
 		</div>
 	</dialog>
 	<?php
 }
 add_action('wp_footer', 'jn_bloque_bienvenida', 5);
+
+/* ─── panel personal de la portada ─── */
+function jn_bloque_cuenta() {
+	if (!is_front_page() || !is_user_logged_in()) {
+		return '';
+	}
+	$usuario = wp_get_current_user();
+	$nombre  = jn_nombre_usuario($usuario);
+	$propio  = trim((string) $usuario->first_name) !== '';
+	$roles   = (array) $usuario->roles;
+	$roles_es = array(
+		'administrator' => 'Administrador',
+		'editor'        => 'Editor',
+		'author'        => 'Autor',
+		'contributor'   => 'Colaborador',
+		'subscriber'    => 'Suscriptor',
+	);
+	$clave_rol = $roles ? (string) $roles[0] : '';
+	$rol       = isset($roles_es[$clave_rol]) ? $roles_es[$clave_rol] : ($clave_rol ? ucfirst($clave_rol) : 'Miembro');
+	$meses     = array(1 => 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre');
+	$marca     = $usuario->user_registered ? strtotime($usuario->user_registered) : 0;
+	$desde     = $marca ? date('j', $marca) . ' de ' . $meses[(int) date('n', $marca)] . ' de ' . date('Y', $marca) : '—';
+	$docs    = home_url('/docs/');
+
+	ob_start();
+	?>
+	<section class="jn-cuenta" id="cuenta" aria-labelledby="cuenta-tit">
+		<div class="jn-cuenta__hola">
+			<span class="jn-kicker">tu panel · sesión iniciada</span>
+			<h2 class="jn-cuenta__tit" id="cuenta-tit">Hola, <em><?php echo esc_html($nombre); ?></em> <span class="jn-cuenta__ola" aria-hidden="true">👋</span></h2>
+			<p class="jn-cuenta__sub">Bienvenido de nuevo a JumperNET. Este es tu punto de partida: sigue explorando el circuito, retoma el aprendizaje o ajusta cómo quieres ver el sitio.</p>
+			<?php if (!$propio) : ?>
+				<p class="jn-cuenta__aviso">Tu cuenta aún no tiene un nombre propio. <a href="<?php echo esc_url(jn_url_perfil()); ?>">Añádelo en tu perfil</a> y lo usaremos en el saludo.</p>
+			<?php endif; ?>
+			<div class="jn-cuenta__prefs" role="group" aria-label="Preferencias de esta visita">
+				<span class="jn-cuenta__prefs-tit">Preferencias</span>
+				<button type="button" class="jn-btn jn-btn--mini jn-btn--ghost" data-jn-tema-btn aria-pressed="false">Tema <b data-jn-modo>claro</b></button>
+				<button type="button" class="jn-btn jn-btn--mini jn-btn--ghost" data-jn-navidad-btn aria-pressed="false"><span aria-hidden="true">✦</span> Navidad</button>
+			</div>
+		</div>
+		<div class="jn-cuenta__rejilla">
+			<div class="jn-cuenta__accesos">
+				<a class="jn-cuenta__acceso" href="#como-funciona"><span aria-hidden="true">⇄</span><b>Simulador</b><small>Recorre los tres saltos y abre la ficha de cada nodo.</small><i aria-hidden="true">→</i></a>
+				<a class="jn-cuenta__acceso" href="#laboratorio"><span aria-hidden="true">⌗</span><b>Laboratorio</b><small>Paquete, comparador, terminal y cifrado por capas.</small><i aria-hidden="true">→</i></a>
+				<a class="jn-cuenta__acceso" href="#recursos"><span aria-hidden="true">◇</span><b>Aprendizaje</b><small>Glosario, cuestionario y tu progreso guardado.</small><i aria-hidden="true">→</i></a>
+				<a class="jn-cuenta__acceso" href="<?php echo esc_url($docs); ?>"><span aria-hidden="true">▤</span><b>Documentación</b><small>Arquitectura, seguridad y operación del proyecto.</small><i aria-hidden="true">→</i></a>
+			</div>
+			<div class="jn-cuenta__lado">
+				<article class="jn-cuenta__ficha">
+					<span class="jn-cuenta__ficha-tit">tu cuenta</span>
+					<dl>
+						<div><dt>Nombre</dt><dd><?php echo esc_html($nombre); ?></dd></div>
+						<div><dt>Rol</dt><dd><?php echo esc_html($rol); ?></dd></div>
+						<div><dt>Desde</dt><dd><?php echo esc_html($desde); ?></dd></div>
+					</dl>
+					<a class="jn-cuenta__enlace" href="<?php echo esc_url(jn_url_perfil()); ?>">Editar mi perfil →</a>
+				</article>
+				<article class="jn-cuenta__ficha jn-cuenta__ficha--estado">
+					<span class="jn-cuenta__ficha-tit">estado</span>
+					<p><span class="jn-punto jn-punto--ok" aria-hidden="true"></span> <b>Sitio en línea</b><small>Esta página se ha servido desde la instalación actual.</small></p>
+					<p><span class="jn-punto jn-punto--demo" aria-hidden="true"></span> <b>Circuito sin monitorizar</b><small>La web no mide la red real. Las métricas disponibles están en Estado del sistema.</small></p>
+					<a class="jn-cuenta__enlace" href="#estado">Ver el estado real →</a>
+				</article>
+			</div>
+		</div>
+	</section>
+	<?php
+	return ob_get_clean();
+}
+
+/* ─── saludo tras iniciar sesión ─── */
+function jn_bloque_saludo() {
+	if (!is_front_page() || !is_user_logged_in() || !isset($_GET['jn-saludo'])) {
+		return;
+	}
+	$usuario = wp_get_current_user();
+	$nombre  = jn_nombre_usuario($usuario);
+	$propio  = trim((string) $usuario->first_name) !== '';
+	?>
+	<div class="jn-saludo" data-jn-saludo role="status">
+		<span class="jn-saludo__icono" aria-hidden="true">👋</span>
+		<div class="jn-saludo__texto">
+			<span class="jn-kicker">sesión iniciada</span>
+			<b>¡Hola, <?php echo esc_html($propio ? $nombre : 'qué gusto verte'); ?>!</b>
+			<small><?php echo $propio ? 'Bienvenido de nuevo a JumperNET.' : 'Añade tu nombre en el perfil para un saludo más personal.'; ?></small>
+		</div>
+		<a class="jn-saludo__ir" href="#cuenta">Mi panel</a>
+		<button type="button" class="jn-saludo__cerrar" data-jn-saludo-cerrar aria-label="Cerrar el saludo">×</button>
+	</div>
+	<?php
+}
+add_action('wp_footer', 'jn_bloque_saludo', 7);
+
+add_filter('login_redirect', function ($redirect_to, $requested, $user) {
+	if (!($user instanceof WP_User)) {
+		return $redirect_to;
+	}
+	if (!empty($_POST['redirect_to'])) {
+		$destino = wp_unslash($_POST['redirect_to']);
+		/* el escritorio no necesita el saludo de la portada */
+		if (strpos($destino, 'wp-admin') !== false) {
+			return $redirect_to;
+		}
+		return add_query_arg('jn-saludo', '1', $destino);
+	}
+	return add_query_arg('jn-saludo', '1', home_url('/'));
+}, 10, 3);
+
+/* ─── registro con nombre ─── */
+add_action('register_form', function () {
+	$valor = isset($_POST['jn_nombre']) ? sanitize_text_field(wp_unslash($_POST['jn_nombre'])) : '';
+	?>
+	<p>
+		<label for="jn_nombre">Nombre <span class="jn-campo-obligatorio">(obligatorio)</span><br>
+			<input type="text" name="jn_nombre" id="jn_nombre" class="input" value="<?php echo esc_attr($valor); ?>" autocomplete="given-name" maxlength="60" required aria-required="true">
+		</label>
+	</p>
+	<?php
+});
+
+add_filter('registration_errors', function ($errors, $login, $email) {
+	$nombre = isset($_POST['jn_nombre']) ? sanitize_text_field(wp_unslash($_POST['jn_nombre'])) : '';
+	if ($nombre === '') {
+		$errors->add('jn_nombre_vacio', '<strong>Nombre:</strong> escribe cómo quieres que te llamemos.');
+	} else {
+		$largo = function_exists('mb_strlen') ? mb_strlen($nombre) : strlen($nombre);
+		if ($largo > 60) {
+			$errors->add('jn_nombre_largo', '<strong>Nombre:</strong> usa 60 caracteres como máximo.');
+		}
+	}
+	return $errors;
+}, 10, 3);
+
+add_action('user_register', function ($user_id) {
+	$nombre = isset($_POST['jn_nombre']) ? sanitize_text_field(wp_unslash($_POST['jn_nombre'])) : '';
+	if ($nombre === '') {
+		return;
+	}
+	$usuario = get_userdata($user_id);
+	update_user_meta($user_id, 'first_name', $nombre);
+	if ($usuario && ($usuario->display_name === '' || $usuario->display_name === $usuario->user_login)) {
+		wp_update_user(array('ID' => $user_id, 'display_name' => $nombre));
+	}
+});
+
+/* recuerda a las cuentas antiguas que pueden completar su nombre */
+add_action('show_user_profile', 'jn_aviso_nombre_perfil');
+add_action('edit_user_profile', 'jn_aviso_nombre_perfil');
+function jn_aviso_nombre_perfil($usuario) {
+	if (trim((string) $usuario->first_name) !== '') {
+		return;
+	}
+	echo '<div class="notice notice-info inline"><p><strong>JumperNET:</strong> añade tu <em>Nombre</em> arriba para que el saludo del sitio sea personal.</p></div>';
+}
 
 /* ─── controles flotantes fuera de la portada ─── */
 add_action('wp_footer', function () {
@@ -604,7 +865,7 @@ add_filter('the_content', function ($contenido) {
 	}
 	$hecho = true;
 
-	$experiencia = jn_bloque_experiencia();
+	$experiencia = jn_bloque_cuenta() . jn_bloque_experiencia();
 
 	if (jn_hay_video()) {
 		$contenido = jn_insertar_en_hero($contenido, jn_bloque_hero_video());
@@ -1096,6 +1357,24 @@ Nada de lo que escribas sale de tu navegador.</p>
 		<p class="jn-sec__intro">Ocho ideas para leer la red sin humo: qué es un proxy, qué revela una IP, qué cuesta la latencia y en qué se diferencia esto de una VPN.</p>
 	</header>
 
+	<div class="jn-aprender__progreso" data-jn-aprender-progreso>
+		<div class="jn-aprender__progreso-cab">
+			<div>
+				<span class="jn-kicker">tu progreso · guardado en este navegador</span>
+				<h3>Tu recorrido de aprendizaje</h3>
+			</div>
+			<span class="jn-aprender__progreso-cuenta" data-jn-progreso-cuenta>0 de 4</span>
+		</div>
+		<div class="jn-aprender__barra" data-jn-progreso-barra-rol role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0" aria-label="Progreso de aprendizaje"><i data-jn-progreso-barra></i></div>
+		<ul class="jn-hitos">
+			<li data-jn-hito="video"><span aria-hidden="true"></span>Vídeo de 30 s</li>
+			<li data-jn-hito="simulador"><span aria-hidden="true"></span>Simulador</li>
+			<li data-jn-hito="glosario"><span aria-hidden="true"></span>Glosario</li>
+			<li data-jn-hito="quiz"><span aria-hidden="true"></span>Cuestionario</li>
+		</ul>
+		<button type="button" class="jn-aprender__reset" data-jn-progreso-reset>reiniciar progreso</button>
+	</div>
+
 	<div class="jn-aprender">
 		<details class="jn-tema" open>
 			<summary><span class="jn-tema__icono" aria-hidden="true">⇄</span><b>Proxy SOCKS5</b><small>protocolo</small></summary>
@@ -1257,6 +1536,24 @@ Nada de lo que escribas sale de tu navegador.</p>
 		<h2 class="jn-sec__tit" id="faq-tit">Lo que <em>suele preguntarse</em></h2>
 		<p class="jn-sec__intro">Respuestas cortas. Si necesitas el detalle, la documentación está a un clic.</p>
 	</header>
+	<div class="jn-ayuda" data-jn-ayuda>
+		<div class="jn-ayuda__cab">
+			<div>
+				<span class="jn-kicker">centro de ayuda</span>
+				<h3>Encuentra tu respuesta</h3>
+				<p>Busca entre las preguntas frecuentes y abre solo la que necesites. Respuestas escritas a partir de la documentación; sin inventar datos técnicos.</p>
+			</div>
+			<button type="button" class="jn-btn jn-btn--mini jn-btn--ghost" data-jn-tour-abrir>↺ Repetir la visita guiada</button>
+		</div>
+		<label class="jn-visually-hidden" for="jn-ayuda-buscar">Buscar en la ayuda</label>
+		<input id="jn-ayuda-buscar" data-jn-ayuda-buscar type="search" placeholder="buscar: tráfico, saltos, SOCKS5, cifrado…" autocomplete="off">
+		<p class="jn-ayuda__estado" data-jn-ayuda-estado aria-live="polite">6 preguntas disponibles.</p>
+		<div class="jn-ayuda__docs">
+			<a href="{{GUIA}}">Guía de primeros pasos</a>
+			<a href="{{DOCS}}">Documentación completa</a>
+			<a href="{{ARQ}}">Arquitectura</a>
+		</div>
+	</div>
 	<div class="jn-faq">
 		<details class="jn-faq__item" open><summary>¿JumperNET guarda mi tráfico?</summary><p>Esta web es la documentación del proyecto: no opera la red ni recibe tu tráfico. Lo que hace el circuito real se describe en la documentación técnica.</p></details>
 		<details class="jn-faq__item"><summary>¿Cuántos saltos usa el circuito?</summary><p>Tres por defecto. El origen conoce el primero, el primero al segundo y así hasta el destino; cada tramo sabe lo mínimo.</p></details>
@@ -1390,6 +1687,12 @@ function jn_panel_widget() {
 			</div>
 			<span class="jn-panel__estado"><i></i>en línea</span>
 		</div>
+
+		<p class="jn-panel__hola">Hola, <b><?php echo esc_html(jn_nombre_usuario()); ?></b> <span aria-hidden="true">👋</span>
+			<?php if (trim((string) wp_get_current_user()->first_name) === '') : ?>
+				<a href="<?php echo esc_url(jn_url_perfil()); ?>">añade tu nombre</a>
+			<?php endif; ?>
+		</p>
 
 		<div class="jn-panel__stats">
 			<?php foreach ($fichas as $ficha) : ?>
@@ -1599,6 +1902,9 @@ add_action('admin_head', function () {
 		#wpadminbar #wp-admin-bar-jn-viaje>.ab-item{color:#ffb09a!important}
 
 		.jn-panel{font-size:13px}
+		.jn-panel__hola{margin:0 0 12px;font-size:13px;color:#c9dbea}
+		.jn-panel__hola b{color:#fff}
+		.jn-panel__hola a{color:#7fe0c8;text-decoration:none;margin-left:4px}
 		.jn-panel__cab{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:radial-gradient(420px 160px at 92% -40%,rgba(255,90,54,.28),transparent 66%),linear-gradient(180deg,#191323,#0f0c15);border:1px solid #2b2436;margin:0 0 14px}
 		.jn-panel__logo{display:grid;place-items:center;width:36px;height:36px;border-radius:11px;font-size:18px;font-weight:800;color:#1b0a04;background:linear-gradient(145deg,#ffb59a,#ff5a36 55%,#b06aff)}
 		.jn-panel__marca b{display:block;color:#fff;font-size:15px;letter-spacing:.02em}

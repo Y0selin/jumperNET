@@ -40,6 +40,74 @@
 	}
 
 	/* ────────────────────────────────────────────────────────────────
+	   PROGRESO DE APRENDIZAJE
+	   Cuatro hitos reales, guardados solo en este navegador. No hay
+	   cuentas ni servidores implicados.
+	   ──────────────────────────────────────────────────────────────── */
+
+	var HITOS = ['video', 'simulador', 'glosario', 'quiz'];
+	var CLAVE_PROGRESO = 'jn-progreso-v31';
+
+	function leerProgreso() {
+		try {
+			var datos = JSON.parse(leer(CLAVE_PROGRESO) || '{}');
+			return datos && typeof datos === 'object' ? datos : {};
+		} catch (e) {
+			return {};
+		}
+	}
+
+	function pintarProgreso() {
+		var caja = $('[data-jn-aprender-progreso]');
+		if (!caja) return;
+		var datos = leerProgreso();
+		var hechos = 0;
+		HITOS.forEach(function (id) {
+			var hecho = !!datos[id];
+			if (hecho) hechos++;
+			var li = $('[data-jn-hito="' + id + '"]', caja);
+			if (li) {
+				li.classList.toggle('is-hecho', hecho);
+				li.setAttribute('aria-label', (li.textContent || '').trim() + (hecho ? ': completado' : ': pendiente'));
+			}
+		});
+		var cuenta = $('[data-jn-progreso-cuenta]', caja);
+		if (cuenta) cuenta.textContent = hechos + ' de ' + HITOS.length;
+		var barra = $('[data-jn-progreso-barra]', caja);
+		if (barra) barra.style.width = (hechos / HITOS.length * 100) + '%';
+		var rol = $('[data-jn-progreso-barra-rol]', caja);
+		if (rol) rol.setAttribute('aria-valuenow', String(hechos));
+	}
+
+	function marcarHito(id) {
+		if (HITOS.indexOf(id) === -1) return;
+		var datos = leerProgreso();
+		if (datos[id]) return;
+		datos[id] = true;
+		guardar(CLAVE_PROGRESO, JSON.stringify(datos));
+		pintarProgreso();
+	}
+
+	function iniciarProgreso() {
+		pintarProgreso();
+		var caja = $('[data-jn-aprender-progreso]');
+		if (!caja) return;
+		var reset = $('[data-jn-progreso-reset]', caja);
+		if (reset) {
+			reset.addEventListener('click', function () {
+				borrar(CLAVE_PROGRESO);
+				pintarProgreso();
+				reset.textContent = 'progreso reiniciado';
+				setTimeout(function () { reset.textContent = 'reiniciar progreso'; }, 1800);
+			});
+		}
+		document.addEventListener('click', function (e) {
+			if (e.target.closest('[data-jn-sim-play]')) marcarHito('simulador');
+			if (e.target.closest('[data-jn-glos] summary')) marcarHito('glosario');
+		});
+	}
+
+	/* ────────────────────────────────────────────────────────────────
 	   TEMA CLARO / OSCURO
 	   ──────────────────────────────────────────────────────────────── */
 
@@ -130,6 +198,8 @@
 
 		var ancho = 0, alto = 0, dpr = 1, vivo = true, frame = null, ultimo = 0;
 		var nodos = [];
+		var pulsos = [];
+		var ultimoPulso = 0;
 		var raton = { x: -999, y: -999 };
 
 		function medir() {
@@ -146,6 +216,8 @@
 		function crear() {
 			var total = Math.max(10, Math.min(38, Math.round((ancho * alto) / 46000)));
 			nodos = [];
+			pulsos = [];
+			ultimoPulso = 0;
 			for (var i = 0; i < total; i++) {
 				nodos.push({
 					x: Math.random() * ancho,
@@ -224,6 +296,40 @@
 				ctx.fill();
 			}
 
+			/* paquetes discretos que recorren una conexión existente */
+			if (t - ultimoPulso > 2400 && pulsos.length < 3) {
+				ultimoPulso = t;
+				for (var intento = 0; intento < 14; intento++) {
+					var pa = nodos[Math.floor(Math.random() * nodos.length)];
+					var pb = nodos[Math.floor(Math.random() * nodos.length)];
+					if (!pa || !pb || pa === pb) continue;
+					var px = pa.x - pb.x;
+					var py = pa.y - pb.y;
+					if (Math.sqrt(px * px + py * py) < 132) {
+						pulsos.push({ a: pa, b: pb, prog: 0, vel: 0.006 + Math.random() * 0.006 });
+						break;
+					}
+				}
+			}
+			for (var pu = pulsos.length - 1; pu >= 0; pu--) {
+				var pulso = pulsos[pu];
+				pulso.prog += pulso.vel;
+				if (pulso.prog >= 1 || !pulso.a || !pulso.b) {
+					pulsos.splice(pu, 1);
+					continue;
+				}
+				var x = pulso.a.x + (pulso.b.x - pulso.a.x) * pulso.prog;
+				var y = pulso.a.y + (pulso.b.y - pulso.a.y) * pulso.prog;
+				ctx.beginPath();
+				ctx.arc(x, y, 5.5, 0, Math.PI * 2);
+				ctx.fillStyle = 'rgba(' + verde + ',.12)';
+				ctx.fill();
+				ctx.beginPath();
+				ctx.arc(x, y, 1.7, 0, Math.PI * 2);
+				ctx.fillStyle = 'rgba(' + verde + ',.85)';
+				ctx.fill();
+			}
+
 			if (raton.x > 0) {
 				for (var k = 0; k < nodos.length; k++) {
 					var rx = nodos[k].x - raton.x;
@@ -291,7 +397,7 @@
 		}
 
 		function crear() {
-			var total = Math.min(90, Math.round(window.innerWidth / 16));
+			var total = Math.min(62, Math.round(window.innerWidth / 26));
 			nieve.copos = [];
 			for (var i = 0; i < total; i++) {
 				nieve.copos.push({
@@ -326,7 +432,7 @@
 				if (c.x < -8) c.x = ancho + 8;
 				ctx.beginPath();
 				ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
-				ctx.fillStyle = 'rgba(' + claro() + ',' + (0.25 + c.r * 0.16).toFixed(2) + ')';
+				ctx.fillStyle = 'rgba(' + claro() + ',' + (0.18 + c.r * 0.12).toFixed(2) + ')';
 				ctx.fill();
 			}
 		}
@@ -352,7 +458,7 @@
 	   ──────────────────────────────────────────────────────────────── */
 
 	function iniciarReveal() {
-		var piezas = $$('.jn-sec__cab, .jn-pilar, .jn-cita, .jn-sim, .jn-videos, .jn-lab__bloque, .jn-aprender, .jn-quiz, .jn-glos, .jn-equipo, .jn-persona, .jn-bitacora, .jn-equipo__cta, .jn-faq__item, .jn-nav');
+		var piezas = $$('.jn-sec__cab, .jn-pilar, .jn-cita, .jn-sim, .jn-videos, .jn-lab__bloque, .jn-aprender, .jn-aprender__progreso, .jn-quiz, .jn-glos, .jn-ayuda, .jn-equipo, .jn-persona, .jn-bitacora, .jn-equipo__cta, .jn-faq__item, .jn-nav, .jn-cuenta');
 		if (!piezas.length) return;
 		if (reducido || !('IntersectionObserver' in window)) {
 			piezas.forEach(function (el) { el.classList.add('jn-visible'); });
@@ -484,6 +590,8 @@
 			var volumen = $('[data-jn-rep-vol]', bloque);
 			var etiqueta = $('[data-jn-rep-tiempo]', bloque);
 			var marco = $('.jn-rep__marco', bloque);
+			var fin = $('[data-jn-rep-fin]', bloque);
+			var btnFin = $('[data-jn-rep-fin-repetir]', bloque);
 
 			if (video.hasAttribute('controls')) video.removeAttribute('controls');
 			video.loop = false;
@@ -518,8 +626,21 @@
 				}
 			}
 
+			function ocultarFin() {
+				if (fin) fin.hidden = true;
+				bloque.classList.remove('is-finished');
+			}
+
+			function mostrarFin() {
+				if (!fin) return;
+				fin.hidden = false;
+				bloque.classList.add('is-finished', 'is-empezado');
+				bloque.classList.remove('is-playing');
+			}
+
 			function reproducir() {
 				if (corte > 0 && video.currentTime >= corte - 0.1) video.currentTime = 0;
+				ocultarFin();
 				var p = video.play();
 				if (p && p.catch) p.catch(function () {});
 			}
@@ -604,15 +725,31 @@
 			});
 			video.addEventListener('pause', pintaBoton);
 			video.addEventListener('ended', function () {
-				bloque.classList.remove('is-playing', 'is-empezado');
+				if (corte > 0 && fin) {
+					mostrarFin();
+					marcarHito('video');
+				} else {
+					bloque.classList.remove('is-playing', 'is-empezado');
+				}
 				pintaBoton();
 				pinta();
 			});
+			if (btnFin) {
+				btnFin.addEventListener('click', function () {
+					video.currentTime = 0;
+					reproducir();
+				});
+			}
 			video.addEventListener('loadedmetadata', pinta);
 			video.addEventListener('timeupdate', function () {
 				if (corte > 0 && video.currentTime >= corte - 0.05) {
-					video.currentTime = 0;
-					if (!video.paused) reproducir();
+					if (!bloque.classList.contains('is-finished')) {
+						video.pause();
+						mostrarFin();
+						marcarHito('video');
+					}
+					pinta();
+					return;
 				}
 				pinta();
 			});
@@ -646,6 +783,256 @@
 	}
 
 	/* ────────────────────────────────────────────────────────────────
+	   INTRO CINEMATOGRÁFICA
+	   Una sola vez por navegador. Es una capa visual: el contenido ya
+	   está cargado debajo y el botón de saltar siempre está disponible.
+	   ──────────────────────────────────────────────────────────────── */
+
+	var introActiva = false;
+
+	function iniciarIntro() {
+		var intro = $('[data-jn-intro]');
+		if (!intro) return;
+		if (leer('jn-intro-v31') || raiz.classList.contains('jn-intro-visto')) {
+			intro.remove();
+			return;
+		}
+		guardar('jn-intro-v31', '1');
+		introActiva = true;
+		raiz.classList.add('jn-intro-activa');
+		document.body.classList.add('jn-intro-abierto');
+		if (reducido) {
+			$$('.jn-intro__chispa', intro).forEach(function (el) { el.remove(); });
+		}
+
+		var saltar = $('[data-jn-intro-saltar]', intro);
+		var cerrada = false;
+		var temporizador = null;
+
+		function cerrar() {
+			if (cerrada) return;
+			cerrada = true;
+			if (temporizador) clearTimeout(temporizador);
+			intro.classList.add('is-saliendo');
+			introActiva = false;
+			document.body.classList.remove('jn-intro-abierto');
+			raiz.classList.remove('jn-intro-activa');
+			setTimeout(function () {
+				if (intro.parentNode) intro.parentNode.removeChild(intro);
+			}, reducido ? 60 : 520);
+			document.dispatchEvent(new CustomEvent('jn:intro-fin'));
+		}
+
+		if (saltar) {
+			saltar.addEventListener('click', cerrar);
+			setTimeout(function () { saltar.focus({ preventScroll: true }); }, 60);
+		}
+		document.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape' && !cerrada) {
+				cerrar();
+				return;
+			}
+			if (e.key === 'Tab' && saltar && document.activeElement !== saltar) {
+				e.preventDefault();
+				saltar.focus({ preventScroll: true });
+			}
+		});
+		temporizador = setTimeout(cerrar, reducido ? 1100 : 4200);
+	}
+
+	/* ────────────────────────────────────────────────────────────────
+	   VISITA GUIADA
+	   Seis paradas contextuales. La tarjeta es la única zona
+	   interactiva; el foco se mantiene dentro de ella.
+	   ──────────────────────────────────────────────────────────────── */
+
+	var tour = { activo: false, indice: 0, previo: null };
+
+	function pasosTour() {
+		var existeCuenta = !!document.getElementById('cuenta');
+		return [
+			{
+				sel: '.jn-hero h1, .jn-hero .wp-block-post-title',
+				kicker: 'la red',
+				tit: 'Una red educativa, no una caja negra',
+				txt: 'JumperNET enseña cómo viaja una conexión por tres saltos: qué ve cada nodo, qué se cifra y qué cuesta recorrer más camino. Nada de promesas de invisibilidad.'
+			},
+			{
+				sel: '#jn-corte',
+				kicker: 'el vídeo',
+				tit: 'Tu tráfico, de principio a fin',
+				txt: 'El corte de 30 segundos resume el viaje del paquete. Puedes verlo con sonido y, al terminar, saltar directo al simulador de los tres saltos.'
+			},
+			{
+				sel: '#como-funciona',
+				kicker: 'el simulador',
+				tit: 'Tres saltos, paso a paso',
+				txt: 'Toca cada nodo para leer su ficha o inicia el recorrido y sigue el paquete por la pista. La latencia que aparece está marcada como demostración.'
+			},
+			{
+				sel: '#laboratorio',
+				kicker: 'el laboratorio',
+				tit: 'Prueba sin abrir conexiones',
+				txt: 'El paquete que viaja, el comparador de conexiones, la topología, la terminal educativa y el estado real de la instalación. Todo ocurre en esta página.'
+			},
+			{
+				sel: '#recursos',
+				kicker: 'aprender',
+				tit: 'Redes y privacidad sin humo',
+				txt: 'Ocho ideas clave, un glosario filtrable, un cuestionario breve y tu progreso guardado en este navegador. Puedes parar y volver cuando quieras.'
+			},
+			{
+				sel: existeCuenta ? '#cuenta' : '.jn-barra__acciones',
+				kicker: 'tu panel',
+				tit: existeCuenta ? 'Todo lo tuyo, en un sitio' : 'Acceso y cuenta',
+				txt: existeCuenta
+					? 'Tu panel reúne el saludo, los accesos rápidos, el estado honesto del circuito, los datos de tu cuenta y las preferencias de tema y Navidad.'
+					: 'En la cabecera —o en su menú si estás en el móvil— tienes Acceder y Crear cuenta. Al entrar, el sitio te saluda con tu nombre y te muestra un panel personalizado.'
+			}
+		];
+	}
+
+	function cerrarTour(motivo) {
+		var caja = $('[data-jn-tour]');
+		if (!caja || !tour.activo) return;
+		tour.activo = false;
+		caja.hidden = true;
+		caja.setAttribute('aria-hidden', 'true');
+		document.body.classList.remove('jn-tour-abierto');
+		setTimeout(function () {
+			var foco = $('[data-jn-tour-foco]', caja);
+			if (foco) foco.removeAttribute('style');
+		}, 220);
+		if (motivo === 'completado') guardar('jn-tour-v31', 'completado');
+		else if (motivo === 'omitido') guardar('jn-tour-v31', 'omitido');
+		if (tour.previo && tour.previo.focus) {
+			try { tour.previo.focus({ preventScroll: true }); } catch (e) {}
+		}
+	}
+
+	function abrirTour(indice) {
+		var caja = $('[data-jn-tour]');
+		if (!caja) return;
+		var pasos = pasosTour();
+		if (!pasos.length) return;
+		tour.previo = document.activeElement;
+		tour.activo = true;
+		tour.indice = Math.max(0, Math.min(indice || 0, pasos.length - 1));
+		document.body.classList.add('jn-tour-abierto');
+		caja.hidden = false;
+		caja.setAttribute('aria-hidden', 'false');
+
+		var puntos = $('[data-jn-tour-puntos]', caja);
+		if (puntos && !puntos.children.length) {
+			pasos.forEach(function (_, i) {
+				var p = document.createElement('i');
+				p.setAttribute('data-jn-tour-punto', String(i));
+				puntos.appendChild(p);
+			});
+		}
+
+		var tarjeta = $('[data-jn-tour-tarjeta]', caja);
+		var foco = $('[data-jn-tour-foco]', caja);
+		var elPaso = $('[data-jn-tour-paso]', caja);
+		var elKicker = $('[data-jn-tour-kicker]', caja);
+		var elTit = $('[data-jn-tour-tit]', caja);
+		var elTxt = $('[data-jn-tour-txt]', caja);
+		var btnPrev = $('[data-jn-tour-prev]', caja);
+		var btnNext = $('[data-jn-tour-next]', caja);
+
+		function pintarFoco(objetivo) {
+			if (!foco) return;
+			if (!objetivo) {
+				foco.style.opacity = '0';
+				return;
+			}
+			var r = objetivo.getBoundingClientRect();
+			var pad = 8;
+			var top = Math.max(6, r.top - pad);
+			var left = Math.max(6, r.left - pad);
+			var derecha = Math.min(window.innerWidth - 6, r.right + pad);
+			var abajo = Math.min(window.innerHeight - 6, r.bottom + pad);
+			if (abajo - top < 24) {
+				foco.style.opacity = '0';
+				return;
+			}
+			foco.style.opacity = '1';
+			foco.style.top = top + 'px';
+			foco.style.left = left + 'px';
+			foco.style.width = Math.max(20, derecha - left) + 'px';
+			foco.style.height = Math.max(20, abajo - top) + 'px';
+		}
+
+		function targetActual() {
+			var paso = pasos[tour.indice];
+			return paso && paso.sel ? $(paso.sel) : null;
+		}
+
+		function repintar() {
+			if (!tour.activo) return;
+			pintarFoco(targetActual());
+		}
+
+		function ir(i) {
+			if (i < 0) return;
+			if (i >= pasos.length) {
+				cerrarTour('completado');
+				return;
+			}
+			tour.indice = i;
+			var paso = pasos[i];
+			if (elPaso) elPaso.textContent = 'parada ' + (i + 1) + ' de ' + pasos.length;
+			if (elKicker) elKicker.textContent = paso.kicker;
+			if (elTit) elTit.textContent = paso.tit;
+			if (elTxt) elTxt.textContent = paso.txt;
+			if (btnPrev) btnPrev.disabled = i === 0;
+			if (btnNext) btnNext.textContent = i === pasos.length - 1 ? 'Terminar' : 'Siguiente';
+			$$('[data-jn-tour-punto]', caja).forEach(function (p, idx) {
+				p.classList.toggle('is-activo', idx === i);
+				p.classList.toggle('is-hecho', idx < i);
+			});
+			var objetivo = targetActual();
+			if (objetivo) {
+				objetivo.scrollIntoView({ behavior: reducido ? 'auto' : 'smooth', block: 'center' });
+				setTimeout(repintar, reducido ? 20 : 420);
+			}
+			if (tarjeta) {
+				try { tarjeta.focus({ preventScroll: true }); } catch (e) {}
+			}
+		}
+
+		if (!caja.__jnTourListo) {
+			caja.__jnTourListo = true;
+			$('[data-jn-tour-cerrar]', caja).addEventListener('click', function () { cerrarTour('omitido'); });
+			$('[data-jn-tour-prev]', caja).addEventListener('click', function () {
+				if (tour.indice > 0) ir(tour.indice - 1);
+			});
+			$('[data-jn-tour-next]', caja).addEventListener('click', function () {
+				ir(tour.indice + 1);
+			});
+			document.addEventListener('keydown', function (e) {
+				if (!tour.activo) return;
+				if (e.key === 'Escape') { e.preventDefault(); cerrarTour('omitido'); }
+				else if (e.key === 'ArrowRight') { e.preventDefault(); ir(tour.indice + 1); }
+				else if (e.key === 'ArrowLeft' && tour.indice > 0) { e.preventDefault(); ir(tour.indice - 1); }
+				else if (e.key === 'Tab') {
+					var enfocables = $$('button:not([disabled]), a[href]', tarjeta);
+					if (!enfocables.length) return;
+					var primero = enfocables[0];
+					var ultimo = enfocables[enfocables.length - 1];
+					if (e.shiftKey && document.activeElement === primero) { e.preventDefault(); ultimo.focus(); }
+					else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primero.focus(); }
+				}
+			});
+			window.addEventListener('scroll', repintar, { passive: true });
+			window.addEventListener('resize', repintar, { passive: true });
+		}
+
+		ir(tour.indice);
+		setTimeout(repintar, reducido ? 30 : 480);
+	}
+
+	/* ────────────────────────────────────────────────────────────────
 	   BIENVENIDA
 	   ──────────────────────────────────────────────────────────────── */
 
@@ -656,18 +1043,14 @@
 			$$('.jn-welcome__chispa', dialogo).forEach(function (el) { el.remove(); });
 		}
 
+		var btnTour = $('[data-jn-bienvenida-tour]', dialogo);
 		var btnExplorar = $('[data-jn-bienvenida-explorar]', dialogo);
-		var btnDemo = $('[data-jn-bienvenida-demo]', dialogo);
 		var btnCerrar = $('[data-jn-bienvenida-cerrar]', dialogo);
-		var check = $('[data-jn-bienvenida-off]', dialogo);
 		var abierta = false;
+		var clave = 'jn-bienvenida-v31';
 
 		function recordar() {
-			if (check && check.checked) {
-				guardar('jn-bienvenida-v3', '1');
-			} else {
-				guardarSesion('jn-bienvenida-sesion', '1');
-			}
+			guardar(clave, '1');
 		}
 
 		function abrir() {
@@ -681,16 +1064,12 @@
 				dialogo.setAttribute('open', '');
 			}
 			setTimeout(function () {
-				if (btnExplorar) btnExplorar.focus({ preventScroll: true });
+				if (btnTour) btnTour.focus({ preventScroll: true });
 			}, 80);
 		}
 
 		function cerrar(accion) {
 			if (!abierta) return;
-			if (accion === 'demo') {
-				var previo = $('[data-jn-rep][data-jn-corte]');
-				if (previo && previo.__jnPlay) previo.__jnPlay();
-			}
 			recordar();
 			abierta = false;
 			document.body.classList.remove('jn-modal-abierto');
@@ -699,11 +1078,8 @@
 			} else {
 				dialogo.removeAttribute('open');
 			}
-			if (accion === 'demo') {
-				var bloque = $('[data-jn-rep][data-jn-corte]');
-				if (bloque && bloque.__jnIr) {
-					bloque.__jnIr();
-				}
+			if (accion === 'tour') {
+				setTimeout(function () { abrirTour(0); }, 180);
 			} else if (accion === 'explorar') {
 				var destino = document.getElementById('proyecto');
 				if (destino) {
@@ -714,8 +1090,8 @@
 			}
 		}
 
+		if (btnTour) btnTour.addEventListener('click', function () { cerrar('tour'); });
 		if (btnExplorar) btnExplorar.addEventListener('click', function () { cerrar('explorar'); });
-		if (btnDemo) btnDemo.addEventListener('click', function () { cerrar('demo'); });
 		if (btnCerrar) btnCerrar.addEventListener('click', function () { cerrar('cerrar'); });
 		dialogo.addEventListener('click', function (e) {
 			if (e.target === dialogo) cerrar('cerrar');
@@ -731,15 +1107,87 @@
 
 		$$('[data-jn-bienvenida-abrir]').forEach(function (btn) {
 			btn.addEventListener('click', function () {
-				borrar('jn-bienvenida-v3');
-				borrarSesion('jn-bienvenida-sesion');
+				borrar(clave);
 				abrir();
 			});
 		});
 
-		if (!leer('jn-bienvenida-v3') && !leerSesion('jn-bienvenida-sesion')) {
-			setTimeout(abrir, 700);
+		var lanzar = function () {
+			if (!leer(clave)) setTimeout(abrir, introActiva ? 350 : 650);
+		};
+		if (introActiva) {
+			document.addEventListener('jn:intro-fin', lanzar, { once: true });
+		} else {
+			lanzar();
 		}
+
+		$$('[data-jn-tour-abrir]').forEach(function (btn) {
+			btn.addEventListener('click', function () { abrirTour(0); });
+		});
+	}
+
+	/* ────────────────────────────────────────────────────────────────
+	   SALUDO DESPUÉS DE INICIAR SESIÓN
+	   Solo se muestra si el servidor ha añadido el parámetro al
+	   volver del formulario de acceso. El nombre viene de la cuenta.
+	   ──────────────────────────────────────────────────────────────── */
+
+	function iniciarSaludo() {
+		var saludo = $('[data-jn-saludo]');
+		if (!saludo) return;
+		try {
+			var url = new URL(window.location.href);
+			if (url.searchParams.has('jn-saludo')) {
+				url.searchParams.delete('jn-saludo');
+				history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+			}
+		} catch (e) {}
+		var cerrar = function () {
+			saludo.classList.add('is-fuera');
+			setTimeout(function () { if (saludo.parentNode) saludo.parentNode.removeChild(saludo); }, 320);
+		};
+		var btn = $('[data-jn-saludo-cerrar]', saludo);
+		if (btn) btn.addEventListener('click', cerrar);
+		setTimeout(cerrar, 11000);
+	}
+
+	/* ────────────────────────────────────────────────────────────────
+	   BUSCADOR DEL CENTRO DE AYUDA
+	   Filtra preguntas reales del proyecto. No genera respuestas.
+	   ──────────────────────────────────────────────────────────────── */
+
+	function iniciarAyuda() {
+		var caja = $('[data-jn-ayuda]');
+		if (!caja) return;
+		var input = $('[data-jn-ayuda-buscar]', caja);
+		var estado = $('[data-jn-ayuda-estado]', caja);
+		var items = $$('.jn-faq__item');
+		if (!input || !items.length) return;
+
+		function normalizar(t) {
+			return (t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+		}
+
+		function filtrar() {
+			var q = normalizar(input.value.trim());
+			var visibles = 0;
+			items.forEach(function (item) {
+				var coincide = !q || normalizar(item.textContent).indexOf(q) !== -1;
+				item.hidden = !coincide;
+				if (coincide) visibles++;
+				if (coincide && q) item.open = true;
+			});
+			if (estado) {
+				estado.textContent = !q
+					? items.length + ' preguntas disponibles.'
+					: visibles
+						? visibles + (visibles === 1 ? ' pregunta coincide con «' : ' preguntas coinciden con «') + input.value.trim() + '».'
+						: 'Sin coincidencias. Prueba con otra palabra o abre la documentación completa.';
+			}
+		}
+
+		input.addEventListener('input', filtrar);
+		filtrar();
 	}
 
 	/* ────────────────────────────────────────────────────────────────
@@ -1180,6 +1628,7 @@
 
 		function terminar() {
 			term = true;
+			marcarHito('quiz');
 			if (elPaso) elPaso.textContent = 'cuestionario completado';
 			if (elPreg) elPreg.textContent = 'Has acertado ' + aciertos + ' de ' + preguntas.length + '.';
 			if (elOpciones) elOpciones.textContent = '';
@@ -1216,6 +1665,10 @@
 		iniciarReveal();
 		iniciarNavegacion();
 		iniciarReproductores();
+		iniciarProgreso();
+		iniciarAyuda();
+		iniciarSaludo();
+		iniciarIntro();
 		iniciarBienvenida();
 		iniciarSimuladores();
 		iniciarComparador();
