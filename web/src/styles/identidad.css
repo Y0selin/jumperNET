@@ -1,0 +1,386 @@
+/* ============================================================
+   identidad.css — JumperNET 3.0
+   Capa final del sitio público. Aplica la identidad 3.0:
+   blanco nieve, azul hielo, azul noche, esmeralda, coral y oro.
+   · No cambia la estructura ni la lógica: reescribe la capa visual.
+   · Se importa la última, después de navidad y del panel.
+   ============================================================ */
+
+/* ─────────── 1 · paleta ─────────── */
+html[data-modo="claro"] {
+  --bg-1: #eef6fd;
+  --bg-2: #ffffff;
+  --panel: 255, 255, 255;
+  --panel-sol: 8, 127, 104;
+  --borde: #d7e6f4;
+  --acento-1: #087f68;
+  --acento-2: #14283e;
+  --acento-3: #d6a84b;
+  --texto: #14283e;
+  --texto-suave: #52697c;
+  --tinta: #ffffff;
+  --acento-txt: #c2401f;
+  --acento-txt-2: #d9583a;
+  --linea: rgb(20 40 62 / .10);
+  --linea-2: rgb(20 40 62 / .18);
+  --sup-1: #ffffff;
+  --sup-2: #f7fbff;
+  --sup-3: #eff7ff;
+  --hover: rgb(20 40 62 / .05);
+  --cristal: rgb(255 255 255 / .90);
+  --cristal-2: #ffffff;
+  --radio: 18px;
+  --radio-2: 12px;
+  --fuente-titulo: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --sombra-panel: 0 24px 60px -44px rgb(20 40 62 / .50);
+}
+
+html[data-modo="oscuro"] {
+  --bg-1: #0a1725;
+  --bg-2: #0d1d2c;
+  --panel: 16, 36, 54;
+  --panel-sol: 53, 199, 167;
+  --borde: rgb(160 200 230 / .16);
+  --acento-1: #35c7a7;
+  --acento-2: #d6a84b;
+  --acento-3: #e9c178;
+  --texto: #f1f7fd;
+  --texto-suave: #a8c1d4;
+  --tinta: #04231d;
+  --acento-txt: #ffa38f;
+  --acento-txt-2: #ffb9a8;
+  --linea: rgb(160 200 230 / .14);
+  --linea-2: rgb(160 200 230 / .26);
+  --sup-1: #102436;
+  --sup-2: #0d2031;
+  --sup-3: #152c40;
+  --hover: rgb(160 200 230 / .08);
+  --cristal: rgb(10 23 37 / .88);
+  --cristal-2: #102436;
+  --radio: 18px;
+  --radio-2: 12px;
+  --fuente-titulo: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --sombra-panel: 0 26px 65px -44px rgb(0 0 0 / .70);
+}
+
+/* ─────────── 2 · fondo ─────────── */
+html[data-modo="claro"] body {
+  background:
+    radial-gradient(58% 42% at 84% -4%, rgb(8 127 104 / .08), transparent 70%),
+    radial-gradient(52% 40% at -6% 8%, rgb(214 168 75 / .12), transparent 72%),
+    linear-gradient(180deg, #f3faff 0%, #ffffff 44%, #eef6fd 100%) !important;
+  background-attachment: fixed !important;
+}
+html[data-modo="oscuro"] body {
+  background:
+    radial-gradient(58% 42% at 84% -4%, rgb(53 199 167 / .14), transparent 70%),
+    radial-gradient(46% 38% at -4% 6%, rgb(214 168 75 / .10), transparent 72%),
+    linear-gradient(180deg, #0a1725 0%, #0d1d2c 60%, #0a1725 100%) !important;
+  background-attachment: fixed !important;
+}
+
+/* ─────────── 3 · tipografía ─────────── */
+.pp h1, .pp h2, .pp h3, .pp h4,
+.pp .sp-h1, .pp .pp-h2, .pp .hn-titulo,
+.cascara h2.seccion {
+  font-family: var(--fuente-titulo) !important;
+  font-weight: 750 !important;
+  letter-spacing: -.035em;
+  color: var(--texto);
+}
+.pp .sp-h1 { font-size: clamp(40px, 5.8vw, 68px); line-height: 1.04; }
+.pp .pp-h2 { font-size: clamp(28px, 3.8vw, 46px); line-height: 1.06; }
+.pp .sp-h3, .pp .sp-tres-item h3 { font-weight: 700 !important; }
+
+.pp .hn-titulo {
+  font-size: clamp(46px, 6.2vw, 92px);
+  line-height: .94;
+  letter-spacing: -.052em;
+  font-weight: 800 !important;
+}
+.pp .hn-titulo-marca { gap: 10px; }
+.pp .hn-marca-palabra {
+  font-family: var(--fuente-titulo);
+  font-weight: 800;
+  letter-spacing: -.06em;
+  color: var(--texto);
+}
+html[data-modo="claro"] .pp .hn-marca-palabra i:nth-child(n+7),
+html[data-modo="oscuro"] .pp .hn-marca-palabra i:nth-child(n+7) { color: var(--acento-1) !important; }
+.pp .hn-lema {
+  display: block;
+  margin-top: 8px;
+  font-family: var(--fuente-titulo);
+  font-weight: 600;
+  font-size: clamp(19px, 2.2vw, 28px);
+  line-height: 1.15;
+  letter-spacing: -.03em;
+  color: var(--texto);
+}
+.pp .hn-lema-em {
+  font-family: ui-serif, "Iowan Old Style", Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 650;
+  color: var(--acento-txt) !important;
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
+  filter: none !important;
+}
+.pp .texto-gradiente {
+  font-family: ui-serif, "Iowan Old Style", Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 600 !important;
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  color: var(--acento-txt) !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+.pp .migas { color: var(--acento-1) !important; }
+.pp .migas::before { color: var(--acento-1); }
+
+/* ─────────── 4 · cabecera ─────────── */
+html[data-modo="claro"] .pp .pp-nav {
+  background: rgb(255 255 255 / .88) !important;
+  border-bottom: 1px solid var(--borde) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+}
+html[data-modo="claro"] .pp .pp-nav.pegada {
+  box-shadow: 0 18px 44px -38px rgb(20 40 62 / .55) !important;
+}
+html[data-modo="oscuro"] .pp .pp-nav {
+  background: rgb(10 23 37 / .88) !important;
+  border-bottom: 1px solid var(--borde) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+}
+html[data-modo="oscuro"] .pp .pp-nav.pegada {
+  box-shadow: 0 18px 44px -38px rgb(0 0 0 / .8) !important;
+}
+
+.pp .pp-marca-txt {
+  font-family: var(--fuente-titulo);
+  font-weight: 700;
+  letter-spacing: -.035em;
+  color: var(--texto);
+}
+html[data-modo="claro"] .pp .pp-marca-txt span,
+html[data-modo="oscuro"] .pp .pp-marca-txt span { color: var(--acento-1) !important; }
+.pp .pp-marca .cursor { color: var(--acento-1); }
+.pp .pp-marca-ver { color: var(--texto-suave); }
+.pp .logo-cubo {
+  background: linear-gradient(140deg, var(--acento-1), color-mix(in srgb, var(--acento-1) 76%, #04231d)) !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 24px -14px rgb(8 127 104 / .85) !important;
+}
+.pp .pp-marca:hover .logo-cubo { box-shadow: 0 16px 32px -14px rgb(8 127 104 / .9) !important; }
+
+.pp .pp-progreso {
+  background: linear-gradient(90deg, var(--acento-1), var(--acento-3)) !important;
+  box-shadow: none !important;
+}
+.pp .pp-nav-seccion { color: var(--texto-suave); }
+.pp .pp-nav-linea { background: linear-gradient(90deg, var(--linea-2), transparent); }
+
+.pp .pp-entrar { color: var(--texto-suave); }
+.pp .pp-entrar:hover { color: var(--acento-1); background: var(--sup-3); }
+.pp .btn-modo {
+  background: var(--sup-1) !important;
+  border-color: var(--borde) !important;
+  color: var(--texto) !important;
+}
+.pp .btn-modo:hover { border-color: var(--acento-1) !important; color: var(--acento-1) !important; }
+.pp .btn-modo-ico { background: rgb(8 127 104 / .12) !important; color: var(--acento-1); }
+.pp-video-abrir {
+  background: var(--sup-1) !important;
+  border-color: var(--borde) !important;
+  color: var(--texto) !important;
+}
+.pp-video-abrir:hover { border-color: var(--acento-1) !important; color: var(--acento-1) !important; }
+.pp-video-abrir-ico { color: var(--acento-txt); }
+.pp-video-abrir-punto { background: var(--acento-1) !important; }
+
+/* ─────────── 5 · botones ─────────── */
+html[data-modo="claro"] .pp .btn {
+  background: #ffffff !important;
+  border: 1px solid var(--borde) !important;
+  color: var(--texto) !important;
+  box-shadow: 0 12px 26px -24px rgb(20 40 62 / .45);
+}
+html[data-modo="claro"] .pp .btn:hover {
+  background: #ffffff !important;
+  border-color: var(--acento-1) !important;
+  color: var(--acento-1) !important;
+  transform: translateY(-1px);
+}
+html[data-modo="claro"] .pp .btn.primario {
+  background: linear-gradient(135deg, var(--acento-1), color-mix(in srgb, var(--acento-1) 84%, #04231d)) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+  box-shadow: 0 16px 32px -20px rgb(8 127 104 / .85) !important;
+}
+html[data-modo="claro"] .pp .btn.primario:hover {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--acento-1) 88%, #ffffff), color-mix(in srgb, var(--acento-1) 84%, #04231d)) !important;
+  color: #ffffff !important;
+}
+html[data-modo="oscuro"] .pp .btn {
+  background: var(--sup-1) !important;
+  border: 1px solid var(--borde) !important;
+  color: var(--texto) !important;
+}
+html[data-modo="oscuro"] .pp .btn:hover {
+  border-color: var(--acento-1) !important;
+  color: var(--acento-1) !important;
+}
+html[data-modo="oscuro"] .pp .btn.primario {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--acento-1) 62%, #ffffff), var(--acento-1)) !important;
+  border-color: transparent !important;
+  color: var(--tinta) !important;
+}
+html[data-modo="oscuro"] .pp .btn.primario:hover { color: var(--tinta) !important; }
+
+.pp .chip {
+  border-color: var(--linea) !important;
+  background: var(--sup-2) !important;
+  color: var(--texto-suave) !important;
+}
+.pp .hn-play { color: var(--texto-suave); }
+.pp .hn-play:hover { color: var(--texto); background: var(--sup-3); }
+.pp .hn-play-ico { border-color: var(--linea-2); color: var(--texto); }
+.pp .hn-play:hover .hn-play-ico { border-color: var(--acento-1); color: var(--acento-1); }
+
+/* ─────────── 6 · tarjetas y superficies ─────────── */
+html[data-modo="claro"] .pp .tarjeta,
+html[data-modo="claro"] .pp .sp-ficha,
+html[data-modo="claro"] .pp .sp-limite,
+html[data-modo="claro"] .pp .pp-pieza,
+html[data-modo="claro"] .pp .sp-tres-item,
+html[data-modo="claro"] .pp .hn-panel,
+html[data-modo="claro"] .pp .tarjeta-descarga {
+  background: var(--sup-1) !important;
+  border-color: var(--borde) !important;
+  box-shadow: 0 20px 46px -40px rgb(20 40 62 / .45);
+}
+.pp .sp-ficha, .pp .sp-limite, .pp .pp-pieza, .pp .sp-tres-item {
+  border-radius: var(--radio) !important;
+}
+.pp .tarjeta:hover { border-color: rgb(8 127 104 / .35); }
+
+/* ─────────── 7 · barra de navegación inferior ─────────── */
+html[data-modo="claro"] .pp-dock {
+  background: rgb(255 255 255 / .92) !important;
+  border: 1px solid var(--borde) !important;
+  box-shadow: 0 24px 50px -34px rgb(20 40 62 / .45), inset 0 1px 0 #ffffff !important;
+}
+html[data-modo="oscuro"] .pp-dock {
+  background: rgb(13 30 45 / .92) !important;
+  border: 1px solid var(--borde) !important;
+  box-shadow: 0 24px 50px -34px #000, inset 0 1px 0 rgb(255 255 255 / .05) !important;
+}
+.pp .dock-enlace { color: var(--texto-suave); }
+.pp .dock-enlace:hover { background: var(--sup-3) !important; color: var(--texto) !important; }
+.pp .dock-enlace.activa {
+  background: var(--acento-1) !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 24px -16px rgb(8 127 104 / .8) !important;
+}
+html[data-modo="oscuro"] .pp .dock-enlace.activa { color: #04231d !important; }
+.pp .dock-enlace.activa .dock-ico { color: inherit; }
+
+/* ─────────── 8 · pie ─────────── */
+html[data-modo="claro"] .pp .sp-pie {
+  border-top: 1px solid var(--borde) !important;
+  background: linear-gradient(180deg, rgb(255 255 255 / 0), rgb(239 247 255 / .9)) !important;
+}
+.pp .sp-pie-tit { color: var(--acento-1) !important; }
+.pp .sp-pie-columnas a:hover { color: var(--acento-1) !important; }
+.pp .sp-pie::before { color: rgb(20 40 62 / .04) !important; }
+html[data-modo="oscuro"] .pp .sp-pie::before { color: rgb(255 255 255 / .035) !important; }
+.pp .pp-arriba {
+  background: var(--sup-1) !important;
+  border: 1px solid var(--borde) !important;
+  color: var(--texto) !important;
+  box-shadow: 0 14px 30px -24px rgb(20 40 62 / .5);
+}
+.pp .pp-arriba:hover { border-color: var(--acento-1) !important; color: var(--acento-1) !important; }
+
+/* ─────────── 9 · detalles sueltos con color viejo ─────────── */
+.pp .sp-datos dt { color: var(--acento-1) !important; }
+.pp .sp-acceso-enlaces a { color: var(--acento-1) !important; }
+.pp .sp-mas span { color: var(--acento-1) !important; }
+.pp .hn-rotativa, .pp .hn-rotativa .pp-maquina { color: var(--acento-1) !important; }
+.pp .hn-rotativa .cursor { color: var(--acento-txt) !important; }
+.pp .etiqueta-viva { color: var(--acento-1) !important; }
+.pp .hn-simulador-cab h3 { font-size: 20px; letter-spacing: -.03em; }
+
+
+/* ─────────── 11 · simulador del hero en oscuro ─────────── */
+html[data-modo="oscuro"] .pp .hn-panel,
+html[data-modo="oscuro"] .pp .hn-nodo,
+html[data-modo="oscuro"] .pp .hn-ficha,
+html[data-modo="oscuro"] .pp .ds-nodo {
+  background: var(--sup-1) !important;
+  border-color: var(--borde) !important;
+  color: var(--texto) !important;
+}
+html[data-modo="oscuro"] .pp .hn-nodo.sel {
+  background: var(--sup-3) !important;
+  border-color: var(--acento-1) !important;
+}
+html[data-modo="oscuro"] .pp .hn-girar {
+  background: var(--sup-2) !important;
+  border-color: var(--borde) !important;
+  color: var(--texto) !important;
+}
+html[data-modo="oscuro"] .pp .hn-nodo-sub,
+html[data-modo="oscuro"] .pp .hn-nodo-n { color: var(--texto-suave) !important; }
+html[data-modo="oscuro"] .pp .hn-ficha-dos strong { color: var(--texto) !important; }
+
+/* el conmutador activo usa el verde de la casa, no el coral */
+.pp .cmp-modos button.on {
+  background: linear-gradient(140deg, var(--acento-1), color-mix(in srgb, var(--acento-1) 80%, #04231d)) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 20px -14px rgb(8 127 104 / .9) !important;
+}
+html[data-modo="oscuro"] .pp .cmp-modos button.on { color: #04231d !important; }
+
+
+/* ─────────── 12 · atmósfera y bandas ─────────── */
+html[data-modo="claro"] body::before {
+  background-image:
+    linear-gradient(rgb(20 40 62 / .028) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(20 40 62 / .028) 1px, transparent 1px),
+    radial-gradient(920px 660px at 88% -10%, rgb(8 127 104 / .12), transparent 68%),
+    radial-gradient(780px 600px at -6% 12%, rgb(214 168 75 / .16), transparent 70%),
+    radial-gradient(700px 560px at 62% 108%, rgb(255 99 71 / .07), transparent 72%),
+    linear-gradient(180deg, #f4fbff 0%, #ffffff 52%, #eef6fd 100%) !important;
+  background-size: 46px 46px, 46px 46px, auto, auto, auto, auto;
+}
+html[data-modo="oscuro"] body::before {
+  background-image:
+    linear-gradient(rgb(160 200 230 / .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(160 200 230 / .035) 1px, transparent 1px),
+    radial-gradient(920px 660px at 88% -10%, rgb(53 199 167 / .14), transparent 68%),
+    radial-gradient(780px 600px at -6% 12%, rgb(214 168 75 / .10), transparent 70%),
+    radial-gradient(700px 560px at 62% 108%, rgb(255 129 104 / .06), transparent 72%),
+    linear-gradient(180deg, #0a1725 0%, #0d1d2c 55%, #0a1725 100%) !important;
+  background-size: 46px 46px, 46px 46px, auto, auto, auto, auto;
+}
+html[data-modo="claro"] .pp .sp-banda {
+  background: linear-gradient(120deg, #ffffff, #eff7ff 62%, #e6f2fd) !important;
+  border: 1px solid var(--borde) !important;
+  box-shadow: 0 24px 60px -50px rgb(20 40 62 / .55);
+  border-radius: 24px;
+}
+html[data-modo="oscuro"] .pp .sp-banda {
+  background: linear-gradient(120deg, var(--sup-1), var(--sup-2) 62%, #102b3d) !important;
+  border: 1px solid var(--borde) !important;
+  border-radius: 24px;
+}
+
+/* ─────────── 10 · movimiento reducido ─────────── */
+@media (prefers-reduced-motion: reduce) {
+  .pp .pp-progreso,
+  .pp .hn-guirnalda { animation: none !important; }
+}

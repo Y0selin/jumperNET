@@ -7,24 +7,24 @@ const CLAVE = "jumpernet-modo-v1";
 export const MODOS = {
   claro: {
     nombre: "Claro",
-    color: "#FFFFFF",
+    color: "#EEF6FD",
     vars: {
-      "--bg-1": "#FFFFFF", "--bg-2": "#EFF8FF",
-      "--panel": "255, 255, 255", "--panel-sol": "22, 125, 104",
-      "--borde": "#dce8f2", "--acento-1": "#FF6347",
-      "--acento-2": "#167D68", "--acento-3": "#D6A84B",
-      "--texto": "#14283E", "--texto-suave": "#3a5068",
+      "--bg-1": "#EEF6FD", "--bg-2": "#FFFFFF",
+      "--panel": "255, 255, 255", "--panel-sol": "8, 127, 104",
+      "--borde": "#d7e6f4", "--acento-1": "#087f68",
+      "--acento-2": "#14283e", "--acento-3": "#d6a84b",
+      "--texto": "#14283E", "--texto-suave": "#52697c",
     },
   },
   oscuro: {
     nombre: "Oscuro",
-    color: "#0B1320",
+    color: "#0A1725",
     vars: {
-      "--bg-1": "#0B1320", "--bg-2": "#111B2E",
-      "--panel": "17, 27, 46", "--panel-sol": "255, 99, 71",
-      "--borde": "#2A3A55", "--acento-1": "#FF6347",
-      "--acento-2": "#33D6C0", "--acento-3": "#D6A84B",
-      "--texto": "#E8F0F8", "--texto-suave": "#A8B8CC",
+      "--bg-1": "#0A1725", "--bg-2": "#0D1D2C",
+      "--panel": "16, 36, 54", "--panel-sol": "53, 199, 167",
+      "--borde": "#1f3a52", "--acento-1": "#35c7a7",
+      "--acento-2": "#d6a84b", "--acento-3": "#e9c178",
+      "--texto": "#F1F7FD", "--texto-suave": "#A8C1D4",
     },
   },
 };

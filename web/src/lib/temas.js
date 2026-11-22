@@ -76,13 +76,13 @@ export const PRESETS = {
     efectos: { "--glow": "0.3", "--glass": "0.9", "--vel-anim": "1" },
   },
   "navidad-clara": {
-    nombre: "Navidad Clara",
+    nombre: "JumperNET 3.0",
     variables: {
-      "--bg-1": "#FFFFFF", "--bg-2": "#EFF8FF", "--panel": "255, 255, 255", "--panel-sol": "22, 125, 104",
-      "--borde": "#dce8f2", "--acento-1": "#FF6347", "--acento-2": "#167D68",
-      "--acento-3": "#D6A84B", "--texto": "#14283E", "--texto-suave": "#3a5068",
+      "--bg-1": "#EEF6FD", "--bg-2": "#FFFFFF", "--panel": "255, 255, 255", "--panel-sol": "8, 127, 104",
+      "--borde": "#d7e6f4", "--acento-1": "#087f68", "--acento-2": "#14283e",
+      "--acento-3": "#d6a84b", "--texto": "#14283E", "--texto-suave": "#52697c",
     },
-    forma: { "--radio": "16px", "--radio-2": "10px", "--tam-fuente": "15px", "--fuente": '"Inter", system-ui' },
+    forma: { "--radio": "18px", "--radio-2": "12px", "--tam-fuente": "15px", "--fuente": '"Inter", system-ui' },
     efectos: { "--glow": "0.4", "--glass": "0.85", "--vel-anim": "1" },
   },
 };
