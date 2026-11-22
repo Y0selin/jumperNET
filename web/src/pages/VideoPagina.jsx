@@ -1,6 +1,5 @@
 import Revela from "../components/Revela.jsx";
-
-const BASE = import.meta.env.BASE_URL || "./";
+import VideoViaje from "../components/VideoViaje.jsx";
 
 const PASOS = [
   ["01", "El problema", "Sin circuito, la web ve tu IP real, tu operador y una ubicación aproximada. La conexión sale tal cual."],
@@ -31,22 +30,7 @@ export default function VideoPagina() {
       </Revela>
 
       <div className="vp-layout">
-        <Revela className="vp-video tarjeta">
-          <video
-            controls
-            playsInline
-            preload="metadata"
-            poster={`${BASE}video/portada.jpg`}
-            aria-label="Vídeo completo del proyecto JumperNET"
-          >
-            <source src={`${BASE}video/JumperNET_El_Viaje.mp4`} type="video/mp4" />
-            Tu navegador no puede reproducir este vídeo.
-          </video>
-          <div className="vp-video-pie">
-            <span className="mono">el viaje · JumperNET</span>
-            <span className="nota">si quieres, ábrelo a pantalla completa</span>
-          </div>
-        </Revela>
+        <Revela><VideoViaje /></Revela>
 
         <Revela retardo={1} className="vp-texto tarjeta">
           <span className="migas">qué estás viendo</span>

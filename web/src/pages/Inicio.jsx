@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Revela from "../components/Revela.jsx";
 import VideoPortada from "../components/VideoPortada.jsx";
+import VideoViaje from "../components/VideoViaje.jsx";
 import MapaCircuito from "../components/MapaCircuito.jsx";
 import CircuitoHero from "../components/CircuitoHero.jsx";
 import Comparador from "../components/Comparador.jsx";
@@ -235,6 +236,10 @@ export default function Inicio() {
         </div>
 
         <div className="hn-hero-visual">
+          <div className="hn-video-hero">
+            <VideoPortada />
+          </div>
+
           <div className="hn-simulador tarjeta">
             <div className="hn-simulador-cab">
               <span className="migas">simulador en vivo</span>
@@ -384,20 +389,21 @@ export default function Inicio() {
 
       <section id="video" className="pp-seccion pp-video-seccion">
         <Revela className="pp-cab">
-          <span className="migas">el proyecto en 30 segundos</span>
-          <h2 className="pp-h2">Así viaja tu tráfico, <span className="texto-gradiente">de principio a fin</span></h2>
+          <span className="migas">el viaje completo</span>
+          <h2 className="pp-h2">JumperNET, <span className="texto-gradiente">de principio a fin</span></h2>
           <p className="pp-sub2 nota">
-            El vídeo de portada lleva la música del proyecto y se reproduce solo al llegar aquí.
-            Actívala con el botón «activar música», o salta al capítulo que te interese.
+            El vídeo largo, con el contexto que no cabe en treinta segundos: qué problema
+            resuelve, cómo viaja el tráfico y qué puedes comprobar tú mismo antes de
+            encender nada. Arriba tienes el resumen de 30 segundos.
           </p>
         </Revela>
-        <Revela retardo={1}><VideoPortada /></Revela>
+        <Revela retardo={1}><VideoViaje /></Revela>
         <Revela retardo={2} className="pp-video-puente">
           <p className="nota">
-            Este es el resumen de 30 segundos. Si quieres el recorrido largo, con las
-            paradas explicadas y más contexto, está en su propia página.
+            El recorrido también está explicado por escrito, parada a parada, con los
+            cuatro pasos y el comando para probarlo.
           </p>
-          <a className="btn" href="#/video">Ver el viaje completo <span aria-hidden>→</span></a>
+          <a className="btn" href="#/funciona">Los cuatro pasos, por escrito <span aria-hidden>→</span></a>
         </Revela>
       </section>
 

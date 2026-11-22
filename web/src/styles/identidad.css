@@ -384,3 +384,16 @@ html[data-modo="oscuro"] .pp .sp-banda {
   .pp .pp-progreso,
   .pp .hn-guirnalda { animation: none !important; }
 }
+
+/* ─────────── 13 · el vídeo, en la portada ─────────── */
+.hn-video-hero { margin-bottom: 18px; }
+.hn-video-hero .pp-video { border-radius: 22px; }
+.hn-video-hero .pp-video-caps { margin-top: 10px; }
+
+@media (max-width: 1040px) {
+  /* el resumen de 30 s se ve antes que el titular; el simulador, después */
+  .hn-hero-visual { display: contents; }
+  .hn-guirnalda { order: -2; }
+  .hn-video-hero { order: -1; width: min(600px, 100%); margin: 0 auto 4px; }
+  .hn-simulador { order: 1; width: min(600px, 100%); margin: 0 auto; }
+}
