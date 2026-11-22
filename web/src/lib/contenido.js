@@ -55,7 +55,7 @@ export const PIEZAS = [
 export const DUDAS = [
   ["¿La IP cambia de verdad?", "Sí — y puedes comprobarlo tú: el panel lanza una petición real por el circuito y te enseña la IP que vio el destino. Si no coincide con la tuya, el circuito está haciendo su trabajo."],
   ["¿Se enciende sola al entrar?", "No. La red llega apagada: el interruptor es tuyo. Nada se conecta hasta que lo pulsas, y puedes apagarla o girar el circuito cuando quieras."],
-  ["¿Qué guarda el sistema de mí?", "Tu email, el estado del circuito y cuándo cambió. Nada más: no hay histórico de webs ni de destinos, y puedes borrar la cuenta de golpe."],
+  ["¿Qué guarda el sistema de mí?", "Tu email, tu nombre visible si lo pones, el estado del circuito y cuándo cambió. Nada más: no hay histórico de webs ni de destinos, y puedes borrar la cuenta de golpe."],
   ["¿Cuánto añade de latencia?", "La de tres saltos más el cifrado: normalmente entre 40 y 120 ms extra. Bien para navegar y buscar; no lo recomendamos para juegos competitivos."],
   ["¿Los nodos son de terceros?", "Son de laboratorio: contenedores en el servidor del proyecto. Además puedes aportar tu propio equipo como nodo voluntario si aceptas ser salto."],
   ["¿Es lo mismo que Tor?", "Comparte la idea de saltos en capas, pero no es una red de anonimato de grado onion: aquí los nodos son pocos, conocidos y del propio proyecto. Es una herramienta educativa y un proxy real, no una promesa de anonimato fuerte."],

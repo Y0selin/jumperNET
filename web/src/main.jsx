@@ -10,6 +10,7 @@ import "./styles/navidad.css";
 import "./styles/panel.css";
 import "./styles/experiencia.css";
 import "./styles/identidad.css";
+import "./styles/novedades31.css";
 
 if (!document.documentElement.dataset.modo) document.documentElement.dataset.modo = "claro";
 createRoot(document.getElementById("root")).render(<App />);

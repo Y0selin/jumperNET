@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Revela from "../components/Revela.jsx";
 import VideoPortada from "../components/VideoPortada.jsx";
 import VideoViaje from "../components/VideoViaje.jsx";
+import Progreso from "../components/Progreso.jsx";
 import MapaCircuito from "../components/MapaCircuito.jsx";
 import CircuitoHero from "../components/CircuitoHero.jsx";
 import Comparador from "../components/Comparador.jsx";
@@ -163,7 +164,7 @@ export default function Inicio() {
             <span className="punto-vivo" /> jumpernet v{VERSION} · {vivos?.total != null ? `${vivos.total} nodos vivos` : "red en vivo"} · 3 saltos
           </span>
 
-          <h1 className="hn-titulo hn-titulo-marca" aria-label={`JumperNET, ${EDICION}. Tu conexión no va sola.`}>
+          <h1 className="hn-titulo hn-titulo-marca" data-tour="hero" aria-label={`JumperNET, ${EDICION}. Tu conexión no va sola.`}>
             <button
               type="button"
               className="hn-marca-palabra"
@@ -236,11 +237,11 @@ export default function Inicio() {
         </div>
 
         <div className="hn-hero-visual">
-          <div className="hn-video-hero">
+          <div className="hn-video-hero" data-tour="video">
             <VideoPortada />
           </div>
 
-          <div className="hn-simulador tarjeta">
+          <div className="hn-simulador tarjeta" data-tour="simulador">
             <div className="hn-simulador-cab">
               <span className="migas">simulador en vivo</span>
               <h3>tu circuito de 3 saltos</h3>
@@ -407,6 +408,10 @@ export default function Inicio() {
         </Revela>
       </section>
 
+      <section className="pp-seccion" id="aprender">
+        <Revela><Progreso /></Revela>
+      </section>
+
       <Revela className="pp-metricas tarjeta">
         <div className="pp-metricas-cab">
           <span className="etiqueta-viva">la red ahora mismo</span>
@@ -451,7 +456,7 @@ export default function Inicio() {
       <Revela className="pp-nov tarjeta">
         <div className="pp-nov-cab">
           <span className="migas">nota de versión</span>
-          <h2 className="pp-h2">Edición <span className="texto-gradiente">2.1</span></h2>
+          <h2 className="pp-h2">Edición <span className="texto-gradiente">{EDICION.replace(/^edición\s*/i, "")}</span></h2>
           <p className="nota">
             Publicada el {PUBLICADA}. Esto es lo que cambia respecto a la 2.0:
           </p>

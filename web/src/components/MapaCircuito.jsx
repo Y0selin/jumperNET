@@ -85,7 +85,7 @@ export default function MapaCircuito() {
   }, []);
 
   return (
-    <div className="sp-mapa tarjeta" ref={caja}>
+    <div className="sp-mapa tarjeta" ref={caja} data-tour="mapa">
       <div className="sp-mapa-cab">
         <span className="etiqueta-viva">esquema interactivo</span>
         <span className="nota mono sp-mapa-pista">toca una casilla o lanza el paquete</span>
@@ -94,7 +94,7 @@ export default function MapaCircuito() {
             aria-pressed={capas} title="Ver las capas de cifrado sobre el paquete">
             ◈ {capas ? "Ocultar capas" : "Ver capas"}
           </button>
-          <button type="button" className="btn primario" onClick={lanzar}>
+          <button type="button" className="btn primario" onClick={() => { window.dispatchEvent(new Event("jumpernet-mapa")); lanzar(); }}>
             {corriendo ? "en tránsito…" : "▶ Lanzar paquete"}
           </button>
         </div>
@@ -114,7 +114,7 @@ export default function MapaCircuito() {
           {PARADAS.map((x, i) => (
             <button key={x.t} type="button"
               className={`sp-mapa-nodo ${sel === i ? "sel" : ""} ${paso === i ? "activo" : ""}`}
-              aria-pressed={sel === i} onClick={() => setSel(i)}>
+              aria-pressed={sel === i} onClick={() => { setSel(i); window.dispatchEvent(new Event("jumpernet-mapa")); }}>
               <span className="sp-mapa-ix mono">0{i + 1}</span>
               <b>{x.t}</b>
               <span>{x.sub}</span>

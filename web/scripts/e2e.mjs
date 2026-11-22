@@ -59,9 +59,14 @@ const MOCK_PAGINA = /* js */ `
         return res({ detail: "credenciales no validas" }, 401);
       }
       if (ruta === "/me" && metodo === "DELETE") { S.borrados++; S.token = null; S.activo = false; S.circuito = []; return res({ ok: true }); }
+      if (ruta === "/me" && metodo === "PATCH") {
+        if (!S.token) return res({ detail: "token" }, 401);
+        if (cuerpo.alias !== undefined) S.alias = cuerpo.alias || null;
+        return res({ id: 7, email: S.email, alias: S.alias || null });
+      }
       if (ruta === "/me") {
         if (!S.token) return res({ detail: "token" }, 401);
-        return res({ id: 7, email: S.email, ip_real: IP_REAL, ip_salida: S.activo ? IP_SALIDA : null,
+        return res({ id: 7, email: S.email, alias: S.alias || null, ip_real: IP_REAL, ip_salida: S.activo ? IP_SALIDA : null,
                      nodo_exit: S.circuito.length ? S.circuito[S.circuito.length - 1] : null,
                      circuito: S.circuito, activo: S.activo, ultimo_cambio: S.ultimoCambio || null,
                      // Fase 9 - modo de saltos elegido por el usuario + IP del exit externo
@@ -134,6 +139,14 @@ pagina.on("response", (r) => {
 });
 pagina.on("console", (m) => { const t = m.text(); if (t.startsWith("[jn-mock]")) console.log("  [mock]", t.slice(0, 110)); if (m.type() === "error") errores.push("console: " + t); });
 await pagina.evaluateOnNewDocument(MOCK_PAGINA);
+await pagina.evaluateOnNewDocument(() => {
+  /* la intro y la invitación son de primera visita: el recorrido E2E ya las
+     prueba aparte y aquí no debe tapar los clics de la app. */
+  try {
+    localStorage.setItem("jumpernet-intro-v31", "1");
+    localStorage.setItem("jumpernet-visita-v31", "1");
+  } catch { /* almacenamiento bloqueado */ }
+});
 await pagina.setViewport({ width: 1280, height: 900 });
 
 const texto = async (sel) => String((await pagina.$eval(sel, (e) => e.textContent).catch(() => "")) ?? "");
@@ -430,6 +443,7 @@ igual((await cuerpo()).includes("eso no parece un correo válido"), true, "valid
 await irAlAcceso("registro");
 igual(await pagina.evaluate(() => location.hash), "#/acceso/registro", "el registro tiene URL propia (#/acceso/registro)");
 igual(await pagina.evaluate(() => document.querySelector(".pestAuth.on")?.textContent.trim()), "Crear", "la página de registro abre en modo «Crear»");
+await escribe("#jn-nombre", "Fernando E2E");
 await escribe("input[type=email]", "e2e@jumpernat.local");
 await escribe("input[type=password]", "corta");
 await clic("Crear cuenta →");

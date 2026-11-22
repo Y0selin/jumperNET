@@ -17,6 +17,18 @@ export default function VideoPortada() {
   const [cc, setCc] = useState(true);
   const [dur, setDur] = useState(DURACION);
   const [tiempo, setTiempo] = useState(0);
+  const [fin, setFin] = useState(false);
+  const finRef = useRef(false);
+
+  function marcarFin() {
+    if (finRef.current) return;
+    finRef.current = true;
+    video.current?.pause();
+    setJugando(false);
+    setFin(true);
+    setTiempo((t) => Math.max(t, Math.min(DURACION, video.current?.duration || DURACION)));
+    window.dispatchEvent(new Event("jumpernet-video-visto"));
+  }
 
   /* autoplay mudo solo cuando el vídeo está a la vista.
      Se insiste un par de veces: al llegar desde otra página el primer
@@ -29,7 +41,7 @@ export default function VideoPortada() {
     let montado = true;
     let enVista = false;
     const intenta = () => {
-      if (!montado || !enVista) return;
+      if (!montado || !enVista || finRef.current) return;
       v.muted = true;
       v.play().then(() => { if (montado) setJugando(true); }).catch(() => {});
     };
@@ -63,31 +75,41 @@ export default function VideoPortada() {
     const v = video.current;
     if (!v) return;
     const meta = () => { if (Number.isFinite(v.duration)) setDur(v.duration); };
-    const avanza = () => setTiempo(v.currentTime);
+    const avanza = () => {
+      setTiempo(v.currentTime);
+      const corte = Number.isFinite(v.duration) && v.duration > 0 ? v.duration : DURACION;
+      if (v.currentTime >= corte - 0.15) marcarFin();
+    };
     const alPlay = () => setJugando(true);
     const alPausa = () => setJugando(false);
     v.addEventListener("loadedmetadata", meta);
     v.addEventListener("timeupdate", avanza);
     v.addEventListener("play", alPlay);
     v.addEventListener("pause", alPausa);
+    v.addEventListener("ended", marcarFin);
     if (v.readyState >= 1) meta();
     return () => {
       v.removeEventListener("loadedmetadata", meta);
       v.removeEventListener("timeupdate", avanza);
       v.removeEventListener("play", alPlay);
       v.removeEventListener("pause", alPausa);
+      v.removeEventListener("ended", marcarFin);
     };
   }, []);
 
   function alterna() {
     const v = video.current;
     if (!v) return;
+    if (fin) { repetir(); return; }
     if (v.paused) v.play().catch(() => {});
     else v.pause();
   }
   function repetir() {
     const v = video.current;
     if (!v) return;
+    finRef.current = false;
+    setFin(false);
+    setTiempo(0);
     v.currentTime = 0;
     if (!conAudio) v.muted = true;
     v.play().catch(() => {});
@@ -106,6 +128,7 @@ export default function VideoPortada() {
   function salta(t) {
     const v = video.current;
     if (!v) return;
+    if (fin) { finRef.current = false; setFin(false); }
     v.currentTime = t;
     setTiempo(t);
     v.play().catch(() => {});
@@ -117,20 +140,32 @@ export default function VideoPortada() {
 
   return (
     <div className="pp-video-bloque">
-      <figure ref={caja} className={`pp-video ${jugando ? "en-marcha" : ""} ${conAudio ? "con-audio" : ""}`}>
+      <figure ref={caja} className={`pp-video ${jugando ? "en-marcha" : ""} ${conAudio ? "con-audio" : ""} ${fin ? "fin" : ""}`}>
         <video
           ref={video}
           className="pp-video-lienzo"
           src={`${BASE}video/portada.webm`}
           poster={`${BASE}video/portada.jpg`}
           muted
-          loop
           playsInline
           preload="metadata"
           onClick={alterna}
           onError={() => setError(true)}
           aria-label="Vídeo de portada: cómo funciona JumperNET en 30 segundos, con música"
         />
+
+        {fin && !error && (
+          <div className="pp-video-fin">
+            <div className="pp-video-fin__caja">
+              <span className="pp-video-fin__etq">fin del resumen · 30 s</span>
+              <h3>Ahora descubre cómo funciona por dentro.</h3>
+              <div className="pp-video-fin__acciones">
+                <a href="#/funciona">Explorar los tres saltos →</a>
+                <button type="button" onClick={repetir}>↺ Volver a ver</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {!error && (
           <>

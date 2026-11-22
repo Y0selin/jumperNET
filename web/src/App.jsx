@@ -118,7 +118,7 @@ export default function App() {
     me().then((d) => {
       const nombre = d?.alias || (d?.email || "").split("@")[0] || "tú";
       setYo(d); guardaUsuario(d); setTab("red"); ir("/panel");
-      aviso(`Hola, ${nombre} · cuenta #${d.id}`);
+      aviso(`¡Hola, ${nombre}! 👋 · cuenta #${d.id}`);
     })
       .catch(() => {
         aviso("la cuenta está creada, pero no se pudo cargar el panel — reintenta", "error");

@@ -25,7 +25,7 @@ export default function Funciona() {
       <section className="pp-seccion">
         <div className="pp-dos">
           <Revela className="tarjeta pp-pasos">
-            <Escalon n="1" titulo="Creas tu cuenta">solo email y contraseña; nada de datos personales.</Escalon>
+            <Escalon n="1" titulo="Creas tu cuenta">tu nombre, email y contraseña; nada más.</Escalon>
             <Escalon n="2" titulo="Pulsas el interruptor">el circuito nace cuando tú lo pides, no antes.</Escalon>
             <Escalon n="3" titulo="Copias el comando SOCKS5">el puerto 1080 acepta tus mismas credenciales.</Escalon>
             <Escalon n="4" titulo="Compruebas y navegas">ves los saltos, su latencia y la IP con la que sales.</Escalon>

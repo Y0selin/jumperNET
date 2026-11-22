@@ -49,9 +49,12 @@ export default function CircuitoHero() {
   ];
   const p = paradas[sel];
 
+  function avisa() { window.dispatchEvent(new Event("jumpernet-simulador")); }
+
   function girar() {
     setRuta((r) => [r[1], r[2], r[0]]);
     setGiro((g) => g + 1);
+    avisa();
   }
 
   return (
@@ -63,7 +66,7 @@ export default function CircuitoHero() {
             ⟳ girar relés
           </button>
           <button type="button" className="hero-switch" role="switch" aria-checked={encendido}
-            aria-label="Encender o apagar la red" onClick={() => setEncendido((v) => !v)}>
+            aria-label="Encender o apagar la red" onClick={() => { setEncendido((v) => !v); avisa(); }}>
             <span />
           </button>
         </div>
@@ -77,7 +80,7 @@ export default function CircuitoHero() {
           {paradas.map((x, i) => (
             <button key={i} type="button"
               className={`hn-nodo ${sel === i ? "sel" : ""}`}
-              aria-pressed={sel === i} onClick={() => setSel(i)}>
+              aria-pressed={sel === i} onClick={() => { setSel(i); avisa(); }}>
               <span className="hn-nodo-n mono">{String(i + 1).padStart(2, "0")}</span>
               <b>{x.t}</b>
               <span className="hn-nodo-sub">{x.sub}</span>

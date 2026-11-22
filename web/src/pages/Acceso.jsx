@@ -16,7 +16,7 @@ export default function Acceso({ modo = "login", alEntrar, aviso }) {
         </h1>
         <p className="sp-lead">
           {registro
-            ? "Solo email y contraseña. Al crear la cuenta entras directo al panel, sin volver a escribir la clave."
+            ? "Tu nombre, email y contraseña. Al crear la cuenta entras directo al panel, sin volver a escribir la clave."
             : "Tu sesión dura 2 horas. La red sigue apagada hasta que tú pulses el interruptor."}
         </p>
 

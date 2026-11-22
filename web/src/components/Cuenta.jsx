@@ -166,6 +166,13 @@ export default function Cuenta({ yo: yoInicial, aviso, alSalir, irRed, alRecarga
           </div>
         </div>
 
+        {!yo?.alias && (
+          <div className="sp-aviso-alias" style={{ marginTop: 14 }}>
+            <span><b>Tu cuenta aún no tiene nombre visible.</b> Puedes ponerlo ahora: se verá en el panel y en el saludo, no cambia tus credenciales.</span>
+            <button type="button" onClick={() => setEdit(true)}>Poner mi nombre</button>
+          </div>
+        )}
+
         <div className="tira-stats" style={{ marginTop: 16 }}>
           <Stat etq="estado de red" val={activo ? "ACTIVA" : "APAGADA"} pie={activo ? "tráfico en 3 saltos" : "sin circuito abierto"} tono={activo ? "ok" : "off"} />
           <Stat etq="saltos" val={`${yo?.circuito?.length || 0} / ${yo?.saltos_max || 3}`} pie={`plan ${yo?.plan || "free"}`} tono="ok" />
@@ -236,7 +243,7 @@ export default function Cuenta({ yo: yoInicial, aviso, alSalir, irRed, alRecarga
           <Revela className="tarjeta">
             <h2 className="seccion">Privacidad · en claro</h2>
             <div className="lista-hechos">
-              <Hecho>Se guarda: <b>email</b>, estado de tu circuito y cuándo cambió. Nada más.</Hecho>
+              <Hecho>Se guarda: <b>email</b>, tu nombre visible si lo pones, estado de tu circuito y cuándo cambió. Nada más.</Hecho>
               <Hecho>No existe histórico de webs ni de destinos.</Hecho>
               <Hecho>Los nodos reenvían sin leer: reenvío ciego con ChaCha20.</Hecho>
               <Hecho>Puedes borrar la cuenta de golpe, sin periodo de gracia.</Hecho>

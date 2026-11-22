@@ -2,13 +2,13 @@
    el script de release. Al publicar una edición: sube VERSION aquí y en
    package.json, y etiqueta el commit con `git tag vX.Y.Z`. */
 
-export const VERSION = "2.1.0";
-export const EDICION = "edición 2.1";
-export const PUBLICADA = "20 de noviembre de 2026";
+export const VERSION = "3.1.0";
+export const EDICION = "edición 3.1";
+export const PUBLICADA = "22 de noviembre de 2026";
 
 export const NOVEDADES = [
-  "Marca nueva: el salto de tres nodos sobre un hexágono.",
-  "El nombre manda en la portada, con entrada animada y letras que saltan.",
-  "La cuenta atrás de diciembre se cambia por el día de hoy, la hora y la semana.",
-  "El panel suma reloj de sesión, latencia en vivo y actividad reciente.",
+  "Una intro cinematográfica de primera visita y una visita guiada de seis paradas, con opción de saltarla.",
+  "El resumen de 30 segundos termina con una invitación a explorar los tres saltos por dentro.",
+  "El registro pide tu nombre y el panel te saluda por él; las cuentas antiguas pueden añadirlo.",
+  "Tu recorrido de aprendizaje se guarda en el navegador y las dudas se pueden buscar por texto.",
 ];

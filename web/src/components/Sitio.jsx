@@ -4,6 +4,7 @@ import BotonModo from "./BotonModo.jsx";
 import Reproductor from "./Reproductor.jsx";
 import VideoModal from "./VideoModal.jsx";
 import Nieve from "./Nieve.jsx";
+import Visita from "./Visita.jsx";
 import { ENLACES } from "../lib/contenido.js";
 import { NOMBRES } from "../lib/equipo.js";
 import { baseRuta } from "../lib/router.js";
@@ -77,6 +78,7 @@ export default function Sitio({ ruta, enSesion, children }) {
   return (
     <div className="pp sp">
       <Nieve />
+      <Visita activa={activa} />
 
       <header className={`pp-nav ${pegada ? "pegada" : ""}`}>
         <a className="pp-marca" href="#/" aria-label="JumperNET, ir a la portada">
@@ -90,7 +92,7 @@ export default function Sitio({ ruta, enSesion, children }) {
           <span className="pp-nav-linea" />
         </div>
 
-        <div className="pp-nav-acciones">
+        <div className="pp-nav-acciones" data-tour="panel">
           <span className="pp-nav-badge mono" aria-hidden>EN VIVO</span>
           <span className="pp-nav-estado mono"><i aria-hidden /> {enSesion ? "sesión activa" : "red educativa"}</span>
           <button type="button" className="pp-video-abrir" onClick={() => setVideoAbierto(true)}
@@ -99,6 +101,11 @@ export default function Sitio({ ruta, enSesion, children }) {
             <span className="pp-video-abrir-txt">vídeo</span>
             <i className="pp-video-abrir-punto" aria-hidden />
           </button>
+          {activa === "/" && (
+            <button type="button" className="pp-tour-abrir"
+              onClick={() => window.dispatchEvent(new Event("jumpernet-tour"))}
+              aria-label="Abrir la visita guiada" title="Visita guiada">?</button>
+          )}
           <BotonModo />
           {enSesion ? (
             <a className="btn primario" href="#/panel">Abrir panel <span aria-hidden>→</span></a>
@@ -125,6 +132,7 @@ export default function Sitio({ ruta, enSesion, children }) {
           {ENLACES.map((e) => (
             <a key={e.ruta} href={`#${e.ruta}`}
               className={`dock-enlace ${activa === e.ruta ? "activa" : ""}`}
+              data-tour={e.ruta === "/recursos" ? "recursos" : undefined}
               aria-current={activa === e.ruta ? "page" : undefined}>
               <span className="dock-ico" aria-hidden>{e.ico}</span>
               <span className="dock-txt">{e.corto}</span>

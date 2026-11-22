@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import Logo from "./Logo.jsx";
-import { login, registrar, setToken } from "../lib/api.js";
+import { login, registrar, setToken, editarMe } from "../lib/api.js";
 
 /* Acceso: una tarjeta limpia, validación en vivo y mensajes que de verdad
    ayudan. La explicación larga vive en la landing; aquí nada de adorno. */
 export default function Autenticacion({ alEntrar, aviso, modoInicial = "login", volver, autoenfocar = true }) {
   const [modo, setModo] = useState(modoInicial); // «login» | «registro»
+  const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [ver, setVer] = useState(false);
@@ -53,6 +54,9 @@ export default function Autenticacion({ alEntrar, aviso, modoInicial = "login", 
   async function enviar(e) {
     e.preventDefault();
     if (cargando) return;
+    const nombreLimpio = nombre.trim().replace(/\s+/g, " ");
+    if (modo === "registro" && nombreLimpio.length < 2) return fallo("escribe tu nombre (mínimo 2 letras)");
+    if (modo === "registro" && nombreLimpio.length > 24) return fallo("el nombre no puede pasar de 24 caracteres");
     if (!correo) return fallo("escribe tu correo");
     if (!emailValido) return fallo("eso no parece un correo válido (falta @ o el dominio)");
     if (!pass) return fallo("escribe tu contraseña");
@@ -72,7 +76,11 @@ export default function Autenticacion({ alEntrar, aviso, modoInicial = "login", 
         try {
           const r = await login(correo, pass);
           setToken(r.token);
-          aviso("cuenta creada — ya estás dentro", "ok");
+          /* El nombre es el alias visible de la cuenta. La API lo guarda en
+             /me; si falla, la cuenta ya existe y se puede poner desde Cuenta. */
+          try { await editarMe({ alias: nombreLimpio }); }
+          catch { aviso("cuenta creada — pon tu nombre desde Cuenta", "error"); }
+          aviso(`cuenta creada — bienvenido, ${nombreLimpio}`, "ok");
           alEntrar();
         } catch {
           setModo("login");
@@ -108,7 +116,7 @@ export default function Autenticacion({ alEntrar, aviso, modoInicial = "login", 
                   {modo === "login" ? "Entrar en tu panel" : "Crear tu cuenta"}
                 </div>
                 <div className="nota mono" style={{ fontSize: 11 }}>
-                  {modo === "login" ? "tu sesión dura 2 h" : "solo pide email y contraseña"}
+                  {modo === "login" ? "tu sesión dura 2 h" : "nombre, email y contraseña"}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
@@ -116,6 +124,21 @@ export default function Autenticacion({ alEntrar, aviso, modoInicial = "login", 
                 <button type="button" className={`pestAuth ${modo === "registro" ? "on" : ""}`} style={{ padding: "6px 12px", flex: "none" }} onClick={() => { setModo("registro"); setError(""); }}>Crear</button>
               </div>
             </div>
+
+            {modo === "registro" && (
+              <>
+                <label className="nota mono" htmlFor="jn-nombre" style={{ display: "block", fontSize: 10.5, letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 5 }}>
+                  nombre
+                </label>
+                <input id="jn-nombre" className="campo" type="text" required autoComplete="given-name"
+                  maxLength={24} placeholder="cómo te llamas"
+                  value={nombre} onChange={(e) => setNombre(e.target.value)}
+                  aria-invalid={modo === "registro" && nombre.length > 0 && nombre.trim().length < 2} />
+                {nombre.length > 0 && nombre.trim().length < 2 && (
+                  <div className="pista" style={{ marginTop: -6, marginBottom: 10 }}>mínimo 2 letras</div>
+                )}
+              </>
+            )}
 
             <label className="nota mono" htmlFor="jn-email" style={{ display: "block", fontSize: 10.5, letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 5 }}>
               correo
@@ -177,7 +200,7 @@ export default function Autenticacion({ alEntrar, aviso, modoInicial = "login", 
         {/* ── tres pasos, sin murallas de texto ── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12 }}>
           {[
-            ["①", "Entras con tu email", "argon2 en el servidor; nada más que pedirte."],
+            ["①", "Entras con tu nombre", "y tu email; argon2 en el servidor."],
             ["②", "Activas la red tú", "el interruptor empieza apagado: sin sorpresas."],
             ["③", "Navegas por el circuito", "con la extensión o el comando SOCKS5; el mundo ve la IP del exit."],
           ].map(([n, t, d]) => (
