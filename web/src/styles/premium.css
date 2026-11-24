@@ -458,6 +458,11 @@ html[data-modo="oscuro"] .hn-senal {
   .reproductor { left: auto; right: 12px; bottom: 78px; }
 }
 
+/* el dock fijo necesita aire: el último contenido debe poder quedar por encima */
+@media (max-width: 760px) {
+  .pp .sp-pagina { padding-bottom: 96px; }
+}
+
 /* el mini panel que sustituye al árbol navideño bajo el simulador */
 .hn-lab-mini {
   display: flex;
