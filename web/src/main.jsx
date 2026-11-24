@@ -11,6 +11,9 @@ import "./styles/panel.css";
 import "./styles/experiencia.css";
 import "./styles/identidad.css";
 import "./styles/novedades31.css";
+import "./styles/portada32.css";
+import "./styles/premium.css";
+import "./styles/laboratorio.css";
 
 if (!document.documentElement.dataset.modo) document.documentElement.dataset.modo = "claro";
 createRoot(document.getElementById("root")).render(<App />);

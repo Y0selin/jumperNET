@@ -20,6 +20,7 @@ import TarifasPagina from "./pages/TarifasPagina.jsx";
 import Dudas from "./pages/Dudas.jsx";
 import DescargasPagina from "./pages/DescargasPagina.jsx";
 import VideoPagina from "./pages/VideoPagina.jsx";
+import Laboratorio from "./pages/Laboratorio.jsx";
 import Acceso from "./pages/Acceso.jsx";
 import { useRuta, baseRuta, ir } from "./lib/router.js";
 import { me, setToken, getToken, getUsuarioGuardado, guardaUsuario } from "./lib/api.js";
@@ -140,6 +141,7 @@ export default function App() {
     else if (activa === "/dudas") pagina = <Dudas />;
     else if (activa === "/descargas") pagina = <DescargasPagina />;
     else if (activa === "/video") pagina = <VideoPagina />;
+    else if (activa === "/lab") pagina = <Laboratorio />;
     else if (activa === "/acceso") {
       pagina = <Acceso modo={ruta.includes("registro") ? "registro" : "login"} alEntrar={alEntrar} aviso={aviso} />;
     }
@@ -359,7 +361,7 @@ export default function App() {
                 <br />
                 <span style={{ opacity: .7 }}>proyecto educativo · la red solo se activa cuando tú lo decides</span>
                 <br />
-                <span style={{ opacity: .55 }}>equipo 2026 · Adrián, Rolando, Fernando, Alex y Yosselin</span>
+                <span style={{ opacity: .55 }}>equipo 2026 · Adrián, Rolando, Fernando, Alex y Yoselin</span>
               </footer>
             </div>
           </main>

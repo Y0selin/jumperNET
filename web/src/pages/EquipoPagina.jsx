@@ -43,7 +43,7 @@ export default function EquipoPagina() {
         </h1>
         <p className="sp-lead">
           JumperNET no salió de una plantilla: lo montamos entre <b>Adrián, Rolando,
-          Fernando, Alex y Yosselin</b>. Una idea sencilla —tres saltos, cifrado en capas,
+          Fernando, Alex y Yoselin</b>. Una idea sencilla —tres saltos, cifrado en capas,
           un interruptor que solo se enciende si tú quieres— y muchas horas de probar,
           romper y volver a montar.
         </p>

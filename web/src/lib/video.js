@@ -10,5 +10,5 @@ export const CAPITULOS = [
   { t: 15.2, n: "la salida", d: "Solo salen 80 y 443. Internet ve la IP del exit, no la tuya." },
   { t: 19.4, n: "interruptor", d: "La red llega apagada: se enciende solo cuando tú lo decides." },
   { t: 22.6, n: "tu cuenta", d: "Creas la cuenta, enciendes el circuito y lo pruebas sin instalar nada." },
-  { t: 26.2, n: "el equipo", d: "Hecho por Adrián, Rolando, Fernando, Alex y Yosselin." },
+  { t: 26.2, n: "el equipo", d: "Hecho por Adrián, Rolando, Fernando, Alex y Yoselin." },
 ];

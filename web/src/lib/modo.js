@@ -44,10 +44,17 @@ export function guardaModo(modo) {
 export function aplicaModo(modo) {
   const m = modo === "oscuro" ? "oscuro" : "claro";
   const html = document.documentElement;
+  /* sin transiciones durante el cambio: la paleta entra de golpe y ninguna
+     capa con backdrop-filter se queda con el color anterior */
+  html.dataset.cambiando = "1";
   html.dataset.modo = m;
   html.style.colorScheme = m;
   Object.entries(MODOS[m].vars).forEach(([k, v]) => html.style.setProperty(k, v));
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute("content", MODOS[m].color);
+  void html.offsetWidth;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => { delete html.dataset.cambiando; });
+  });
   return m;
 }

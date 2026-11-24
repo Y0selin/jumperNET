@@ -6,6 +6,9 @@ import Progreso from "../components/Progreso.jsx";
 import MapaCircuito from "../components/MapaCircuito.jsx";
 import CircuitoHero from "../components/CircuitoHero.jsx";
 import Comparador from "../components/Comparador.jsx";
+import Sobre from "../components/Sobre.jsx";
+import SenalRed from "../components/SenalRed.jsx";
+import IndicePortada from "../components/IndicePortada.jsx";
 import Logo from "../components/Logo.jsx";
 import { BandaHoy, PildoraHoy, SelloHoy } from "../components/Hoy.jsx";
 import { VERSION, EDICION, PUBLICADA, NOVEDADES } from "../lib/version.js";
@@ -25,6 +28,7 @@ const DESTINOS = [
   { r: "/descargas", n: "05", t: "Descargas", d: "La extensión para tu navegador, el navegador completo para Windows y Linux, y GitHub Releases.", ico: "⬇" },
   { r: "/dudas", n: "06", t: "Dudas", d: "La IP, la latencia, lo que se guarda de ti y en qué se diferencia (y en qué no) de Tor.", ico: "?" },
   { r: "/video", n: "07", t: "El viaje en vídeo", d: "El recorrido completo, con las cuatro paradas explicadas y tiempo para entender qué pasa en cada una.", ico: "▶" },
+  { r: "/lab", n: "08", t: "Laboratorio", d: "Una consola de comandos, un explorador de nodos, el inspector del paquete y el simulador de fallos.", ico: "⌘" },
 ];
 
 /* Luces de la guirnalda: posición sobre el cable, color y retardo. */
@@ -142,7 +146,7 @@ export default function Inicio() {
 
   return (
     <>
-      <section className="hn-hero" ref={hero} onPointerMove={paralaje} onPointerLeave={suelta}>
+      <section className="hn-hero" id="inicio" ref={hero} onPointerMove={paralaje} onPointerLeave={suelta}>
         <div className="hn-guirnalda" aria-hidden="true">
           <svg viewBox="0 0 1200 52" preserveAspectRatio="none">
             <path d="M-20 6 C 180 52 380 52 600 6 S 1020 52 1220 6" />
@@ -197,6 +201,9 @@ export default function Inicio() {
               Crear cuenta gratis <span aria-hidden>→</span>
             </a>
             <a className="btn grande" href="#/funciona">Cómo funciona</a>
+            <a className="btn grande hn-lab-link" href="#/lab">
+              <span className="mono" aria-hidden>⌘</span> Laboratorio
+            </a>
             <button className="hn-play" type="button"
               onClick={() => window.dispatchEvent(new Event("jumpernet-video"))}>
               <span className="hn-play-ico" aria-hidden>▶</span>
@@ -217,23 +224,34 @@ export default function Inicio() {
             <div><dt className="mono">histórico</dt><dd>0</dd></div>
           </dl>
 
-          <a className="hn-firma" href="#/equipo"
-            aria-label={`Conocer al equipo que ha creado JumperNET: ${NOMBRES}`}>
-            <span className="hn-firma-avatares" aria-hidden>
-              {EQUIPO.map((p) => (
-                <i key={p.nombre} data-tono={p.tono}>{p.nombre.slice(0, 1)}</i>
-              ))}
-            </span>
-            <span className="hn-firma-txt">
-              Hecho por <b>{NOMBRES}</b>
-              <span className="hn-firma-link">la marca y el equipo →</span>
-            </span>
-          </a>
+          <div className="hn-bajo">
+            <Sobre />
+            <SenalRed vivos={vivos} sinApi={sinApi} />
+          </div>
 
-          <a className="hn-scroll" href="#esquema">
-            <span className="mono">sigue el paquete</span>
-            <i aria-hidden>↓</i>
-          </a>
+          <div className="hn-pie">
+            <a className="hn-firma" href="#/equipo"
+              aria-label={`Conocer al equipo que ha creado JumperNET: ${NOMBRES}`}>
+              <span className="hn-firma-avatares" aria-hidden>
+                {EQUIPO.map((p) => (
+                  <i key={p.nombre} data-tono={p.tono}>{p.nombre.slice(0, 1)}</i>
+                ))}
+              </span>
+              <span className="hn-firma-txt">
+                Hecho por <b>{NOMBRES}</b>
+                <span className="hn-firma-link">la marca y el equipo →</span>
+              </span>
+            </a>
+
+            <button
+              type="button"
+              className="hn-scroll"
+              onClick={() => document.getElementById("esquema")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            >
+              <span className="mono">sigue el paquete</span>
+              <i aria-hidden>↓</i>
+            </button>
+          </div>
         </div>
 
         <div className="hn-hero-visual">
@@ -249,41 +267,19 @@ export default function Inicio() {
             <CircuitoHero />
             <span className="hn-pie-visual mono">toca una parada · enciende o apaga la red</span>
 
-            <svg className="hn-arbol-navidad" viewBox="0 0 200 240" aria-hidden="true">
-              <g className="arbol-conexiones">
-                <line x1="100" y1="20" x2="60" y2="60" />
-                <line x1="100" y1="20" x2="140" y2="60" />
-                <line x1="60" y1="60" x2="40" y2="110" />
-                <line x1="60" y1="60" x2="80" y2="110" />
-                <line x1="140" y1="60" x2="120" y2="110" />
-                <line x1="140" y1="60" x2="160" y2="110" />
-                <line x1="40" y1="110" x2="30" y2="170" />
-                <line x1="80" y1="110" x2="70" y2="170" />
-                <line x1="120" y1="110" x2="130" y2="170" />
-                <line x1="160" y1="110" x2="170" y2="170" />
-                <line x1="30" y1="170" x2="100" y2="200" />
-                <line x1="70" y1="170" x2="100" y2="200" />
-                <line x1="130" y1="170" x2="100" y2="200" />
-                <line x1="170" y1="170" x2="100" y2="200" />
-              </g>
-              <g className="arbol-nodos">
-                <circle cx="100" cy="20" r="5" className="nodo-estrella" />
-                <circle cx="60" cy="60" r="4" />
-                <circle cx="140" cy="60" r="4" />
-                <circle cx="40" cy="110" r="4" />
-                <circle cx="80" cy="110" r="4" />
-                <circle cx="120" cy="110" r="4" />
-                <circle cx="160" cy="110" r="4" />
-                <circle cx="30" cy="170" r="4" />
-                <circle cx="70" cy="170" r="4" />
-                <circle cx="130" cy="170" r="4" />
-                <circle cx="170" cy="170" r="4" />
-                <circle cx="100" cy="200" r="5" className="nodo-tronco" />
-              </g>
-            </svg>
+            <a className="hn-lab-mini" href="#/lab">
+              <span className="hn-lab-mini-nodos" aria-hidden><i /><i /><i /></span>
+              <span className="hn-lab-mini-txt">
+                <b>JumperNET Lab</b>
+                <span>prueba la consola y tumba un nodo</span>
+              </span>
+              <span className="hn-lab-mini-flecha" aria-hidden>→</span>
+            </a>
           </div>
         </div>
       </section>
+
+      <IndicePortada />
 
       <Revela className="pp-hoy tarjeta">
         <BandaHoy vivos={vivos} sinApi={sinApi} edicion={EDICION} />
@@ -331,7 +327,7 @@ export default function Inicio() {
         <Revela retardo={1}><MapaCircuito /></Revela>
       </section>
 
-      <section className="pp-seccion">
+      <section className="pp-seccion" id="tres-ideas">
         <Revela className="pp-cab">
           <span className="migas">qué es jumpernet</span>
           <h2 className="pp-h2">Tres ideas, <span className="texto-gradiente">ni una promesa de más</span></h2>
@@ -365,7 +361,7 @@ export default function Inicio() {
         </div>
       </section>
 
-      <section className="pp-seccion">
+      <section className="pp-seccion" id="piezas">
         <Revela className="pp-cab">
           <span className="migas">qué te llevas</span>
           <h2 className="pp-h2">Cuatro piezas, <span className="texto-gradiente">una red</span></h2>
@@ -429,7 +425,7 @@ export default function Inicio() {
         </div>
       </Revela>
 
-      <section className="pp-seccion">
+      <section className="pp-seccion" id="destinos">
         <Revela className="pp-cab">
           <span className="migas">sigue explorando</span>
           <h2 className="pp-h2">Cada cosa, en <span className="texto-gradiente">su página</span></h2>
@@ -453,7 +449,7 @@ export default function Inicio() {
         </div>
       </section>
 
-      <Revela className="pp-nov tarjeta">
+      <Revela className="pp-nov tarjeta" id="notas">
         <div className="pp-nov-cab">
           <span className="migas">nota de versión</span>
           <h2 className="pp-h2">Edición <span className="texto-gradiente">{EDICION.replace(/^edición\s*/i, "")}</span></h2>
@@ -472,7 +468,7 @@ export default function Inicio() {
         <span className="pp-nov-ver mono" aria-hidden>v{VERSION}</span>
       </Revela>
 
-      <Revela className="sp-equipo-teaser tarjeta">
+      <Revela className="sp-equipo-teaser tarjeta" id="equipo">
         <div className="sp-equipo-cab">
           <div className="sp-equipo-marca">
             <Logo tam={46} />

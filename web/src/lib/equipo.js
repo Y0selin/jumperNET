@@ -6,9 +6,9 @@ export const EQUIPO = [
   { nombre: "Rolando", codigo: "JN-02", tono: "violeta" },
   { nombre: "Fernando", codigo: "JN-03", tono: "turquesa" },
   { nombre: "Alex", codigo: "JN-04", tono: "coral" },
-  { nombre: "Yosselin", codigo: "JN-05", tono: "violeta" },
+  { nombre: "Yoselin", codigo: "JN-05", tono: "violeta" },
 ];
 
-export const NOMBRES = "Adrián, Rolando, Fernando, Alex y Yosselin";
+export const NOMBRES = "Adrián, Rolando, Fernando, Alex y Yoselin";
 
 export const AÑO = "2026";

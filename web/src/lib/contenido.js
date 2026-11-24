@@ -16,6 +16,7 @@ export const ENLACES = [
   { ruta: "/proyecto", texto: "Proyecto", corto: "Proyecto", ico: "◈" },
   { ruta: "/equipo", texto: "El equipo", corto: "Equipo", ico: "✦" },
   { ruta: "/funciona", texto: "Cómo funciona", corto: "Funciona", ico: "⌁" },
+  { ruta: "/lab", texto: "Laboratorio interactivo", corto: "Lab", ico: "⌘" },
   { ruta: "/tarifas", texto: "Tarifas", corto: "Tarifas", ico: "◇" },
   { ruta: "/dudas", texto: "Dudas", corto: "Dudas", ico: "?" },
   { ruta: "/recursos", texto: "Recursos", corto: "Recursos", ico: "⌬" },

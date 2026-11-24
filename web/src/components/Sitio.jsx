@@ -4,8 +4,12 @@ import BotonModo from "./BotonModo.jsx";
 import Reproductor from "./Reproductor.jsx";
 import VideoModal from "./VideoModal.jsx";
 import Nieve from "./Nieve.jsx";
+import FondoRed from "./FondoRed.jsx";
 import Visita from "./Visita.jsx";
+import AvisoDocs from "./AvisoDocs.jsx";
+import Buscador from "./Buscador.jsx";
 import { ENLACES } from "../lib/contenido.js";
+import { DOCS_URL } from "../lib/enlaces.js";
 import { NOMBRES } from "../lib/equipo.js";
 import { baseRuta } from "../lib/router.js";
 import { VERSION } from "../lib/version.js";
@@ -26,6 +30,7 @@ const TITULOS = {
   "/recursos": "Recursos",
   "/descargas": "Descargas",
   "/video": "El viaje en vídeo",
+  "/lab": "Laboratorio interactivo",
   "/acceso": "Entrar o crear cuenta",
   "/panel": "Panel",
 };
@@ -35,6 +40,7 @@ export default function Sitio({ ruta, enSesion, children }) {
   const [arriba, setArriba] = useState(false);
   const [progreso, setProgreso] = useState(0);
   const [videoAbierto, setVideoAbierto] = useState(false);
+  const [buscador, setBuscador] = useState(false);
   const activa = baseRuta(ruta);
 
   useEffect(() => {
@@ -60,7 +66,28 @@ export default function Sitio({ ruta, enSesion, children }) {
     return () => window.removeEventListener("jumpernet-video", abre);
   }, []);
 
-  useEffect(() => { setVideoAbierto(false); }, [activa]);
+  useEffect(() => { setVideoAbierto(false); setBuscador(false); }, [activa]);
+
+  /* Ctrl/Cmd + K: el buscador global, desde cualquier página */
+  useEffect(() => {
+    const alPulsar = (e) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key?.toLowerCase() === "k" || e.code === "KeyK")) {
+        e.preventDefault();
+        e.stopPropagation();
+        setBuscador((v) => !v);
+        return;
+      }
+      /* atajo de reserva: «/» cuando no se está escribiendo */
+      const escribiendo = ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)
+        || document.activeElement?.isContentEditable;
+      if (e.key === "/" && !escribiendo) {
+        e.preventDefault();
+        setBuscador(true);
+      }
+    };
+    window.addEventListener("keydown", alPulsar, true);
+    return () => window.removeEventListener("keydown", alPulsar, true);
+  }, []);
 
   /* spotlight: las tarjetas iluminan alrededor del cursor */
   useEffect(() => {
@@ -77,8 +104,10 @@ export default function Sitio({ ruta, enSesion, children }) {
 
   return (
     <div className="pp sp">
+      <FondoRed />
       <Nieve />
       <Visita activa={activa} />
+      <AvisoDocs activa={activa} />
 
       <header className={`pp-nav ${pegada ? "pegada" : ""}`}>
         <a className="pp-marca" href="#/" aria-label="JumperNET, ir a la portada">
@@ -95,6 +124,25 @@ export default function Sitio({ ruta, enSesion, children }) {
         <div className="pp-nav-acciones" data-tour="panel">
           <span className="pp-nav-badge mono" aria-hidden>EN VIVO</span>
           <span className="pp-nav-estado mono"><i aria-hidden /> {enSesion ? "sesión activa" : "red educativa"}</span>
+          <button type="button" className="pp-buscar" onClick={() => setBuscador(true)}
+            aria-label="Buscar en JumperNET" title="Buscar (Ctrl + K)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+              <circle cx="11" cy="11" r="6.4" /><path d="m15.8 15.8 4.2 4.2" />
+            </svg>
+            <span className="pp-buscar-txt">Buscar</span>
+            <kbd>⌘K</kbd>
+          </button>
+          <a className="pp-docs-link" href={DOCS_URL} target="_blank" rel="noreferrer"
+            title="Documentación de JumperNET" aria-label="Abrir la documentación de JumperNET">
+            <svg className="pp-docs-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z" />
+              <path d="M4 20.5V5.5" />
+              <path d="M8 7h8M8 10.5h5" />
+            </svg>
+            <span className="pp-docs-txt pp-docs-largo">documentación</span>
+            <span className="pp-docs-txt pp-docs-corto">docs</span>
+            <span className="pp-docs-flecha" aria-hidden>↗</span>
+          </a>
           <button type="button" className="pp-video-abrir" onClick={() => setVideoAbierto(true)}
             aria-label="Ver el vídeo de portada de JumperNET" aria-haspopup="dialog">
             <span className="pp-video-abrir-ico" aria-hidden>▶</span>
@@ -143,6 +191,7 @@ export default function Sitio({ ruta, enSesion, children }) {
 
       <Reproductor />
       <VideoModal abierto={videoAbierto} cerrar={() => setVideoAbierto(false)} />
+      <Buscador abierto={buscador} cerrar={() => setBuscador(false)} />
 
       <footer className="sp-pie">
         <div className="sp-pie-arriba">
@@ -176,7 +225,7 @@ export default function Sitio({ ruta, enSesion, children }) {
           </div>
           <div>
             <span className="sp-pie-tit mono">recursos</span>
-            <a href="https://jumpernet.duckdns.org/docs/" target="_blank" rel="noreferrer">Documentación ↗</a>
+            <a href={DOCS_URL} target="_blank" rel="noreferrer">Documentación ↗</a>
             <a href="https://github.com/y0selin/jumperNET" target="_blank" rel="noreferrer">GitHub ↗</a>
             <a href="#/dudas">Preguntas frecuentes</a>
             <a href="#/descargas">Descargas</a>

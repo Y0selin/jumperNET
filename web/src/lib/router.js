@@ -37,6 +37,9 @@ export function useRuta() {
        normal se queda a medias al cambiar de ruta desde el pie */
     if ("scrollRestoration" in history) history.scrollRestoration = "manual";
     const alCambiar = () => {
+      /* un ancla interna (#esquema) no es una ruta: deja que el navegador
+         haga el salto y no reinicies la página ni el scroll. */
+      if (location.hash && !location.hash.startsWith("#/")) return;
       setRuta(rutaActual());
       const raiz = document.documentElement;
       const antes = raiz.style.scrollBehavior;

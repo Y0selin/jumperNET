@@ -21,6 +21,13 @@ export default function BotonModo({ compacto = false }) {
     setModo(nuevo);
   }
 
+  /* el buscador global también puede cambiar el modo */
+  useEffect(() => {
+    const alterna = () => cambia();
+    window.addEventListener("jumpernet-cambiar-modo", alterna);
+    return () => window.removeEventListener("jumpernet-cambiar-modo", alterna);
+  });
+
   return (
     <button
       type="button"
