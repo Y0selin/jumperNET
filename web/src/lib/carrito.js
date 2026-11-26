@@ -1,20 +1,27 @@
 import { useEffect, useState } from "react";
-import { PROMO } from "./planes.js";
+import {
+  PROMO,
+  PRECIO_BASE_PRO,
+  normalizaSaltos,
+  precioPro,
+  extrasPro,
+  precioConPromo,
+} from "./planes.js";
 
 /* Carrito mínimo de JumperNET.
  * Solo existe una suscripción Pro: nunca se acumulan unidades. El contenido
  * vive en localStorage para sobrevivir a recargas y cambios de página.
  *
- * La promoción de bienvenida se aplica sola mientras no se haya consumido en
- * este navegador. No hay backend de pagos, así que la elegibilidad real no se
- * puede comprobar todavía: la interfaz lo dice y el flujo va etiquetado como
- * entorno de pruebas. */
+ * El precio se calcula aquí solo para previsualizar: el backend vuelve a
+ * calcularlo y el checkout compara ambos importes antes de continuar. La
+ * promoción de bienvenida no se puede verificar sin una pasarela real, así
+ * que la interfaz lo dice con claridad. */
 
 const CLAVE = "jumpernet-carrito-v2";
 const CLAVE_PROMO = "jumpernet-promo-usada-v1";
 const EVENTO = "jumpernet-carrito";
 
-export const PRECIO_PRO = 5;
+export const PRECIO_PRO = PRECIO_BASE_PRO;
 
 let memoria = null;
 
@@ -43,28 +50,49 @@ export function marcarPromoUsada() {
 
 export function estadoCarrito() {
   const crudo = lee();
-  const items = crudo.items.filter((i) => i && i.id === "pro").slice(0, 1);
+  const items = crudo.items
+    .filter((i) => i && i.id === "pro")
+    .slice(0, 1)
+    .map((i) => ({ ...i, saltos: normalizaSaltos(i.saltos || 3) }));
+  const saltos = items[0]?.saltos || 3;
   const promo = items.length > 0 && !promoUsada();
-  const descuento = promo ? Math.round(PRECIO_PRO * PROMO.porcentaje) / 100 : 0;
+  const precio = items.length ? precioPro(saltos) : 0;
+  const { descuento, primerPago } = precioConPromo(precio, promo);
+
   return {
     items,
     cantidad: items.length,
+    saltos,
     promo,
-    precio: items.length ? PRECIO_PRO : 0,
+    base: PRECIO_BASE_PRO,
+    extras: items.length ? extrasPro(saltos) : 0,
+    precio,
     descuento,
-    primerPago: items.length ? Math.max(0, PRECIO_PRO - descuento) : 0,
-    renovacion: items.length ? PRECIO_PRO : 0,
+    primerPago: items.length ? primerPago : 0,
+    renovacion: items.length ? precio : 0,
   };
 }
 
-export function agregaPro() {
+/** Añade Pro con el tamaño elegido o actualiza el que ya está en el carrito. */
+export function agregaPro(saltos = 3) {
+  const n = normalizaSaltos(saltos);
   const actual = lee();
-  if (actual.items.some((i) => i.id === "pro")) {
-    window.dispatchEvent(new CustomEvent(EVENTO, { detail: estadoCarrito() }));
-    return estadoCarrito();
-  }
   escribe({
-    items: [{ id: "pro", nombre: "JumperNET Pro", precio: PRECIO_PRO, desde: Date.now() }],
+    items: [{ id: "pro", nombre: "JumperNET Pro", saltos: n, precio: precioPro(n), desde: Date.now() }],
+    actualizado: Date.now(),
+  });
+  return estadoCarrito();
+}
+
+/** Cambia el máximo contratado sin salir del carrito. */
+export function cambiaSaltosPro(saltos = 3) {
+  const n = normalizaSaltos(saltos);
+  const actual = lee();
+  if (!actual.items.some((i) => i.id === "pro")) return agregaPro(n);
+  escribe({
+    items: actual.items.map((i) => (i.id === "pro"
+      ? { ...i, saltos: n, precio: precioPro(n) }
+      : i)),
     actualizado: Date.now(),
   });
   return estadoCarrito();
@@ -94,3 +122,5 @@ export function useCarrito() {
 
   return estado;
 }
+
+export { PROMO };

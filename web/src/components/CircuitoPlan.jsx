@@ -25,10 +25,12 @@ export default function CircuitoPlan({
   onCambio,
   compacto = false,
   etiqueta = true,
+  max = 7,
 }) {
   const id = useId().replace(/:/g, "");
   const [activo, setActivo] = useState(null);
-  const total = Math.max(3, Math.min(7, Number(saltos) || 3));
+  const limite = Math.max(3, Math.min(7, Number(max) || 7));
+  const total = Math.max(3, Math.min(limite, Number(saltos) || 3));
   const pts = posiciones(total);
   const ruta = pts.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
 
@@ -104,20 +106,24 @@ export default function CircuitoPlan({
         <div className="jn-circ-control">
           <div className="jn-circ-control-cab">
             <span className="mono">saltos del circuito</span>
-            <b className="mono">{total}</b>
+            <span className="jn-circ-paso">
+              <button type="button" onClick={() => onCambio?.(total - 1)} disabled={total <= 3} aria-label="Quitar un salto">−</button>
+              <b className="mono">{total}</b>
+              <button type="button" onClick={() => onCambio?.(total + 1)} disabled={total >= limite} aria-label="Añadir un salto">+</button>
+            </span>
           </div>
           <input
             type="range"
             min="3"
-            max="7"
+            max={limite}
             step="1"
             value={total}
             onChange={(e) => onCambio?.(Number(e.target.value))}
-            aria-label="Elegir el número de saltos del circuito Pro"
+            aria-label={`Elegir el número de saltos del circuito, de 3 a ${limite}`}
           />
           <div className="jn-circ-ticks" aria-hidden>
             {[3, 4, 5, 6, 7].map((n) => (
-              <span key={n} className={n === total ? "on" : ""}>{n}</span>
+              <span key={n} className={`${n === total ? "on" : ""} ${n > limite ? "bloqueado" : ""}`}>{n}</span>
             ))}
           </div>
         </div>

@@ -17,6 +17,67 @@ export const PROMO = {
   texto: "Consigue un 10 % de descuento en tu primera suscripción Pro.",
 };
 
+/* Precio del Pro según el tamaño del circuito. El backend guarda esta misma
+   tabla y es quien valida el importe final; aquí solo se usa para configurar
+   y previsualizar la suscripción. */
+export const PRECIOS_PRO = { 3: 5, 4: 6, 5: 7, 6: 8, 7: 9 };
+export const PRECIO_BASE_PRO = PRECIOS_PRO[3];
+export const SALTOS_MIN = 3;
+export const SALTOS_MAX = 7;
+
+export function normalizaSaltos(n) {
+  const v = Math.round(Number(n) || SALTOS_MIN);
+  return Math.max(SALTOS_MIN, Math.min(SALTOS_MAX, v));
+}
+
+export function precioPro(n = SALTOS_MIN) {
+  return PRECIOS_PRO[normalizaSaltos(n)];
+}
+
+export function extrasPro(n = SALTOS_MIN) {
+  return Math.max(0, precioPro(n) - PRECIO_BASE_PRO);
+}
+
+export function precioConPromo(precio, promo = true) {
+  const bruto = Math.max(0, Number(precio) || 0);
+  const descuento = promo ? Math.round(bruto * PROMO.porcentaje) / 100 : 0;
+  return { descuento, primerPago: Math.max(0, bruto - descuento) };
+}
+
+/** Características visibles de Pro para el número de saltos elegido. */
+export function caracteristicasPro(saltos = SALTOS_MIN) {
+  const n = normalizaSaltos(saltos);
+  const extra = extrasPro(n);
+  return [
+    {
+      titulo: "Todo lo incluido en Free",
+      detalle: "Panel completo, comprobación real, descargas y el interruptor maestro siguen igual. Pro añade herramientas y más control, no recorta lo gratuito.",
+    },
+    {
+      titulo: `${n} saltos en el circuito`,
+      detalle: `Tu suscripción permite circuitos de 3 a ${n} relés. Puedes moverte dentro de ese rango sin volver a pagar cada vez que cambies la configuración.`,
+    },
+    {
+      titulo: extra > 0 ? `+${extra} € por los ${n - SALTOS_MIN} saltos adicionales` : "Precio de entrada: 3 saltos",
+      detalle: extra > 0
+        ? `La base son 5 € por 3 saltos y cada salto extra suma 1 €. Con ${n} saltos la renovación queda en ${precioPro(n)} €/mes.`
+        : "Empiezas con el circuito mínimo de 3 relés. Puedes ampliar la suscripción cuando quieras desde el panel.",
+    },
+    {
+      titulo: "Herramientas Pro desbloqueadas",
+      detalle: "Centro de control, Network Explorer, diseñador de circuitos, monitor, inspector educativo y diagnóstico avanzado.",
+    },
+    {
+      titulo: "Cifrado según la implementación",
+      detalle: "El mismo ChaCha20-Poly1305 entre saltos que en Free. Más saltos añaden intermediarios y latencia; no convierten el plan en «más seguro» por sí solo.",
+    },
+    {
+      titulo: "Refresco cada diez horas",
+      detalle: "Giras el circuito con más frecuencia que en Free, sin cerrar la sesión ni volver a autenticarte.",
+    },
+  ];
+}
+
 const CLAVE_DEMO = "jumpernet-demo-pro-v1";
 export const DIAS_DEMO = 30;
 
@@ -64,7 +125,8 @@ export const PLANES = [
     precioTexto: "5 €",
     periodo: "al mes",
     resumen:
-      "Tú decides cuán largo es el circuito. Hasta siete relés y un refresco nuevo cada diez horas.",
+      "Tú decides cuán largo es el circuito. De 3 a 7 relés, con precio según el tamaño y un refresco nuevo cada diez horas.",
+    precioDesde: 5,
     saltos: 3,
     saltosMax: 7,
     destacado: true,
@@ -76,9 +138,9 @@ export const PLANES = [
           "Nada de recortes: panel, comprobación real, descargas y el interruptor maestro siguen igual.",
       },
       {
-        titulo: "Hasta siete saltos en nodos",
+        titulo: "De 3 a 7 saltos, a tu medida",
         detalle:
-          "Puedes montar circuitos de 3, 4, 5, 6 o 7 relés. Más saltos añaden intermediarios y latencia; no convierten el plan en «más seguro» por sí solo.",
+          "Eliges el máximo contratado y puedes montar circuitos de 3 a ese máximo. Más saltos añaden intermediarios y latencia; no convierten el plan en «más seguro» por sí solo.",
       },
       {
         titulo: "Cifrado según la implementación",
@@ -91,9 +153,9 @@ export const PLANES = [
           "Giras el circuito con más frecuencia que en Free, sin cerrar la sesión ni volver a autenticarte.",
       },
       {
-        titulo: "Elección de 3 a 7 saltos",
+        titulo: "Herramientas avanzadas incluidas",
         detalle:
-          "El selector del panel aplica el número elegido la próxima vez que conectes o gires el circuito.",
+          "Network Explorer, diseñador de circuitos, monitor de rendimiento, inspector educativo, comparador y diagnóstico avanzado. Las simulaciones se identifican como tales.",
       },
     ],
   },
@@ -181,11 +243,23 @@ export function leeDemoPro() {
   return null;
 }
 
-export function activaDemoPro(usuarioId = null) {
-  const demo = { plan: "pro", usuario: usuarioId, desde: Date.now(), hasta: Date.now() + DIAS_DEMO * 86400000 };
+export function activaDemoPro(usuarioId = null, saltos = SALTOS_MIN) {
+  const demo = {
+    plan: "pro",
+    usuario: usuarioId,
+    saltos: normalizaSaltos(saltos),
+    desde: Date.now(),
+    hasta: Date.now() + DIAS_DEMO * 86400000,
+  };
   try { localStorage.setItem(CLAVE_DEMO, JSON.stringify(demo)); } catch { /* sin persistencia */ }
   window.dispatchEvent(new CustomEvent("jumpernet-plan", { detail: demo }));
   return demo;
+}
+
+export function actualizaDemoPro(saltos) {
+  const demo = leeDemoPro();
+  if (!demo) return null;
+  return activaDemoPro(demo.usuario, saltos);
 }
 
 export function desactivaDemoPro() {
@@ -202,7 +276,16 @@ export function planDe(yo) {
   if (!demo) return { ...real, demo: false };
   /* la demo pertenece a la cuenta que la activó: no se contagia a otras */
   if (demo.usuario != null && String(demo.usuario) !== String(yo?.id)) return { ...real, demo: false };
-  return { ...PLANES[1], demo: true, hasta: demo.hasta };
+  const saltos = normalizaSaltos(demo.saltos || SALTOS_MIN);
+  return {
+    ...PLANES[1],
+    demo: true,
+    hasta: demo.hasta,
+    saltos,
+    saltosMax: saltos,
+    precio: precioPro(saltos),
+    precioTexto: `${precioPro(saltos)} €`,
+  };
 }
 
 export function fechaCorta(ms) {

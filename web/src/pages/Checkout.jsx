@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useCarrito, marcarPromoUsada, vaciaCarrito } from "../lib/carrito.js";
-import { activaDemoPro, fechaCorta, DIAS_DEMO, PROMO } from "../lib/planes.js";
-import { getToken, getUsuarioGuardado } from "../lib/api.js";
+import { activaDemoPro, fechaCorta, DIAS_DEMO, PROMO, precioPro } from "../lib/planes.js";
+import { getToken, getUsuarioGuardado, precioPro as precioServidor } from "../lib/api.js";
 
 /* Contratación en tres pasos. No hay pasarela conectada: el paso de pago es
    un entorno de pruebas identificado y no se recogen datos de tarjeta.
@@ -15,6 +15,8 @@ export default function Checkout({ aviso }) {
   const [acepta, setAcepta] = useState(false);
   const [compra, setCompra] = useState(null);
   const [demo, setDemo] = useState(null);
+  const [validando, setValidando] = useState(false);
+  const [errorPrecio, setErrorPrecio] = useState("");
 
   const usuario = getUsuarioGuardado();
   const conSesion = !!getToken();
@@ -23,15 +25,32 @@ export default function Checkout({ aviso }) {
     try { sessionStorage.setItem("jumpernet-volver", "/checkout"); } catch { /* sin sesión */ }
   }
 
-  function completar() {
-    if (!acepta) return;
-    setCompra({ precio: carrito.precio, descuento: carrito.descuento, primerPago: carrito.primerPago, promo: carrito.promo });
-    marcarPromoUsada();
-    setDemo(activaDemoPro(usuario?.id));
-    vaciaCarrito();
-    setPaso(3);
-    aviso?.("modo de prueba activado · no se ha realizado ningún cargo", "ok");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  async function completar() {
+    if (!acepta || !carrito.cantidad) return;
+    setValidando(true);
+    setErrorPrecio("");
+    try {
+      /* El precio definitivo sale del backend. Si no coincide con la vista
+         previa, no continuamos: nunca cobramos ni activamos con un importe
+         manipulado en el navegador. */
+      const validado = await precioServidor(carrito.saltos, carrito.promo);
+      if (Number(validado.precio) !== Number(precioPro(carrito.saltos))) {
+        setErrorPrecio("El importe del servidor no coincide con la vista previa. Vuelve a cargar el carrito.");
+        return;
+      }
+      const primerPago = carrito.promo ? validado.primer_pago : validado.precio;
+      setCompra({ ...validado, saltos: carrito.saltos, primerPago });
+      marcarPromoUsada();
+      setDemo(activaDemoPro(usuario?.id, carrito.saltos));
+      vaciaCarrito();
+      setPaso(3);
+      aviso?.("modo de prueba activado · no se ha realizado ningún cargo", "ok");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e) {
+      setErrorPrecio(`No pudimos validar el importe con el servidor: ${e.message}`);
+    } finally {
+      setValidando(false);
+    }
   }
 
   if (paso === 3 && demo) {
@@ -60,9 +79,9 @@ export default function Checkout({ aviso }) {
             <span className="jn-checkout-precio mono">{compra ? euros(compra.primerPago) : "—"}</span>
           </div>
           <ul className="jn-checkout-resumen-lista">
-            <li>Hasta 7 saltos y elección de 3 a 7 en el panel</li>
+            <li>{compra?.saltos || carrito.saltos} saltos contratados · circuitos de 3 a {compra?.saltos || carrito.saltos}</li>
             <li>Refresco cada 10 h cuando el backend aplique el plan</li>
-            <li>Cifrado JENC idéntico al resto de planes</li>
+            <li>Herramientas Pro y cifrado JENC idéntico al resto de planes</li>
           </ul>
         </div>
 
@@ -118,17 +137,19 @@ export default function Checkout({ aviso }) {
                 </span>
                 <div>
                   <b>JumperNET Pro</b>
-                  <span className="mono">mensual · 1 unidad</span>
+                  <span className="mono">{carrito.saltos} saltos · mensual</span>
                 </div>
                 <span className="jn-checkout-precio mono">{euros(carrito.precio)}</span>
               </div>
               <ul className="jn-checkout-resumen-lista">
-                <li>Hasta 7 saltos por circuito</li>
-                <li>Elección de 3 a 7 saltos · refresco cada 10 h</li>
+                <li>Circuitos de 3 a {carrito.saltos} saltos</li>
+                <li>Herramientas Pro desbloqueadas · refresco cada 10 h</li>
                 <li>Todo lo incluido en Free</li>
               </ul>
               <dl className="jn-totales">
-                <div><dt>Precio original</dt><dd>{euros(carrito.precio)}</dd></div>
+                <div><dt>Precio base · 3 saltos</dt><dd>{euros(carrito.base)}</dd></div>
+                <div><dt>Saltos adicionales · {carrito.saltos - 3}</dt><dd>{carrito.extras ? `+${euros(carrito.extras)}` : "—"}</dd></div>
+                <div><dt>Precio del plan</dt><dd>{euros(carrito.precio)}</dd></div>
                 {carrito.promo && (
                   <div className="descuento">
                     <dt>Descuento de bienvenida <span className="mono">{PROMO.codigo}</span></dt>
@@ -179,12 +200,14 @@ export default function Checkout({ aviso }) {
                 <input type="checkbox" checked={acepta} onChange={(e) => setAcepta(e.target.checked)} />
                 <span>Entiendo que es una demostración y que no se ha cobrado nada.</span>
               </label>
+              {errorPrecio && <p className="jn-form-error" role="alert">{errorPrecio}</p>}
               <div className="jn-checkout-acciones">
-                <button type="button" className="jn-btn jn-btn-pro" onClick={completar} disabled={!acepta}>
-                  Completar la prueba <span aria-hidden>→</span>
+                <button type="button" className="jn-btn jn-btn-pro" onClick={completar} disabled={!acepta || validando}>
+                  {validando ? "Validando importe…" : "Completar la prueba"} <span aria-hidden>→</span>
                 </button>
-                <button type="button" className="jn-btn jn-btn-suave" onClick={() => setPaso(1)}>Volver</button>
+                <button type="button" className="jn-btn jn-btn-suave" onClick={() => setPaso(1)} disabled={validando}>Volver</button>
               </div>
+              <p className="jn-checkout-nota">Al continuar, el servidor recalcula el precio de {carrito.saltos} saltos y comprueba que coincide antes de activar la demo.</p>
             </>
           )}
         </div>
@@ -193,6 +216,7 @@ export default function Checkout({ aviso }) {
           <span className="jn-eyebrow"><i aria-hidden /> qué pasa después</span>
           <ol>
             <li><b>Revisas</b><span>Plan, descuento y precio final antes de nada.</span></li>
+            <li><b>Valida el servidor</b><span>El backend recalcula el precio de los saltos antes de continuar.</span></li>
             <li><b>Pruebas</b><span>Recorres la contratación sin datos de pago ni cargos.</span></li>
             <li><b>El equipo activa</b><span>Cuando haya pago confirmado, Pro queda en tu cuenta.</span></li>
           </ol>

@@ -33,6 +33,8 @@ export function guardaUsuario(u) {
   const recorte = {
     id: u.id, email: u.email, alias: u.alias, plan: u.plan,
     activo: u.activo, circuito: u.circuito, saltos_max: u.saltos_max,
+    saltos_plan: u.saltos_plan, precio_mes: u.precio_mes,
+    solicitud_suscripcion: u.solicitud_suscripcion,
   };
   usuarioMemoria = recorte;
   try { localStorage.setItem(CLAVE_USUARIO, JSON.stringify(recorte)); }
@@ -110,6 +112,17 @@ export async function miNodo(direccion = null, conexiones = 0) {
 
 /** Comprobación REAL del circuito: pide al destino que IP ve al salir por él */
 export async function comprobar(password) { return (await api("POST", "/comprobar", { password })).datos; }
+
+/** Precio Pro calculado por el backend. El frontend solo previsualiza. */
+export async function precioPro(saltos = 3, promo = true) {
+  return (await api("POST", "/precio-pro", { saltos, promo }, false)).datos;
+}
+
+/** Solicitud de cambio de saltos. No cobra ni cambia el plan: queda pendiente
+    de que el equipo confirme el pago. */
+export async function solicitarSuscripcion(saltos) {
+  return (await api("POST", "/me/suscripcion", { saltos })).datos;
+}
 
 /** Geolocalización real hecha en el servidor (con caché); sin IP usa la tuya */
 export async function geoApi(ip = null) {

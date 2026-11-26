@@ -1,0 +1,99 @@
+/* Precio dinámico del Pro y carrito configurable. */
+
+.jn-plan-precio.cambiando b {
+  animation: jn-precio-pop .38s cubic-bezier(.2, .8, .25, 1);
+}
+@keyframes jn-precio-pop {
+  0% { transform: translateY(7px) scale(.94); opacity: .55; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+.jn-plan-precio b { transition: color .2s ease; }
+
+.jn-plan-desglose {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: -8px 0 10px;
+  color: var(--texto-suave);
+  font-size: 9.5px;
+  letter-spacing: .01em;
+}
+.jn-plan-desglose span { white-space: nowrap; }
+.jn-plan-desglose .extra { color: var(--acento-1); font-weight: 700; }
+.jn-plan-desglose .total { color: var(--texto); font-weight: 600; }
+.jn-plan-pro .jn-plan-desglose { color: #8fa9bc; }
+.jn-plan-pro .jn-plan-desglose .extra { color: #7fe3cf; }
+.jn-plan-pro .jn-plan-desglose .total { color: #e6f4ff; }
+
+.jn-circ-control-cab { align-items: center; }
+.jn-circ-paso {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.jn-circ-paso button {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgb(255 255 255 / .16);
+  border-radius: 7px;
+  background: rgb(255 255 255 / .05);
+  color: #cfeee8;
+  font: 700 13px/1 var(--fuente-mono);
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, opacity .18s ease;
+}
+.jn-circ-paso button:hover:not(:disabled) { background: rgb(53 199 167 / .16); border-color: #35c7a7; }
+.jn-circ-paso button:disabled { opacity: .28; cursor: not-allowed; }
+.jn-circ-ticks span { transition: color .2s ease, opacity .2s ease, transform .2s ease; }
+.jn-circ-ticks span.on { transform: translateY(-1px); }
+.jn-circ-ticks span.bloqueado { opacity: .25; }
+
+.jn-item-saltos {
+  display: grid;
+  gap: 8px;
+  padding: 11px 0 2px;
+  border-top: 1px solid var(--jn-linea);
+}
+.jn-item-saltos-cab {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11.5px;
+  color: var(--texto-suave);
+}
+.jn-item-saltos-cab b { color: var(--texto); font-size: 16px; }
+.jn-item-saltos-opciones {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+}
+.jn-item-saltos-opciones button {
+  display: grid;
+  gap: 1px;
+  padding: 7px 2px 6px;
+  border: 1px solid var(--jn-linea);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--texto) 2%, transparent);
+  color: var(--texto-suave);
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, color .18s ease, transform .18s ease;
+}
+.jn-item-saltos-opciones button:hover { border-color: var(--acento-1); transform: translateY(-1px); }
+.jn-item-saltos-opciones button.on {
+  border-color: var(--acento-1);
+  background: color-mix(in srgb, var(--acento-1) 11%, transparent);
+  color: var(--texto);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acento-1) 32%, transparent);
+}
+.jn-item-saltos-opciones span { font: 700 13px/1.1 var(--fuente-mono); }
+.jn-item-saltos-opciones small { font: 8px/1.1 var(--fuente-mono); opacity: .75; }
+.jn-item-saltos p { margin: 0; font-size: 9.5px; color: var(--texto-suave); }
+
+@media (max-width: 420px) {
+  .jn-item-saltos-opciones { gap: 3px; }
+  .jn-item-saltos-opciones button { padding: 6px 1px 5px; }
+  .jn-item-saltos-opciones small { font-size: 7px; }
+}

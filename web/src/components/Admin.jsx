@@ -18,6 +18,7 @@ function FilaUsuario({ u, esAdmin, aviso, onBorrado }) {
   const [ocupado, setOcu] = useState(false);
   const [confBorra, setConf] = useState(false);
   const [plan, setPlan] = useState(u.plan);
+  const [saltosPlan, setSaltosPlan] = useState(u.saltos_plan || 7);
   const [rol, setRol] = useState(u.rol);
 
   async function despacha(cambios, msg) {
@@ -47,16 +48,26 @@ function FilaUsuario({ u, esAdmin, aviso, onBorrado }) {
       </td>
       <td>
         {esAdmin ? (
-          <select className="campo mono" style={{ width: "auto", padding: "4px 8px", fontSize: 12, marginBottom: 0 }}
-            value={plan} disabled={ocupado}
-            onChange={(e) => { setPlan(e.target.value); despacha({ plan: e.target.value }, `plan de #${u.id} → ${e.target.value}`); }}
-            aria-label="Plan del usuario">
-            <option value="free">🌱 free</option>
-            <option value="pro">⚡ pro</option>
-            <option value="empresarial">🏛 empresarial</option>
-          </select>
+          <div style={{ display: "grid", gap: 4 }}>
+            <select className="campo mono" style={{ width: "auto", padding: "4px 8px", fontSize: 12, marginBottom: 0 }}
+              value={plan} disabled={ocupado}
+              onChange={(e) => { setPlan(e.target.value); despacha({ plan: e.target.value, saltos_plan: e.target.value === "pro" ? saltosPlan : undefined }, `plan de #${u.id} → ${e.target.value}`); }}
+              aria-label="Plan del usuario">
+              <option value="free">🌱 free</option>
+              <option value="pro">⚡ pro</option>
+              <option value="empresarial">🏛 empresarial</option>
+            </select>
+            {plan === "pro" && (
+              <select className="campo mono" style={{ width: "auto", padding: "3px 6px", fontSize: 10.5, marginBottom: 0 }}
+                value={saltosPlan} disabled={ocupado}
+                onChange={(e) => { const n = Number(e.target.value); setSaltosPlan(n); despacha({ saltos_plan: n }, `#${u.id} → ${n} saltos`); }}
+                aria-label="Saltos contratados">
+                {[3, 4, 5, 6, 7].map((n) => <option key={n} value={n}>{n} saltos · {n + 2} €/mes</option>)}
+              </select>
+            )}
+          </div>
         ) : (
-          <span className={`chip mono ${u.plan === "pro" ? "acento" : ""}`} style={{ fontSize: 10.5 }}>{PLAN_ICO[u.plan] || ""} {u.plan}</span>
+          <span className={`chip mono ${u.plan === "pro" ? "acento" : ""}`} style={{ fontSize: 10.5 }}>{PLAN_ICO[u.plan] || ""} {u.plan}{u.plan === "pro" && u.saltos_plan ? ` · ${u.saltos_plan} saltos` : ""}</span>
         )}
       </td>
       <td>

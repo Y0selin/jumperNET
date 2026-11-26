@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import CircuitoPlan from "./CircuitoPlan.jsx";
 import ContactoVentas from "./ContactoVentas.jsx";
-import { PLANES, PROMO, COMPARATIVA, planDe } from "../lib/planes.js";
+import {
+  PLANES, PROMO, COMPARATIVA, planDe,
+  PRECIO_BASE_PRO, precioPro, extrasPro, normalizaSaltos, caracteristicasPro,
+} from "../lib/planes.js";
 import { agregaPro, promoUsada, useCarrito } from "../lib/carrito.js";
 import { getToken, getUsuarioGuardado } from "../lib/api.js";
 
@@ -40,14 +43,48 @@ const Check = ({ off = false }) => (
 
 const euros = (n) => n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 
+/* Anima el número del precio cada vez que cambia el circuito. */
+function usePrecioAnimado(destino) {
+  const [valor, setValor] = useState(destino);
+  const anterior = useRef(destino);
+  const [cambiando, setCambiando] = useState(false);
+
+  useEffect(() => {
+    const desde = anterior.current;
+    anterior.current = destino;
+    if (desde === destino) return;
+    let raf;
+    const t0 = performance.now();
+    const duracion = 380;
+    setCambiando(true);
+    const paso = (t) => {
+      const p = Math.min(1, (t - t0) / duracion);
+      const suave = 1 - Math.pow(1 - p, 3);
+      setValor(desde + (destino - desde) * suave);
+      if (p < 1) raf = requestAnimationFrame(paso);
+      else { setValor(destino); setCambiando(false); }
+    };
+    raf = requestAnimationFrame(paso);
+    return () => cancelAnimationFrame(raf);
+  }, [destino]);
+
+  return { valor, cambiando };
+}
+
 export default function Tarifas({ irAuth, dentroPanel = false }) {
-  const [saltosPro, setSaltosPro] = useState(planDe(getUsuarioGuardado()).saltosMax === 7 ? 5 : 3);
+  const carrito = useCarrito();
+  const planInicial = planDe(getUsuarioGuardado());
+  const [saltosPro, setSaltosPro] = useState(() => normalizaSaltos(
+    carrito.items[0]?.saltos || (planInicial.id === "pro" ? planInicial.saltosMax : 3)
+  ));
   const [verTodas, setVerTodas] = useState(true);
   const [contacto, setContacto] = useState(false);
   const [anadido, setAnadido] = useState(false);
   const [promoVisible, setPromoVisible] = useState(true);
   const [usuario, setUsuario] = useState(() => getUsuarioGuardado());
-  const carrito = useCarrito();
+  const precioAnimado = usePrecioAnimado(precioPro(saltosPro));
+  const extraPro = extrasPro(saltosPro);
+  const descuentoPro = Math.round(precioPro(saltosPro) * PROMO.porcentaje) / 100;
 
   useEffect(() => {
     let vivo = true;
@@ -68,10 +105,16 @@ export default function Tarifas({ irAuth, dentroPanel = false }) {
 
   function configurarPro() {
     if (esProReal) { window.location.hash = "#/panel"; return; }
-    agregaPro();
+    agregaPro(saltosPro);
     setAnadido(true);
     setTimeout(() => setAnadido(false), 2200);
     window.dispatchEvent(new CustomEvent("jumpernet-carrito-abrir"));
+  }
+
+  function eligeSaltos(n) {
+    setSaltosPro(normalizaSaltos(n));
+    setAnadido(false);
+    if (carrito.cantidad) agregaPro(n);
   }
 
   const filas = COMPARATIVA.flatMap((g) => g.filas.map((f) => ({ ...f, grupo: g.grupo }))).filter(
@@ -137,9 +180,15 @@ export default function Tarifas({ irAuth, dentroPanel = false }) {
 
               <p className="jn-plan-desc">{p.resumen}</p>
 
-              <div className={`jn-plan-precio ${p.precio == null ? "a-medida" : ""}`}>
+              <div className={`jn-plan-precio ${p.precio == null ? "a-medida" : ""} ${esPro && precioAnimado.cambiando ? "cambiando" : ""}`} aria-live="polite">
                 {p.precio == null ? (
                   <b>A medida</b>
+                ) : esPro ? (
+                  <>
+                    <b>{Math.round(precioAnimado.valor)}</b>
+                    <span className="jn-plan-moneda">€</span>
+                    <i>al mes</i>
+                  </>
                 ) : (
                   <>
                     <b>{p.precio}</b>
@@ -150,10 +199,22 @@ export default function Tarifas({ irAuth, dentroPanel = false }) {
                 {p.precio == null && <i>precio personalizado</i>}
               </div>
 
+              {esPro && (
+                <div className="jn-plan-desglose mono" aria-live="polite">
+                  <span>{PRECIO_BASE_PRO} € base · 3 saltos</span>
+                  <span className={extraPro ? "extra" : ""}>
+                    {extraPro ? `+${extraPro} € · ${saltosPro - 3} salto${saltosPro - 3 === 1 ? "" : "s"} extra` : "sin extras"}
+                  </span>
+                  <span className="total">renovación {euros(precioPro(saltosPro))}/mes</span>
+                </div>
+              )}
               {esPro && descuentoDisponible && (
                 <p className="jn-plan-estreno mono">
-                  primer pago {euros(4.5)} con {PROMO.codigo} · luego {euros(5)}/mes
+                  primer pago {euros(precioPro(saltosPro) - descuentoPro)} con {PROMO.codigo} · luego {euros(precioPro(saltosPro))}/mes
                 </p>
+              )}
+              {esPro && !descuentoDisponible && (
+                <p className="jn-plan-estreno mono">renovación {euros(precioPro(saltosPro))}/mes · promoción ya utilizada</p>
               )}
               {p.precio === 0 && <p className="jn-plan-estreno mono">sin tarjeta · sin fecha de caducidad</p>}
               {p.precio == null && <p className="jn-plan-estreno mono">según capacidad y configuración</p>}
@@ -162,12 +223,12 @@ export default function Tarifas({ irAuth, dentroPanel = false }) {
                 saltos={esPro ? saltosPro : p.id === "empresarial" ? 7 : 3}
                 tono={p.id}
                 interactivo={esPro}
-                onCambio={setSaltosPro}
+                onCambio={eligeSaltos}
                 compacto
               />
 
               <ul className="jn-plan-lista">
-                {p.caracteristicas.map((c) => (
+                {(esPro ? caracteristicasPro(saltosPro) : p.caracteristicas).map((c) => (
                   <li key={c.titulo}>
                     <span className="jn-plan-check"><Check /></span>
                     <details>
@@ -197,7 +258,7 @@ export default function Tarifas({ irAuth, dentroPanel = false }) {
                         <circle cx="9.5" cy="19.5" r="1.2" /><circle cx="17" cy="19.5" r="1.2" />
                       </svg>
                     </span>
-                    {esProReal ? "Abrir mi plan" : anadido ? "Añadido al carrito" : carrito.cantidad ? "Ver en el carrito" : p.cta}
+                    {esProReal ? "Abrir mi plan" : anadido ? "Añadido al carrito" : carrito.cantidad ? (carrito.saltos === saltosPro ? "Ver en el carrito" : "Actualizar carrito") : p.cta}
                     <span aria-hidden>{anadido ? "✓" : "→"}</span>
                   </button>
                 )}
@@ -209,7 +270,7 @@ export default function Tarifas({ irAuth, dentroPanel = false }) {
                 )}
                 <p className="jn-plan-nota">
                   {p.id === "free" && "Cuenta en 20 segundos · sin pasar por el carrito"}
-                  {p.id === "pro" && "Se añade al carrito y revisas antes de continuar"}
+                  {p.id === "pro" && `${saltosPro} saltos · ${euros(precioPro(saltosPro))}/mes · revisas antes de continuar`}
                   {p.id === "empresarial" && "Sin alta automática: primero hablamos"}
                 </p>
               </div>

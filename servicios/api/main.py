@@ -87,6 +87,10 @@ PLANES = {
     "empresarial": {"saltos_max": 7, "refresco_seg": 10 * 3600, "puede_elegir": True},
     # moderadores/admin no pueden elegir saltos (3 fijos) pero no tienen cooldown de refresco
 }
+# Precio del Pro según el máximo contratado. Es la ÚNICA tabla que decide el
+# importe definitivo: la web solo previsualiza y /precio-pro valida.
+PRECIOS_PRO = {3: 5, 4: 6, 5: 7, 6: 8, 7: 9}
+PROMO_PORCENTAJE = 10
 ROLES = {"usuario", "moderador", "admin"}
 
 
@@ -193,6 +197,13 @@ def conex():
     # desde el panel (PATCH /me {"salto_publico":true}). 0 = no, 1 = aceptado.
     try:
         c.execute("ALTER TABLE usuarios ADD COLUMN peer_publico INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+    # máximo de saltos contratado en Pro (3..7). El precio depende de este
+    # número y el backend nunca acepta más saltos de los comprados. Las
+    # cuentas Pro anteriores conservan 7 por compatibilidad.
+    try:
+        c.execute("ALTER TABLE usuarios ADD COLUMN saltos_plan INTEGER NOT NULL DEFAULT 7")
     except sqlite3.OperationalError:
         pass
     return c
@@ -471,16 +482,44 @@ def ip_salida_de_circuito(circ: dict | None) -> str | None:
 
 
 def datos_plan(u) -> dict:
-    """Lo que el panel necesita del plan de este usuario."""
+    """Lo que el panel necesita del plan de este usuario.
+
+    En Pro el máximo sale de `saltos_plan`, no de un 7 fijo: así el precio y
+    los permisos reales coinciden con lo contratado. El backend es la fuente
+    de verdad; la demo local del frontend nunca cambia estos valores."""
     plan = PLANES.get(u["plan"], PLANES["free"])
     puede_elegir = bool(plan["puede_elegir"])
     if u["rol"] == "admin":
         puede_elegir = True   # el admin prueba lo que quiera
+
+    saltos_plan = None
+    if u["plan"] == "pro":
+        try:
+            saltos_plan = int(u["saltos_plan"] or 7)
+        except (KeyError, IndexError, TypeError, ValueError):
+            saltos_plan = 7
+        if saltos_plan not in PRECIOS_PRO:
+            saltos_plan = 7
+        saltos_max = saltos_plan
+    elif u["plan"] == "empresarial":
+        try:
+            saltos_plan = int(u["saltos_plan"] or 7)
+        except (KeyError, IndexError, TypeError, ValueError):
+            saltos_plan = 7
+        saltos_plan = max(3, min(7, saltos_plan))
+        saltos_max = max(plan["saltos_max"], saltos_plan)
+    else:
+        saltos_max = plan["saltos_max"]
+
+    precio_mes = PRECIOS_PRO.get(saltos_plan) if u["plan"] == "pro" else None
     return {
         "plan": u["plan"],
         "rol": u["rol"],
-        "saltos_max": plan["saltos_max"],
+        "saltos_max": saltos_max,
+        "saltos_plan": saltos_plan,
         "saltos_min": 3,
+        "precio_mes": precio_mes,
+        "precio_base": PRECIOS_PRO[3] if u["plan"] == "pro" else 0,
         "puede_elegir_saltos": puede_elegir,
         "refresco_cada_h": round(plan["refresco_seg"] / 3600),
     }
@@ -507,6 +546,7 @@ def fila_a_dict(f) -> dict:
         "lema": pref.get("lema") or None,
         "foto": pref.get("foto") or None,
         "salto_publico": bool(publico),
+        "solicitud_suscripcion": pref.get("solicitud_suscripcion"),
         "alta": f["fecha_registro"],
         "ip_real": f["ip_real"],
         # ip_salida: la que verá internet por el circuito ACTIVO (exit peer =
@@ -1313,6 +1353,77 @@ def editar_me(prefs: Preferencias, token: str | None = Header(default=None, alia
     return fila_a_dict(c.execute("SELECT * FROM usuarios WHERE id=?", (u["id"],)).fetchone())
 
 
+class PrecioPro(BaseModel):
+    saltos: int = 3
+    promo: bool = True
+
+
+@app.post("/precio-pro")
+def precio_pro(body: PrecioPro):
+    """Importe definitivo calculado en el servidor. No cobra ni activa nada.
+
+    La promoción de bienvenida se aplica solo si el cliente la declara, porque
+    sin pasarela no hay forma de verificar que sea la primera compra: la
+    respuesta lo indica explícitamente para no vender una validación falsa."""
+    saltos = int(body.saltos)
+    if saltos not in PRECIOS_PRO:
+        raise HTTPException(status_code=422, detail="el plan Pro permite entre 3 y 7 saltos")
+    precio = PRECIOS_PRO[saltos]
+    descuento = round(precio * PROMO_PORCENTAJE / 100, 2) if body.promo else 0
+    return {
+        "saltos": saltos,
+        "precio_base": PRECIOS_PRO[3],
+        "extras": precio - PRECIOS_PRO[3],
+        "precio": precio,
+        "descuento": descuento,
+        "primer_pago": round(precio - descuento, 2),
+        "renovacion": precio,
+        "promo_verificada": False,
+        "nota": "importe calculado por el backend; la elegibilidad de la promoción se confirma al contratar",
+    }
+
+
+class SolicitudSaltos(BaseModel):
+    saltos: int
+
+
+@app.post("/me/suscripcion")
+def solicitar_suscripcion(
+    body: SolicitudSaltos,
+    token: str | None = Header(default=None, alias="Authorization"),
+):
+    """Registra una solicitud de cambio de saltos. NO cobra ni cambia el plan.
+
+    El precio lo calcula el backend y queda pendiente de confirmación humana.
+    Así la interfaz puede enseñar el importe y las condiciones sin simular un
+    cargo que todavía no existe."""
+    u = _auth(token)
+    c = conex()
+    f = c.execute("SELECT * FROM usuarios WHERE id=?", (u["id"],)).fetchone()
+    if f["plan"] not in ("pro", "empresarial"):
+        raise HTTPException(status_code=403, detail="primero necesitas una suscripción Pro")
+    saltos = int(body.saltos)
+    if saltos not in PRECIOS_PRO:
+        raise HTTPException(status_code=422, detail="el plan Pro permite entre 3 y 7 saltos")
+    try:
+        pref = json.loads(f["pref"] or "{}")
+    except Exception:
+        pref = {}
+    solicitud = {
+        "saltos": saltos,
+        "precio": PRECIOS_PRO[saltos],
+        "estado": "pendiente",
+        "fecha": time.time(),
+        "nota": "sin cargo: el equipo confirma el pago antes de aplicar el cambio",
+    }
+    pref["solicitud_suscripcion"] = solicitud
+    c.execute("UPDATE usuarios SET pref=? WHERE id=?", (json.dumps(pref, ensure_ascii=False), u["id"]))
+    c.commit()
+    d = fila_a_dict(c.execute("SELECT * FROM usuarios WHERE id=?", (u["id"],)).fetchone())
+    d["solicitud"] = solicitud
+    return d
+
+
 @app.post("/connect")
 def connect(
     cbase: Conexion | None = None,
@@ -1766,6 +1877,7 @@ def admin_usuarios(token: str | None = Header(default=None, alias="Authorization
 
 class CambioAdmin(BaseModel):
     plan: str | None = None   # free | pro | empresarial
+    saltos_plan: int | None = None  # 3..7 cuando el plan es Pro
     rol: str | None = None    # usuario | moderador | admin (solo admin)
     desactivar: bool | None = None
     activar: bool | None = None
@@ -1785,6 +1897,17 @@ def admin_editar(id_usuario: int, body: CambioAdmin, token: str | None = Header(
         if yo["rol"] != "admin":
             raise HTTPException(status_code=403, detail="solo el admin cambia el plan")
         cambios.append("plan=?"); valores.append(body.plan)
+        if body.plan == "pro" and body.saltos_plan is None:
+            cambios.append("saltos_plan=?"); valores.append(7)
+    if body.saltos_plan is not None:
+        if yo["rol"] != "admin":
+            raise HTTPException(status_code=403, detail="solo el admin cambia los saltos")
+        if body.saltos_plan not in PRECIOS_PRO:
+            raise HTTPException(status_code=422, detail="saltos_plan debe estar entre 3 y 7")
+        plan_objetivo = body.plan or f["plan"]
+        if plan_objetivo not in ("pro", "empresarial"):
+            raise HTTPException(status_code=422, detail="solo los planes Pro o Empresarial tienen saltos configurables")
+        cambios.append("saltos_plan=?"); valores.append(body.saltos_plan)
     if body.rol is not None:
         if body.rol not in ROLES:
             raise HTTPException(status_code=422, detail="rol no valido")

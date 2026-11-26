@@ -154,7 +154,7 @@ export default function Cuenta({ yo: yoInicial, aviso, alSalir, irRed, alRecarga
           <div style={{ display: "grid", gap: 6, justifyItems: "end" }}>
             <span className={`chip ${activo ? "vivo" : "muerto"} mono`}>{activo ? "RED ACTIVA" : "RED APAGADA"}</span>
             <span className={`chip ${yo?.plan === "pro" ? "acento" : ""} mono`} style={{ fontSize: 10.5 }}
-              title={yo?.plan === "pro" ? "ha el número de saltos (3…7) y refresca cada 10 h" : "3 saltos fijos · refresco 1 vez al día"}>
+              title={yo?.plan === "pro" ? `eliges el número de saltos (3…${yo?.saltos_max || 7}) y refrescas cada 10 h` : "3 saltos fijos · refresco 1 vez al día"}>
               {yo?.plan === "pro" ? "⚡ plan pro" : yo?.plan === "empresarial" ? "🏛 empresarial" : "🌱 plan free"}
             </span>
             <span className="chip mono" style={{ fontSize: 10.5, color: "var(--acento-2)", borderColor: "rgb(from var(--acento-2) r g b / .4)", background: "rgb(from var(--acento-2) r g b / .09)" }}>
@@ -174,7 +174,7 @@ export default function Cuenta({ yo: yoInicial, aviso, alSalir, irRed, alRecarga
         )}
 
         <div className="tira-stats" style={{ marginTop: 16 }}>
-          <Stat etq="estado de red" val={activo ? "ACTIVA" : "APAGADA"} pie={activo ? "tráfico en 3 saltos" : "sin circuito abierto"} tono={activo ? "ok" : "off"} />
+          <Stat etq="estado de red" val={activo ? "ACTIVA" : "APAGADA"} pie={activo ? `tráfico en ${yo?.circuito?.length || 0} saltos` : "sin circuito abierto"} tono={activo ? "ok" : "off"} />
           <Stat etq="saltos" val={`${yo?.circuito?.length || 0} / ${yo?.saltos_max || 3}`} pie={`plan ${yo?.plan || "free"}`} tono="ok" />
           <Stat etq="tu IP pública" val={<span style={{ fontSize: 13.5 }}>{yo?.ip_real || "—"}</span>} pie="la que ve el servidor" tono="info" />
           <Stat etq="IP de salida" val={<span style={{ fontSize: 13.5 }}>{activo ? yo?.ip_salida : "—"}</span>} pie={activo ? "la que ve internet" : "sin uso"} tono="aviso" />

@@ -9,6 +9,7 @@ import Revela from "./Revela.jsx";
 import { TarjetaHoy } from "./Hoy.jsx";
 import { haceCuanto } from "../lib/fecha.js";
 import { planDe } from "../lib/planes.js";
+import { usePrefCircuito } from "../lib/panel.jsx";
 
 const CLAVE_LOG = "jumpernet-actividad";
 
@@ -101,7 +102,7 @@ function PlanRed({ yo, activo }) {
               : plan.id === "free"
                 ? "3 saltos fijos, cifrado JENC y refresco diario. Sin caducidad."
                 : plan.id === "pro"
-                  ? "Eliges de 3 a 7 saltos y refrescas el circuito cada 10 h."
+                  ? `Eliges de 3 a ${plan.saltosMax || yo?.saltos_max || 7} saltos y refrescas el circuito cada 10 h.`
                   : "Infraestructura y configuración acordadas con el equipo."}
           </span>
         </div>
@@ -160,7 +161,8 @@ function Actividad({ log, alLimpiar }) {
 }
 
 /* ── interruptor de red grande ── */
-function Interruptor({ activo, ocupado, alCambiar }) {
+function Interruptor({ activo, ocupado, alCambiar, saltos = 3 }) {
+  const ruta = Array.from({ length: saltos }, (_, i) => `nodo${i + 1}`);
   return (
     <section className={`red-card pn-switch tarjeta brillo ${activo ? "on" : "off"}`}>
       <div className="pn-switch-cab">
@@ -178,7 +180,7 @@ function Interruptor({ activo, ocupado, alCambiar }) {
             className={"interruptor" + (activo ? " activo" : "") + (ocupado ? " ocupado" : "")}
             onClick={alCambiar} disabled={ocupado}
             aria-label={activo ? "Desactivar red" : "Activar red"}
-            title={activo ? "Desactivar la red (cierra tu circuito)" : "Activar la red (crea tu circuito de 3 saltos)"}
+            title={activo ? "Desactivar la red (cierra tu circuito)" : `Activar la red (crea tu circuito de ${saltos} saltos)`}
           >
             <span className="interruptor-bola" />
           </button>
@@ -189,10 +191,10 @@ function Interruptor({ activo, ocupado, alCambiar }) {
           <p className="nota">
             {activo
               ? "Tu circuito está vivo: al navegar con el proxy, la IP que ve internet es la del nodo de salida, no la tuya. Abajo puedes comprobarlo de verdad."
-              : "Nada se conecta hasta que tú lo digas: pulsa el interruptor y la red elegirá 3 nodos vivos al azar, cifrará cada salto y saldrá solo por 80/443."}
+              : `Nada se conecta hasta que tú lo digas: pulsa el interruptor y la red elegirá ${saltos} nodos vivos al azar, cifrará cada salto y saldrá solo por 80/443.`}
           </p>
           <div className="pn-switch-datos">
-            <span><b>3</b><small>saltos al azar</small></span>
+            <span><b>{saltos}</b><small>saltos al azar</small></span>
             <span><b>80/443</b><small>solo salida</small></span>
             <span><b>JENC</b><small>ChaCha20</small></span>
           </div>
@@ -200,7 +202,7 @@ function Interruptor({ activo, ocupado, alCambiar }) {
       </div>
 
       <div className="pn-switch-tuberia">
-        <Tuberia activo={activo} saltos={["nodo₁", "nodo₂", "nodo₃"]} paquetes={5} compacta />
+        <Tuberia activo={activo} saltos={ruta} paquetes={5} compacta />
       </div>
     </section>
   );
@@ -300,13 +302,13 @@ function SelectorSaltos({ yo, saltosSel, setSel, ocupado }) {
       {!puede ? (
         <p className="nota pn-saltos-aviso" style={{ marginTop: 8, fontSize: 12 }}>
           Con el plan <b>Free</b> la conexión usa siempre 3 saltos fijos. Con <b>Pro</b> eliges
-          cuántos quieres, de 3 a 7, y refrescas el circuito cada 10 h.
+          cuántos quieres, de 3 a {max}, y refrescas el circuito cada 10 h.
           <a href="#/tarifas">Ver los planes →</a>
         </p>
       ) : (
         <p className="nota" style={{ marginTop: 8, fontSize: 12 }}>
           El nº de saltos se aplica la PRÓXIMA vez que conectes (o al girar el circuito).
-          Más saltos = más relés entre tú y la salida: más privacidad, algo más de latencia.
+          Más saltos = más relés entre tú y la salida: más intermediarios y algo más de latencia; no es una garantía automática de más seguridad.
         </p>
       )}
     </div>
@@ -523,13 +525,30 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
   const [ipSalida, setIpSalida] = useState(null);
   const [copiada, setCopiada] = useState(null);
   const [avisaExt, setAvisaExt] = useState(false);
-  const [saltosSel, setSel] = useState(3);   // nº deseado de saltos (plan pro)
-  const [modoSel, setModo] = useState("todos"); // "todos" | "externos"
+  const [prefCircuito, guardaPrefCircuito] = usePrefCircuito(yo0);
+  const [saltosSel, setSel] = useState(() => Math.min(prefCircuito.saltos, yo0?.saltos_max || 3));
+  const [modoSel, setModo] = useState(prefCircuito.modo || "todos"); // "todos" | "externos"
   const [muestras, setMuestras] = useState([]); // latencias medidas de la API
   const [log, setLog] = useState(leeLog);      // actividad local del panel
   const divMapa = useRef(null);
   const mapa = useRef(null);
   const capa = useRef(null);
+
+  /* si el plan real cambia, no dejamos seleccionado un tamaño no permitido */
+  useEffect(() => {
+    const max = Math.max(3, Number(yo0?.saltos_max) || 3);
+    setSel((n) => Math.min(max, Math.max(3, n)));
+  }, [yo0?.saltos_max]);
+
+  function eligeSaltos(n) {
+    setSel(n);
+    guardaPrefCircuito({ saltos: n, modo: modoSel });
+  }
+
+  function eligeModo(modo) {
+    setModo(modo);
+    guardaPrefCircuito({ saltos: saltosSel, modo });
+  }
 
   const apunta = (texto, tipo = "ok") => {
     const item = { t: Date.now(), texto, tipo };
@@ -570,9 +589,10 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
     return () => { vivo = false; };
   }, [yo?.activo, yo?.ip_salida, ipSalida]);
 
-  /* mapa: se crea una vez y se repinta con cada dato nuevo */
+  /* mapa: se crea al activar la red y se destruye al apagarla o salir de la
+     pestaña. Así una segunda conexión no reutiliza un contenedor desmontado. */
   useEffect(() => {
-    if (mapa.current || !divMapa.current) return;
+    if (!yo?.activo || mapa.current || !divMapa.current) return;
     const m = L.map(divMapa.current, { attributionControl: false });
     // FONDO VECTORIAL ÚNICO: los proveedores de tiles responden HTTP 200 con
     // la imagen del mensaje «API KEY REQUIRED» (no hay tileerror que detectar,
@@ -592,8 +612,14 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
     capa.current = L.layerGroup().addTo(m);
     mapa.current = m;
     m.setView([40, -30], 3);
-    setTimeout(() => m.invalidateSize(), 80);
-  }, []);
+    const t = setTimeout(() => m.invalidateSize(), 80);
+    return () => {
+      clearTimeout(t);
+      m.remove();
+      mapa.current = null;
+      capa.current = null;
+    };
+  }, [yo?.activo]);
 
   useEffect(() => {
     if (!mapa.current || !capa.current) return;
@@ -747,8 +773,8 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
           )}
 
           <div className="pn-config">
-            <SelectorModo modo={modoSel} setModo={setModo} yo={yo} activo={activo} />
-            <SelectorSaltos yo={yo} saltosSel={saltosSel} setSel={setSel} ocupado={ocupado} />
+            <SelectorModo modo={modoSel} setModo={eligeModo} yo={yo} activo={activo} />
+            <SelectorSaltos yo={yo} saltosSel={saltosSel} setSel={eligeSaltos} ocupado={ocupado} />
           </div>
 
           {!activo && (
@@ -877,8 +903,8 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
               <span className="mono flecha">━━▶</span>
               {saltos.map((n, i) => (
                 <span key={n + i} style={{ display: "contents" }}>
-                  <Parada nombre={n} sub={i === 2 ? "_exit_" : i === 0 ? "entrada" : "relé ciego"}
-                    tipo={i === 2 ? "exit" : "nodo"} pulso={activo && i === 0} />
+                  <Parada nombre={n} sub={i === saltos.length - 1 ? "_exit_" : i === 0 ? "entrada" : "relé ciego"}
+                    tipo={i === saltos.length - 1 ? "exit" : "nodo"} pulso={activo && i === 0} />
                   <span className="mono flecha">━━▶</span>
                 </span>
               ))}
@@ -926,7 +952,7 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
           <div className="tarjeta pn-que-pasa">
             <h2 className="seccion">¿Qué pasa si activo?</h2>
             <div className="lista-hechos">
-              <Hecho>Se eligen <b>3 nodos vivos al azar</b> y se abre tu circuito.</Hecho>
+              <Hecho>Se eligen <b>{saltosSel} nodos vivos al azar</b> y se abre tu circuito.</Hecho>
               <Hecho>Aparece el comando SOCKS5 listo para copiar.</Hecho>
               <Hecho>Podrás <b>comprobar</b> que internet te ve con otra IP.</Hecho>
               <Hecho>Puedes girar el circuito sin cortar la sesión.</Hecho>

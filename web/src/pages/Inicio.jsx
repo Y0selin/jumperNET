@@ -24,7 +24,7 @@ const DESTINOS = [
   { r: "/usos", n: "01", t: "Para qué sirve", d: "Cinco situaciones reales —Wi-Fi público, otra IP, redes que filtran— con un circuito que enciendes y giras tú.", ico: "◎" },
   { r: "/proyecto", n: "02", t: "El proyecto", d: "Qué es JumperNET, qué problema resuelve y qué no promete. Con una demo del circuito que puedes tocar.", ico: "◈" },
   { r: "/funciona", n: "03", t: "Cómo funciona", d: "Los cuatro pasos desde crear la cuenta hasta navegar, el comando SOCKS5 y una terminal en vivo.", ico: "⌁" },
-  { r: "/tarifas", n: "04", t: "Tarifas", d: "Tres velocidades: 3 saltos gratis, hasta 7 en Pro y un plan a medida para equipos.", ico: "◇" },
+  { r: "/tarifas", n: "04", t: "Tarifas", d: "Free con 3 saltos, Pro configurable de 3 a 7 con herramientas avanzadas y un plan a medida para equipos.", ico: "◇" },
   { r: "/descargas", n: "05", t: "Descargas", d: "La extensión para tu navegador, el navegador completo para Windows y Linux, y GitHub Releases.", ico: "⬇" },
   { r: "/dudas", n: "06", t: "Dudas", d: "La IP, la latencia, lo que se guarda de ti y en qué se diferencia (y en qué no) de Tor.", ico: "?" },
   { r: "/video", n: "07", t: "El viaje en vídeo", d: "El recorrido completo, con las cuatro paradas explicadas y tiempo para entender qué pasa en cada una.", ico: "▶" },

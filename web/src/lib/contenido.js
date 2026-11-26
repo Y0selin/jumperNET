@@ -65,6 +65,6 @@ export const DUDAS = [
 
 export const PLANES_RESUMEN = [
   { nombre: "Free", precio: "0 €", nota: "3 saltos, cifrado base y refresco diario." },
-  { nombre: "Pro", precio: "5 €/mes", nota: "Hasta 7 saltos, mejor cifrado y refresco cada 10 h." },
+  { nombre: "Pro", precio: "desde 5 €/mes", nota: "Circuitos de 3 a 7 según lo contratado, herramientas avanzadas y refresco cada 10 h. El cifrado es el mismo que en Free." },
   { nombre: "Empresarial", precio: "a medida", nota: "Salidas y consumos dedicados, trato directo." },
 ];

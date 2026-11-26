@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useCarrito, quitaPro } from "../lib/carrito.js";
-import { PROMO } from "../lib/planes.js";
+import { useCarrito, quitaPro, cambiaSaltosPro } from "../lib/carrito.js";
+import { PROMO, SALTOS_MIN, SALTOS_MAX, PRECIO_BASE_PRO, precioPro } from "../lib/planes.js";
 
 /* Carrito lateral: una sola suscripción, sin tienda. Vive en Sitio para que
    esté disponible tanto en páginas públicas como con sesión iniciada. */
@@ -65,13 +65,31 @@ export default function CarritoPanel({ abierto, cerrar }) {
                   </span>
                   <div>
                     <b>JumperNET Pro</b>
-                    <span className="mono">suscripción mensual · 1 unidad</span>
+                    <span className="mono">{carrito.saltos} saltos · suscripción mensual</span>
                   </div>
                   <span className="jn-item-precio mono">{euros(carrito.precio)}</span>
                 </div>
+
+                <div className="jn-item-saltos" role="group" aria-label="Número máximo de saltos contratados">
+                  <div className="jn-item-saltos-cab">
+                    <span>Máximo de saltos</span>
+                    <b className="mono">{carrito.saltos}</b>
+                  </div>
+                  <div className="jn-item-saltos-opciones">
+                    {[SALTOS_MIN, 4, 5, 6, SALTOS_MAX].map((n) => (
+                      <button key={n} type="button" className={carrito.saltos === n ? "on" : ""}
+                        onClick={() => cambiaSaltosPro(n)}
+                        aria-pressed={carrito.saltos === n}>
+                        <span>{n}</span>
+                        <small>{precioPro(n)} €</small>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mono">base {euros(PRECIO_BASE_PRO)} + {carrito.extras ? `${euros(carrito.extras)} de saltos extra` : "sin extras"}</p>
+                </div>
                 <ul className="jn-item-lista">
-                  <li>Hasta 7 saltos por circuito</li>
-                  <li>Elección de 3 a 7 saltos</li>
+                  <li>Circuitos de 3 a {carrito.saltos} saltos</li>
+                  <li>Herramientas Pro desbloqueadas</li>
                   <li>Refresco del circuito cada 10 h</li>
                   <li>Todo lo incluido en Free</li>
                 </ul>
@@ -91,7 +109,9 @@ export default function CarritoPanel({ abierto, cerrar }) {
               )}
 
               <dl className="jn-totales">
-                <div><dt>Precio original</dt><dd>{euros(carrito.precio)}</dd></div>
+                <div><dt>Precio base · 3 saltos</dt><dd>{euros(carrito.base)}</dd></div>
+                <div><dt>Saltos adicionales · {carrito.saltos - 3}</dt><dd>{carrito.extras ? `+${euros(carrito.extras)}` : "—"}</dd></div>
+                <div><dt>Precio del plan</dt><dd>{euros(carrito.precio)}</dd></div>
                 {carrito.promo && (
                   <div className="descuento">
                     <dt>Descuento de bienvenida <span className="mono">{PROMO.codigo}</span></dt>
@@ -103,8 +123,8 @@ export default function CarritoPanel({ abierto, cerrar }) {
               </dl>
 
               <p className="jn-drawer-nota">
-                Entorno de pruebas: todavía no hay pasarela de pago conectada. No se realizará
-                ningún cargo y no pedimos datos de tarjeta.
+                El importe se recalcula y valida en el servidor al continuar. Entorno de pruebas:
+                todavía no hay pasarela conectada, no se realizará ningún cargo y no pedimos datos de tarjeta.
               </p>
             </div>
 

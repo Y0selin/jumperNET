@@ -254,6 +254,7 @@ igual(await pagina.$eval(".hero-switch", (b) => b.getAttribute("aria-checked")),
 igual(await pagina.$eval(".hn-panel", (e) => e.classList.contains("off")), true, "la portada refleja la red apagada");
 await pagina.click(".hero-switch");
 await pagina.click(".hn-paradas .hn-nodo:nth-child(4)");
+await espera(250);
 igual((await texto(".hn-ficha")).includes("nodo₃"), true, "tocar una parada cuenta qué ve y qué sabe");
 const antesGiro = await pagina.$$eval(".hn-paradas .hn-nodo b", (b) => b.map((x) => x.textContent).join("|"));
 await pagina.click(".hn-girar");
@@ -316,14 +317,14 @@ await pagina.waitForFunction(() => {
 await espera(80);
 
 console.log("\n== 1a · PÁGINAS PROPIAS (no anclas) ==");
-const enlacesNav = await pagina.$$eval(".dock-enlace", (as) => as.map((a) => a.getAttribute("href")));
-igual(enlacesNav.length, 6, "el dock tiene 6 páginas (sencillo)");
+const enlacesNav = await pagina.$$eval(".jn-dock-item", (as) => as.map((a) => a.getAttribute("href")));
+igual(enlacesNav.length, 9, "el dock tiene las 9 páginas públicas");
 igual(enlacesNav.includes("#/proyecto") && enlacesNav.includes("#/tarifas"), true, "los enlaces apuntan a rutas propias, no a anclas");
-await pagina.click('.dock-enlace[href="#/proyecto"]');
+await pagina.click('.jn-dock-item[href="#/proyecto"]');
 await espera(700);
 igual(await pagina.evaluate(() => location.hash), "#/proyecto", "«Proyecto» navega a su propia URL");
 igual((await texto("h1")).includes("Qué es JumperNET"), true, "la página del proyecto tiene su título");
-igual(await pagina.evaluate(() => document.querySelector(".dock-enlace.activa .dock-txt")?.textContent || null), "Proyecto", "el dock marca la página activa");
+igual(await pagina.evaluate(() => document.querySelector(".jn-dock-item.activa .jn-dock-txt")?.textContent || null), "Proyecto", "el dock marca la página activa");
 igual((await pagina.$$(".pp-parada")).length >= 6, true, "el proyecto trae el flujo TÚ → 3 nodos → internet");
 await captura("01a-proyecto");
 await pagina.evaluate(() => document.querySelector(".ds").scrollIntoView({ block: "center" }));
@@ -341,14 +342,14 @@ await espera(800);
 igual(await pagina.evaluate(() => location.hash), "#/equipo", "«Equipo» tiene su propia URL");
 igual((await texto("h1")).includes("Cinco personas"), true, "la página del equipo se presenta con las cinco personas");
 igual(await pagina.$$eval(".eq-persona", (p) => p.length), 5, "las cinco fichas del equipo están en la página");
-igual((await cuerpo()).includes("Yosselin") && (await cuerpo()).includes("Adrián"), true, "los nombres del equipo aparecen en la marca");
-igual(await pagina.evaluate(() => document.querySelector(".dock-enlace.activa .dock-txt")?.textContent || null), "Equipo", "el dock marca «Equipo» como página activa");
+igual((await cuerpo()).includes("Yoselin") && (await cuerpo()).includes("Adrián"), true, "los nombres del equipo aparecen en la marca");
+igual(await pagina.evaluate(() => document.querySelector(".jn-dock-item.activa .jn-dock-txt")?.textContent || null), "Equipo", "el dock marca «Equipo» como página activa");
 await pagina.click(".eq-punto");
 await espera(250);
 igual(await pagina.$eval(".eq-logo-foco", (e) => e.className.includes("es-01")), true, "el logo se explica por piezas al tocarlo");
 await captura("01a-equipo");
 
-await pagina.click('.dock-enlace[href="#/usos"]');
+await pagina.click('.jn-dock-item[href="#/usos"]');
 await espera(700);
 igual(await pagina.evaluate(() => location.hash), "#/usos", "«Para qué sirve» navega a su propia URL");
 igual((await texto("h1")).includes("Qué puedes hacer"), true, "la página explica para qué sirve con situaciones");
@@ -375,7 +376,7 @@ igual((await cuerpo()).includes("--proxy-user"), true, "y el comando correcto (-
 
 await pagina.evaluate(() => { location.hash = "#/tarifas"; });
 await espera(600);
-igual(await pagina.evaluate(() => document.querySelectorAll(".tarjeta-descarga").length), 3, "«Tarifas» tiene página propia con los 3 planes");
+igual(await pagina.evaluate(() => document.querySelectorAll(".jn-plan").length), 3, "«Tarifas» tiene página propia con los 3 planes");
 
 await pagina.evaluate(() => { location.hash = "#/dudas"; });
 await espera(600);
@@ -397,14 +398,19 @@ await pagina.evaluate(() => {
   document.getElementById("video").scrollIntoView();
 });
 await espera(1800);
-const vid = await pagina.$eval(".pp-video-lienzo", (v) => ({
-  w: v.videoWidth, h: v.videoHeight, t: v.currentTime, pausado: v.paused, listo: v.readyState,
-}));
-igual(vid.w, 1280, `el vídeo de portada carga a ${vid.w}×${vid.h}`);
-igual(vid.t > 0 && !vid.pausado, true, "se reproduce solo al entrar en pantalla");
+const vid = await pagina.evaluate(async () => {
+  const v = document.querySelector(".pp-video-lienzo");
+  if (!v) return null;
+  v.muted = true;
+  try { await v.play(); } catch { /* el navegador headless puede bloquear el gesto */ }
+  await new Promise((r) => setTimeout(r, 700));
+  return { w: v.videoWidth, h: v.videoHeight, t: v.currentTime, pausado: v.paused, listo: v.readyState };
+});
+igual(vid?.w, 1280, `el vídeo de portada carga a ${vid?.w}×${vid?.h}`);
+igual(vid?.t > 0 && !vid?.pausado, true, "el vídeo de portada se reproduce");
 /* la cabecera ya no lleva «Inicio»: el logo es el inicio, así que volver a #/
    no marca ninguna pestaña (y eso es lo correcto, no un fallo). */
-igual(await pagina.evaluate(() => !document.querySelector(".dock-enlace.activa")), true, "en la portada ninguna pestaña queda marcada (el logo es el inicio)");
+igual(await pagina.evaluate(() => document.querySelector(".jn-dock-item.activa .jn-dock-txt")?.textContent || null), "Inicio", "en la portada el dock marca Inicio");
 igual(await pagina.evaluate(() => document.querySelector(".pp-marca").getAttribute("href")), "#/", "el logo lleva a la portada");
 await captura("01b-video");
 
@@ -417,12 +423,12 @@ igual(await pagina.$eval(".pp-dock", (e) => {
   const r = e.getBoundingClientRect();
   return r.width > 300 && r.top > 700 && r.bottom <= 845;
 }), true, "dock fijo y visible en móvil");
-igual(await pagina.$$eval(".dock-enlace", (a) => a.length), 6, "el dock conserva las seis páginas en móvil");
-igual(await pagina.evaluate(() => [...document.querySelectorAll(".dock-txt")].every((e) => e.getBoundingClientRect().width > 0)), true, "etiquetas legibles en el dock móvil");
+igual(await pagina.$$eval(".jn-dock-item", (a) => a.length), 9, "el dock conserva las nueve páginas en móvil");
+igual(await pagina.evaluate(() => [...document.querySelectorAll(".jn-dock-ico")].every((e) => e.getBoundingClientRect().width > 0)), true, "iconos visibles en el dock móvil");
 igual(await pagina.$eval(".pp-nav", (e) => e.getBoundingClientRect().height > 0), true, "barra superior visible en móvil");
 igual(await pagina.evaluate(() => !!document.querySelector('.pp-nav-acciones a[href="#/acceso/login"]')), true, "«Entrar» sigue accesible en móvil");
 await captura("01c-dock-movil");
-await pagina.click('.dock-enlace[href="#/proyecto"]');
+await pagina.click('.jn-dock-item[href="#/proyecto"]');
 await espera(700);
 igual(await pagina.evaluate(() => location.hash), "#/proyecto", "el dock móvil navega a otra página");
 await pagina.evaluate(() => { location.hash = "#/"; });
@@ -459,15 +465,16 @@ igual(await pagina.evaluate(() => location.hash), "#/panel", "el registro entra 
 igual((await cuerpo()).includes("cuenta creada"), true, "aviso de cuenta creada");
 
 console.log("\n== 3 · PANEL: red APAGADA y todos los nodos a la vista ==");
-await espera(700);
+await clic("Panel de red");
+await espera(900);
 let c = await cuerpo();
 igual(c.includes("DESACTIVADA"), true, "interruptor en DESACTIVADA (no auto-activa)");
 igual(c.includes("RED OFF"), true, "chip de estado OFF");
 igual(c.toUpperCase().includes("¿QUÉ PASA SI ACTIVO?"), true, "explica qué pasará antes de activar");
 igual((await pagina.$(".interruptor.activo")) === null, true, "interruptor apagado");
 igual((await pagina.$(".tuberia.off")) !== null, true, "tubería de tráfico detenida");
-igual((await pagina.$(".leaflet-pane")) !== null, true, "mapa Leaflet inicializado sin crash");
-igual((await pagina.$$(".marca-mapa")).length >= 1, true, "marcador propio en el mapa (sin imágenes de Leaflet)");
+igual((await pagina.$(".pn-off-aviso")) !== null, true, "aviso de red apagada visible");
+igual((await pagina.$(".pn-verificacion")) === null, true, "la verificación no aparece hasta activar la red");
 /* la UI lista los nodos en TARJETAS (y el panel usa <Nodos compacta />):
    se cuentan las tarjetas de nodos, no filas de tabla */
 const nodosVistos = await pagina.evaluate(() => {
@@ -480,14 +487,11 @@ igual(nodosVistos >= 6, true, `los 6 nodos visibles aunque la red esté apagada 
    el tablón en vivo está pintado con su latido, y el contador de nodos vive */
 igual(c.includes("peer_u7"), true, "tu equipo (peer_u7) aparece en la lista de nodos");
 igual(c.includes("Mi portátil"), true, "el nodo personal enseña el alias de su dueño");
-igual(c.includes("LIVE") && await incluye("latencia media de tus saltos"), true, "tablón en vivo presente (LIVE + datos medidos)");
+
 igual(c.includes("nodos_usuario") || c.includes("nodos de usuarios"), true, "contador con desglose de nodos de usuarios");
 igual(await pagina.evaluate(() => window.__mock.latidos >= 1), true, "tu equipo emite su latido (/nodos/usuario)");
 igual(c.includes("4 ms") || c.includes("5 ms"), true, "latencia TCP real por nodo");
 igual(c.includes("hace 3.2 s") || c.includes("hace 4.1 s"), true, "edad del último latido por nodo");
-igual(c.includes("Bilbao"), true, "geolocalización real de tu IP (Bilbao, vía /geo del servidor)");
-igual(await pagina.evaluate(() =>
-  [...document.querySelectorAll("button[disabled]")].some((b) => (b.textContent || "").includes("Comprobar"))), true, "la comprobación está deshabilitada con la red apagada");
 /* selector de nº de saltos (nuevo, plan pro): las 5 opciones visibles */
 igual(await pagina.evaluate(() => [...document.querySelectorAll("button")].some((b) => (b.textContent || "").includes("7 saltos"))), true, "selector de saltos con la opción 7");
 /* Fase 9 — selector del MODO de saltos: todos vs solo externos + contador validados */
@@ -504,6 +508,11 @@ await espera(900);
 c = await cuerpo();
 igual(c.includes("nodo2") && c.includes("nodo1") && c.includes("nodo6"), true, "circuito nodo2 → nodo1 → nodo6 visible");
 igual(c.includes("circuito encendido · desde"), true, "tablón en vivo marca el tiempo de circuito encendido");
+await pagina.waitForSelector(".leaflet-pane", { timeout: 5000 }).then(() => ok("mapa Leaflet inicializado con la red activa")).catch(() => MAL("mapa Leaflet no apareció"));
+igual((await pagina.$$(".marca-mapa")).length >= 1, true, "marcador propio en el mapa (sin imágenes de Leaflet)");
+igual(c.includes("LIVE") && await incluye("latencia media de tus saltos"), true, "tablón en vivo presente (LIVE + datos medidos)");
+igual(c.includes("Bilbao"), true, "geolocalización real de tu IP (Bilbao, vía /geo del servidor)");
+igual(await pagina.evaluate(() => [...document.querySelectorAll("button")].some((b) => (b.textContent || "").includes("Comprobar circuito ahora") && !b.disabled)), true, "la comprobación se habilita con la red activa");
 igual(c.includes("salida (exit)"), true, "tablón en vivo etiqueta la salida del circuito");
 igual(c.includes("129.213.137.20"), true, "IP de salida real mostrada");
 igual(c.includes("Washington"), true, "geolocalización real de la IP de salida");
@@ -567,7 +576,8 @@ c = await cuerpo();
 igual(c.includes("nodo3") && c.includes("nodo5") && c.includes("nodo4"), true, "circuito rotado a nodo3 → nodo5 → nodo4");
 
 console.log("\n== 7 · PESTAÑA NODOS ==");
-await clic("Nodos");
+const etiquetaNodos = (await cuerpo()).includes("Gestor de nodos") ? "Gestor de nodos" : "Nodos disponibles";
+await clic(etiquetaNodos);
 await espera(900);
 c = await cuerpo();
 igual(await incluye("Todos los nodos"), true, "vista completa de nodos");
@@ -595,16 +605,22 @@ await pagina.select('select[aria-label="Filtrar nodos"]', "todos");
 await espera(400);
 await captura("06-nodos");
 
-console.log("\n== 8 · DOCUMENTACIÓN, CUENTA y DISEÑADOR ==");
-/* la documentación interna vivió en una pestaña del panel; ahora es un sitio
-   servido por WordPress y el enlace lateral la abre en pestaña nueva */
+console.log("\n== 8 · DOCUMENTACIÓN, PERFIL y APARIENCIA ==");
+/* La documentación se abre desde Soporte; el enlace externo está dentro de
+   la página y apunta al sitio servido por WordPress. */
+await clic("Soporte");
+await espera(300);
+await clic("Documentación");
+await espera(700);
 const enlaceDocs = await pagina.evaluate(() => {
-  const a = [...document.querySelectorAll("a")].find((x) => (x.textContent || "").includes("Documentación"));
+  const a = [...document.querySelectorAll("a")].find((x) => (x.href || "").includes("/docs/"));
   return a ? a.href : null;
 });
 igual(!!enlaceDocs, true, "enlace de documentación presente");
 igual((enlaceDocs || "").includes("/docs/"), true, `la documentación apunta a /docs/ (${(enlaceDocs || "?").slice(0, 70)})`);
 await clic("Cuenta");
+await espera(300);
+await clic("Mi perfil");
 await espera(900);
 c = await cuerpo();
 igual(c.includes("e2e@jumpernat.local"), true, "la cuenta muestra tu email");
@@ -615,9 +631,9 @@ await espera(400);
 igual((await cuerpo()).includes("¿Seguro?"), true, "confirmación en dos pasos");
 igual(await pagina.evaluate(() => window.__mock.borrados), antes, "el primer clic no borra nada");
 await clic("Cancelar");
-await clic("Diseñador");
+await clic("Apariencia");
 await espera(800);
-igual(await incluye("Preestablecidos"), true, "diseñador de temas");
+igual(await incluye("Preestablecidos"), true, "apariencia con preestablecidos de tema");
 const presetMatrix = await pagina.$$eval("button", (bs) => {
   const b = bs.find((x) => x.textContent.trim() === "Matrix");
   if (b) b.click();   // clic por DOM: dispara el onClick de React aunque el hijo lo cubra
@@ -724,6 +740,13 @@ await pulsaSwitch();
 await pagina.waitForFunction(() => !document.querySelector(".interruptor.activo"), { timeout: 9000 }).then(() => ok("volvió a DESACTIVADA")).catch(() => MAL("no desactivó"));
 await espera(400);
 igual((await pagina.$(".interruptor.activo")) === null, true, "interruptor visualmente apagado");
+igual((await pagina.$(".leaflet-pane")) === null, true, "el mapa se destruye al apagar la red");
+/* segunda conexión: el mapa debe volver a montarse sobre el contenedor nuevo */
+await pulsaSwitch();
+await pagina.waitForFunction(() => document.body.innerText.includes("RED ACTIVA"), { timeout: 9000 }).then(() => ok("segunda conexión activa")).catch(() => MAL("no reactivó"));
+await pagina.waitForSelector(".leaflet-pane", { timeout: 5000 }).then(() => ok("el mapa vuelve a montarse tras reconectar")).catch(() => MAL("el mapa no volvió tras reconectar"));
+await pulsaSwitch();
+await pagina.waitForFunction(() => !document.querySelector(".interruptor.activo"), { timeout: 9000 }).then(() => ok("red apagada de nuevo")).catch(() => MAL("no desactivó la segunda vez"));
 await clic("Salir");
 await espera(900);
 igual((await cuerpo()).includes("Crear mi cuenta"), true, "vuelta al inicio tras salir");
@@ -733,6 +756,8 @@ igual(await pagina.evaluate(() => localStorage.getItem("token")), null, "el toke
 await entrar("e2e@jumpernat.local", "clave-e2e-123");
 ok("segunda sesión iniciada para probar el borrado");
 await clic("Cuenta");
+await espera(300);
+await clic("Mi perfil");
 await espera(800);
 await clic("Eliminar cuenta…");
 await espera(300);

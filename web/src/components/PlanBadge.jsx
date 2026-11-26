@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { planDe, fechaCorta, desactivaDemoPro } from "../lib/planes.js";
+import { planDe, fechaCorta, desactivaDemoPro, precioPro } from "../lib/planes.js";
 
 /* Indicador del plan actual. Se usa en el lateral y la barra superior del
    panel. Al pulsarlo abre una ficha breve con lo que incluye y la gestión. */
@@ -36,12 +36,13 @@ export default function PlanBadge({ yo, compacto = false }) {
 
   const plan = planDe(yo);
   const nombre = plan.demo ? `${plan.nombre} · demo` : plan.nombre;
+  const precio = plan.id === "pro" ? (yo?.precio_mes || precioPro(plan.saltosMax || 3)) : null;
   const detalle = plan.id === "free"
     ? "Sin renovación ni cargos"
     : plan.demo
       ? `Demo hasta ${fechaCorta(plan.hasta)}`
       : plan.id === "pro"
-        ? "Renovación mensual · 5 €"
+        ? `Renovación mensual · ${precio} €`
         : "Condiciones acordadas";
 
   return (
@@ -72,7 +73,7 @@ export default function PlanBadge({ yo, compacto = false }) {
                 <span className="jn-eyebrow"><i aria-hidden /> tu plan</span>
                 <h3>{nombre}</h3>
                 <span className="jn-planficha-precio mono">
-                  {plan.id === "free" ? "0 € / siempre" : plan.demo ? "5 €/mes · no cobrado" : plan.id === "pro" ? "5 € / mes" : "a medida"}
+                  {plan.id === "free" ? "0 € / siempre" : plan.demo ? `${precio} €/mes · no cobrado` : plan.id === "pro" ? `${precio} € / mes` : "a medida"}
                 </span>
               </div>
               <button type="button" className="jn-cerrar" onClick={() => setAbierto(false)} aria-label="Cerrar">
