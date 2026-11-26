@@ -17,6 +17,7 @@ import "./styles/laboratorio.css";
 import "./styles/planes.css";
 import "./styles/planes-dinamicas.css";
 import "./styles/panel-usuario.css";
+import "./styles/saas.css";
 
 if (!document.documentElement.dataset.modo) document.documentElement.dataset.modo = "claro";
 createRoot(document.getElementById("root")).render(<App />);

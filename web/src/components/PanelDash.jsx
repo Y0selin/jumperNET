@@ -3,6 +3,7 @@ import { me, nodos, nodosVivos, salida, decodificaJwt, getToken, miNodo } from "
 import { planDe, precioPro } from "../lib/planes.js";
 import { leeLog } from "./PanelLog.js";
 import { Stat } from "./Piezas.jsx";
+import { VistazoRendimiento } from "./Estadisticas.jsx";
 
 /* Dashboard del área privada.
  *
@@ -283,6 +284,7 @@ export default function PanelDash({ yo, plan, variante = "inicio", prefs, navega
           {acceso("nodos", esPro ? "Gestor de nodos" : "Nodos disponibles", "⛓")}
           {acceso("ip", "Comprobar mi IP", "◎")}
           {acceso("diagnostico", "Diagnóstico", "⌁")}
+          {acceso("estadisticas", "Estadísticas", "▥")}
           {acceso("informes", "Informe PDF", "▤")}
           {esPro ? acceso("explorer", "Network Explorer", "◈") : acceso("mejorar", "Descubrir Pro", "⚡")}
           {esPro ? acceso("disenador", "Diseñar circuito", "✦") : acceso("guias", "Guías", "▤")}
@@ -314,6 +316,8 @@ export default function PanelDash({ yo, plan, variante = "inicio", prefs, navega
             <span className="mono">{activo ? "saltos en uso" : "sin conexión"}</span>
           </div>
         </header>
+
+        <VistazoRendimiento apiMs={apiMs} lista={lista} vivos={vivos} navega={ir} />
 
         <div className="pu-bento-grid">
           {tarjetas.slice(0, 4).map((id) => contenido[id])}

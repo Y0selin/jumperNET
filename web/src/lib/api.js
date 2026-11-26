@@ -57,13 +57,27 @@ export async function api(metodo, ruta, cuerpo, autorizado = true) {
   const token = getToken();
   if (autorizado && token) cab["Authorization"] = "Bearer " + token;
   const t0 = performance.now();
+  const cuerpoTxt = cuerpo ? JSON.stringify(cuerpo) : "";
   let resp;
   try {
-    resp = await fetch(API_URL + ruta, { method: metodo, headers: cab, body: cuerpo ? JSON.stringify(cuerpo) : undefined });
+    resp = await fetch(API_URL + ruta, { method: metodo, headers: cab, body: cuerpoTxt || undefined });
   } catch (e) { throw new Error("sin conexión con la API"); }
   const ms = Math.round(performance.now() - t0);
   let datos = null;
-  try { datos = await resp.json(); } catch { /* sin cuerpo */ }
+  let texto = "";
+  try { texto = await resp.text(); } catch { /* sin cuerpo */ }
+  try { datos = texto ? JSON.parse(texto) : null; } catch { /* respuesta no JSON */ }
+  /* Medimos bytes de aplicación (cuerpo real, sin cabeceras ni compresión)
+     para el gráfico de tráfico. No es tráfico del proxy: es tráfico de la API. */
+  try {
+    const bytes = (s) => new TextEncoder().encode(s).length;
+    window.dispatchEvent(new CustomEvent("jumpernet-api-medida", {
+      detail: {
+        ruta, metodo, ms, estado: resp.status, t: Date.now(),
+        enviado: bytes(cuerpoTxt), recibido: bytes(texto),
+      },
+    }));
+  } catch { /* sin CustomEvent: el panel sigue funcionando */ }
   if (resp.status === 401 && autorizado && token) { setToken(null); window.location.reload(); }
   if (!resp.ok) {
     const err = new Error((datos && datos.detail) || `HTTP ${resp.status}`);

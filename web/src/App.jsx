@@ -44,7 +44,9 @@ export default function App() {
       .finally(() => setCargandoCuenta(false));
   }
 
-  useEffect(() => { aplicaTema(cargaTema()); aplicaModo(cargaModo()); }, []);
+  /* primero el modo base y después el diseño elegido: cada preset trae su
+     propia variante clara y oscura, y debe ganar sobre la paleta genérica */
+  useEffect(() => { aplicaModo(cargaModo()); aplicaTema(cargaTema()); }, []);
   useEffect(() => {
     if (!getToken()) { setCargandoCuenta(false); return; }
     cargaCuenta();

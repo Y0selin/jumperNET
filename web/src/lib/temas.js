@@ -1,124 +1,378 @@
-/* Temas del Diseñador: cada tema es un conjunto de variables CSS que se
-   aplican en vivo sobre document.documentElement. Persiste en localStorage. */
+/* Diseños del panel.
+ *
+ * Cada preset tiene DOS paletas coordinadas —claro y oscuro— y comparte
+ * forma, tipografía y efectos. El color solo no basta: cada diseño ajusta
+ * radios, densidad visual y luminosidad para tener identidad propia.
+ *
+ * Se aplican en vivo sobre document.documentElement y se guardan en
+ * localStorage. Los temas antiguos se migran al preset más cercano para no
+ * dejar a nadie con una paleta rota.
+ */
 import { useEffect, useState } from "react";
 
-const CLAVE = "jumpernat-tema-v2";
+const CLAVE = "jumpernat-tema-v3";
+
+const BASE_CLARO = {
+  "--panel": "255, 255, 255",
+  "--panel-sol": "15, 118, 110",
+  "--linea": "rgb(16 42 36 / .10)",
+  "--linea-2": "rgb(16 42 36 / .18)",
+  "--sup-1": "#FFFFFF",
+  "--sup-2": "#F7FBF9",
+  "--sup-3": "#ECF5F0",
+};
+
+const BASE_OSCURO = {
+  "--panel": "13, 36, 32",
+  "--panel-sol": "61, 220, 171",
+  "--linea": "rgb(170 220 205 / .13)",
+  "--linea-2": "rgb(170 220 205 / .24)",
+  "--sup-1": "#0D241F",
+  "--sup-2": "#0A1F1B",
+  "--sup-3": "#123029",
+};
 
 export const PRESETS = {
-  "coral-nocturno": {
-    nombre: "Coral Nocturno",
-    variables: {
-      "--bg-1": "#06050b", "--bg-2": "#0a0812", "--panel": "22, 19, 32", "--panel-sol": "255, 90, 54",
-      "--borde": "#2a2438", "--acento-1": "#ff5a36", "--acento-2": "#8b7bff",
-      "--acento-3": "#33d6c0", "--texto": "#f4f0e8", "--texto-suave": "#a49dae",
+  "jumpernet-classic": {
+    id: "jumpernet-classic",
+    nombre: "JumperNET Classic",
+    descripcion: "La identidad de siempre: esmeralda, coral y superficies de hielo.",
+    etiqueta: "Identidad",
+    forma: {
+      "--radio": "18px", "--radio-2": "12px", "--tam-fuente": "15px",
+      "--fuente": '"Inter", "Segoe UI", system-ui, sans-serif',
+      "--fuente-titulo": '"Space Grotesk", "Inter", system-ui, sans-serif',
     },
-    forma: { "--radio": "20px", "--radio-2": "12px", "--tam-fuente": "15px", "--fuente": '"Avenir Next", "Segoe UI", system-ui, sans-serif' },
-    efectos: { "--glow": "0.8", "--glass": "0.7", "--vel-anim": "1" },
+    efectos: { "--glow": "0.55", "--glass": "0.9", "--vel-anim": "1" },
+    variantes: {
+      claro: {
+        ...BASE_CLARO,
+        "--bg-1": "#F4FAF7", "--bg-2": "#E9F5EF",
+        "--borde": "#D3E5DC",
+        "--acento-1": "#0F766E", "--acento-2": "#0E8C6F", "--acento-3": "#D9A441",
+        "--texto": "#102A24", "--texto-suave": "#4B665D",
+        "--acento-txt": "#C2410C", "--acento-txt-2": "#E4572E",
+        "--grafico-1": "#0F766E", "--grafico-2": "#E4572E", "--grafico-3": "#0EA5A4",
+        "--grafico-4": "#D9A441", "--grafico-5": "#64748B",
+        "--fondo-a": "#E8F6F0", "--fondo-b": "#F8FCFA", "--fondo-c": "#FBEDE7",
+        "--sombra": "0 20px 50px -38px rgb(16 42 36 / .42)",
+      },
+      oscuro: {
+        ...BASE_OSCURO,
+        "--bg-1": "#071A18", "--bg-2": "#0A2521",
+        "--borde": "#1D453D",
+        "--acento-1": "#3DDCAB", "--acento-2": "#35C7A7", "--acento-3": "#E7C37A",
+        "--texto": "#EAF7F2", "--texto-suave": "#9DBBB2",
+        "--acento-txt": "#FF8A6E", "--acento-txt-2": "#FFA38F",
+        "--grafico-1": "#3DDCAB", "--grafico-2": "#FF8A6E", "--grafico-3": "#7DD3FC",
+        "--grafico-4": "#E7C37A", "--grafico-5": "#A8C1D4",
+        "--fondo-a": "#06201C", "--fondo-b": "#061512", "--fondo-c": "#12241F",
+        "--sombra": "0 24px 60px -34px rgb(0 0 0 / .62)",
+      },
+    },
   },
-  "terminal-verde": {
-    nombre: "Terminal Verde",
-    variables: {
-      "--bg-1": "#0b0f0d", "--bg-2": "#0d1410", "--panel": "18, 23, 20", "--panel-sol": "125, 255, 192",
-      "--borde": "#232b26", "--acento-1": "#2ee88a", "--acento-2": "#4fb0ff",
-      "--acento-3": "#ffb454", "--texto": "#d9e2db", "--texto-suave": "#8a948d",
+
+  arctic: {
+    id: "arctic",
+    nombre: "Arctic",
+    descripcion: "Blanco hielo y azul glaciar. Luz limpia, técnica y serena.",
+    etiqueta: "Frío",
+    forma: {
+      "--radio": "16px", "--radio-2": "10px", "--tam-fuente": "15px",
+      "--fuente": '"Inter", "Segoe UI", system-ui, sans-serif',
+      "--fuente-titulo": '"Inter", "Segoe UI", system-ui, sans-serif',
     },
-    forma: { "--radio": "12px", "--radio-2": "8px", "--tam-fuente": "14.5px", "--fuente": '"Inter", system-ui' },
-    efectos: { "--glow": "0.8", "--glass": "0.7", "--vel-anim": "1" },
+    efectos: { "--glow": "0.4", "--glass": "0.86", "--vel-anim": "1" },
+    variantes: {
+      claro: {
+        ...BASE_CLARO,
+        "--panel": "255, 255, 255", "--panel-sol": "29, 78, 216",
+        "--bg-1": "#F5FAFF", "--bg-2": "#E9F3FE",
+        "--borde": "#D4E4F4",
+        "--acento-1": "#1D4ED8", "--acento-2": "#0284C7", "--acento-3": "#0D9488",
+        "--texto": "#0F2035", "--texto-suave": "#51677E",
+        "--acento-txt": "#0369A1", "--acento-txt-2": "#0284C7",
+        "--linea": "rgb(20 45 75 / .10)", "--linea-2": "rgb(20 45 75 / .18)",
+        "--sup-1": "#FFFFFF", "--sup-2": "#F8FCFF", "--sup-3": "#ECF5FE",
+        "--grafico-1": "#1D4ED8", "--grafico-2": "#0EA5E9", "--grafico-3": "#14B8A6",
+        "--grafico-4": "#8B5CF6", "--grafico-5": "#64748B",
+        "--fondo-a": "#E5F2FE", "--fondo-b": "#F9FCFF", "--fondo-c": "#E8FBF7",
+        "--sombra": "0 22px 50px -40px rgb(15 42 70 / .38)",
+      },
+      oscuro: {
+        ...BASE_OSCURO,
+        "--panel": "12, 33, 53", "--panel-sol": "125, 211, 252",
+        "--bg-1": "#061524", "--bg-2": "#0A2033",
+        "--borde": "#1B3A55",
+        "--acento-1": "#7DD3FC", "--acento-2": "#38BDF8", "--acento-3": "#5EEAD4",
+        "--texto": "#EAF5FF", "--texto-suave": "#A3BFD4",
+        "--acento-txt": "#93C5FD", "--acento-txt-2": "#BFDBFE",
+        "--linea": "rgb(165 210 240 / .13)", "--linea-2": "rgb(165 210 240 / .24)",
+        "--sup-1": "#0C2135", "--sup-2": "#091B2B", "--sup-3": "#12304A",
+        "--grafico-1": "#7DD3FC", "--grafico-2": "#38BDF8", "--grafico-3": "#5EEAD4",
+        "--grafico-4": "#C4B5FD", "--grafico-5": "#9FB9CB",
+        "--fondo-a": "#082238", "--fondo-b": "#061421", "--fondo-c": "#0B2A2C",
+        "--sombra": "0 24px 60px -34px rgb(0 0 0 / .62)",
+      },
+    },
   },
-  "grafito-profesional": {
-    nombre: "Grafito Profesional",
-    variables: {
-      "--bg-1": "#0a0d14", "--bg-2": "#0e1320", "--panel": "21, 27, 42", "--panel-sol": "255, 255, 255",
-      "--borde": "#374460", "--acento-1": "#5b8def", "--acento-2": "#34c48c",
-      "--acento-3": "#8f7cf1", "--texto": "#e6eaf2", "--texto-suave": "#8a94a8",
+
+  midnight: {
+    id: "midnight",
+    nombre: "Midnight",
+    descripcion: "Azul noche, violeta y destellos de oro. Profundidad elegante.",
+    etiqueta: "Nocturno",
+    forma: {
+      "--radio": "20px", "--radio-2": "13px", "--tam-fuente": "15px",
+      "--fuente": '"Inter", "Segoe UI", system-ui, sans-serif',
+      "--fuente-titulo": '"Space Grotesk", "Inter", system-ui, sans-serif',
     },
-    forma: { "--radio": "12px", "--radio-2": "8px", "--tam-fuente": "14.5px", "--fuente": '"Inter", system-ui' },
-    efectos: { "--glow": "0.5", "--glass": "0.72", "--vel-anim": "1" },
+    efectos: { "--glow": "0.75", "--glass": "0.82", "--vel-anim": "1" },
+    variantes: {
+      claro: {
+        ...BASE_CLARO,
+        "--panel": "255, 255, 255", "--panel-sol": "67, 56, 202",
+        "--bg-1": "#F6F7FC", "--bg-2": "#ECEFFA",
+        "--borde": "#DCDDF2",
+        "--acento-1": "#4338CA", "--acento-2": "#0F766E", "--acento-3": "#B68A3E",
+        "--texto": "#171A35", "--texto-suave": "#575C7A",
+        "--acento-txt": "#C2410C", "--acento-txt-2": "#E4572E",
+        "--linea": "rgb(30 34 72 / .10)", "--linea-2": "rgb(30 34 72 / .18)",
+        "--sup-1": "#FFFFFF", "--sup-2": "#FAFAFF", "--sup-3": "#F0F1FB",
+        "--grafico-1": "#4338CA", "--grafico-2": "#E4572E", "--grafico-3": "#0F9D8F",
+        "--grafico-4": "#B68A3E", "--grafico-5": "#64748B",
+        "--fondo-a": "#EAEBFB", "--fondo-b": "#FAFAFF", "--fondo-c": "#F8EFE7",
+        "--sombra": "0 24px 55px -42px rgb(40 40 80 / .42)",
+      },
+      oscuro: {
+        ...BASE_OSCURO,
+        "--panel": "15, 21, 43", "--panel-sol": "129, 140, 248",
+        "--bg-1": "#070B18", "--bg-2": "#0B1226",
+        "--borde": "#232A4D",
+        "--acento-1": "#818CF8", "--acento-2": "#22D3EE", "--acento-3": "#F0B86E",
+        "--texto": "#EEF2FF", "--texto-suave": "#A5AECF",
+        "--acento-txt": "#FDA4AF", "--acento-txt-2": "#FECDD3",
+        "--linea": "rgb(170 180 230 / .13)", "--linea-2": "rgb(170 180 230 / .24)",
+        "--sup-1": "#0D1428", "--sup-2": "#0A1020", "--sup-3": "#141C38",
+        "--grafico-1": "#818CF8", "--grafico-2": "#FDA4AF", "--grafico-3": "#22D3EE",
+        "--grafico-4": "#F0B86E", "--grafico-5": "#A5AECF",
+        "--fondo-a": "#0A1430", "--fondo-b": "#060A14", "--fondo-c": "#0A2228",
+        "--sombra": "0 26px 65px -34px rgb(0 0 0 / .7)",
+      },
+    },
   },
-  "neon-nocturno": {
-    nombre: "Neón Nocturno",
-    variables: {
-      "--bg-1": "#060a14", "--bg-2": "#0b1226", "--panel": "18, 24, 43", "--panel-sol": "255, 255, 255",
-      "--borde": "#4e68b4", "--acento-1": "#4f8cff", "--acento-2": "#2ecc71",
-      "--acento-3": "#a06bff", "--texto": "#e8edf8", "--texto-suave": "#93a0bd",
+
+  forest: {
+    id: "forest",
+    nombre: "Forest",
+    descripcion: "Verdes profundos, musgo y ámbar. Natural, sobrio y cálido.",
+    etiqueta: "Natural",
+    forma: {
+      "--radio": "14px", "--radio-2": "9px", "--tam-fuente": "15px",
+      "--fuente": '"Inter", "Segoe UI", system-ui, sans-serif',
+      "--fuente-titulo": '"Fraunces", "Iowan Old Style", Georgia, serif',
     },
-    forma: { "--radio": "16px", "--radio-2": "10px", "--tam-fuente": "15px", "--fuente": '"Inter", system-ui' },
-    efectos: { "--glow": "1.1", "--glass": "0.55", "--vel-anim": "1" },
+    efectos: { "--glow": "0.38", "--glass": "0.9", "--vel-anim": "1" },
+    variantes: {
+      claro: {
+        ...BASE_CLARO,
+        "--panel": "255, 255, 255", "--panel-sol": "47, 107, 58",
+        "--bg-1": "#F5F8F1", "--bg-2": "#E9F1E2",
+        "--borde": "#D8E4CF",
+        "--acento-1": "#2F6B3A", "--acento-2": "#527C34", "--acento-3": "#B7791F",
+        "--texto": "#1B2A1D", "--texto-suave": "#53634F",
+        "--acento-txt": "#A8432B", "--acento-txt-2": "#C25A3A",
+        "--linea": "rgb(28 48 30 / .10)", "--linea-2": "rgb(28 48 30 / .18)",
+        "--sup-1": "#FFFFFF", "--sup-2": "#F9FCF6", "--sup-3": "#EEF5E8",
+        "--grafico-1": "#2F6B3A", "--grafico-2": "#B7791F", "--grafico-3": "#5DAF9A",
+        "--grafico-4": "#8A9A5B", "--grafico-5": "#64748B",
+        "--fondo-a": "#E6F0DE", "--fondo-b": "#F9FCF6", "--fondo-c": "#F5EEDD",
+        "--sombra": "0 22px 50px -40px rgb(28 48 30 / .4)",
+      },
+      oscuro: {
+        ...BASE_OSCURO,
+        "--panel": "15, 39, 25", "--panel-sol": "134, 201, 122",
+        "--bg-1": "#0A150E", "--bg-2": "#102217",
+        "--borde": "#23402B",
+        "--acento-1": "#86C97A", "--acento-2": "#5DAF9A", "--acento-3": "#D4B15A",
+        "--texto": "#EDF5E8", "--texto-suave": "#A4B8A0",
+        "--acento-txt": "#F0A58D", "--acento-txt-2": "#F7C4B2",
+        "--linea": "rgb(170 210 165 / .13)", "--linea-2": "rgb(170 210 165 / .24)",
+        "--sup-1": "#102719", "--sup-2": "#0C1E13", "--sup-3": "#173224",
+        "--grafico-1": "#86C97A", "--grafico-2": "#D4B15A", "--grafico-3": "#5DAF9A",
+        "--grafico-4": "#C9D6A3", "--grafico-5": "#A4B8A0",
+        "--fondo-a": "#0E2417", "--fondo-b": "#08120B", "--fondo-c": "#1F2A18",
+        "--sombra": "0 24px 60px -34px rgb(0 0 0 / .62)",
+      },
+    },
   },
-  "oceano-profundo": {
-    nombre: "Océano Profundo",
-    variables: {
-      "--bg-1": "#02111b", "--bg-2": "#05253a", "--panel": "8, 34, 52", "--panel-sol": "190, 240, 255",
-      "--borde": "#2f7fa6", "--acento-1": "#0ea5e9", "--acento-2": "#14b8a6",
-      "--acento-3": "#22d3ee", "--texto": "#dff5ff", "--texto-suave": "#8fb6c9",
+
+  minimal: {
+    id: "minimal",
+    nombre: "Minimal",
+    descripcion: "Casi sin ruido: tinta, teal y grises finos. Todo respira.",
+    etiqueta: "Esencial",
+    forma: {
+      "--radio": "10px", "--radio-2": "6px", "--tam-fuente": "14.5px",
+      "--fuente": '"Inter", "Segoe UI", system-ui, sans-serif',
+      "--fuente-titulo": '"Inter", "Segoe UI", system-ui, sans-serif',
     },
-    forma: { "--radio": "18px", "--radio-2": "11px", "--tam-fuente": "15px", "--fuente": '"Inter", system-ui' },
-    efectos: { "--glow": "0.8", "--glass": "0.62", "--vel-anim": "1" },
+    efectos: { "--glow": "0.18", "--glass": "0.96", "--vel-anim": "1" },
+    variantes: {
+      claro: {
+        ...BASE_CLARO,
+        "--panel": "255, 255, 255", "--panel-sol": "15, 118, 110",
+        "--bg-1": "#FBFCFC", "--bg-2": "#F2F5F5",
+        "--borde": "#DFE5E6",
+        "--acento-1": "#0F172A", "--acento-2": "#0F766E", "--acento-3": "#64748B",
+        "--texto": "#0F172A", "--texto-suave": "#5B6672",
+        "--acento-txt": "#0F766E", "--acento-txt-2": "#115E59",
+        "--linea": "rgb(15 23 42 / .09)", "--linea-2": "rgb(15 23 42 / .16)",
+        "--sup-1": "#FFFFFF", "--sup-2": "#F8FAFA", "--sup-3": "#EFF3F3",
+        "--grafico-1": "#0F766E", "--grafico-2": "#334155", "--grafico-3": "#0EA5A4",
+        "--grafico-4": "#94A3B8", "--grafico-5": "#E4572E",
+        "--fondo-a": "#F0F6F5", "--fondo-b": "#FCFDFD", "--fondo-c": "#F7F3EF",
+        "--sombra": "0 18px 44px -38px rgb(15 23 42 / .3)",
+      },
+      oscuro: {
+        ...BASE_OSCURO,
+        "--panel": "18, 23, 28", "--panel-sol": "226, 232, 240",
+        "--bg-1": "#0B0E11", "--bg-2": "#12161A",
+        "--borde": "#262C32",
+        "--acento-1": "#E2E8F0", "--acento-2": "#5EEAD4", "--acento-3": "#94A3B8",
+        "--texto": "#F1F5F9", "--texto-suave": "#9BA7B4",
+        "--acento-txt": "#7DD3FC", "--acento-txt-2": "#BAE6FD",
+        "--linea": "rgb(220 230 240 / .10)", "--linea-2": "rgb(220 230 240 / .18)",
+        "--sup-1": "#12171C", "--sup-2": "#0E1216", "--sup-3": "#1A2026",
+        "--grafico-1": "#5EEAD4", "--grafico-2": "#CBD5E1", "--grafico-3": "#38BDF8",
+        "--grafico-4": "#94A3B8", "--grafico-5": "#FDBA74",
+        "--fondo-a": "#101A1C", "--fondo-b": "#090C0F", "--fondo-c": "#1A1512",
+        "--sombra": "0 22px 55px -36px rgb(0 0 0 / .6)",
+      },
+    },
   },
-  "matrix": {
-    nombre: "Matrix",
-    variables: {
-      "--bg-1": "#010603", "--bg-2": "#031c0c", "--panel": "6, 28, 14", "--panel-sol": "40, 255, 140",
-      "--borde": "#1f6e35", "--acento-1": "#22c55e", "--acento-2": "#4ade80",
-      "--acento-3": "#86efac", "--texto": "#d8ffe6", "--texto-suave": "#7fae8a",
+
+  grafito: {
+    id: "grafito",
+    nombre: "Grafito Pro",
+    descripcion: "Azul acero y violeta sobre grises fríos. Aspecto de herramienta.",
+    etiqueta: "Profesional",
+    forma: {
+      "--radio": "12px", "--radio-2": "8px", "--tam-fuente": "14.5px",
+      "--fuente": '"Inter", "Segoe UI", system-ui, sans-serif',
+      "--fuente-titulo": '"Space Grotesk", "Inter", system-ui, sans-serif',
     },
-    forma: { "--radio": "6px", "--radio-2": "4px", "--tam-fuente": "14px", "--fuente": 'ui-monospace, "Cascadia Code", Consolas' },
-    efectos: { "--glow": "0.9", "--glass": "0.55", "--vel-anim": "1.1" },
-  },
-  "luz-blanca": {
-    nombre: "Luz Aurora",
-    variables: {
-      "--bg-1": "#f0f4ff", "--bg-2": "#e6ecff", "--panel": "255, 255, 255", "--panel-sol": "124, 77, 255",
-      "--borde": "#c9d4f0", "--acento-1": "#7c4dff", "--acento-2": "#00b8d9",
-      "--acento-3": "#ff5c93", "--texto": "#0f1233", "--texto-suave": "#5b6490",
+    efectos: { "--glow": "0.5", "--glass": "0.88", "--vel-anim": "1" },
+    variantes: {
+      claro: {
+        ...BASE_CLARO,
+        "--panel": "255, 255, 255", "--panel-sol": "37, 99, 235",
+        "--bg-1": "#F6F7FA", "--bg-2": "#ECEFF5",
+        "--borde": "#D9DFEA",
+        "--acento-1": "#2563EB", "--acento-2": "#0F766E", "--acento-3": "#7C3AED",
+        "--texto": "#111827", "--texto-suave": "#525D6E",
+        "--acento-txt": "#C2410C", "--acento-txt-2": "#E4572E",
+        "--linea": "rgb(17 24 39 / .10)", "--linea-2": "rgb(17 24 39 / .18)",
+        "--sup-1": "#FFFFFF", "--sup-2": "#F9FAFC", "--sup-3": "#EEF1F7",
+        "--grafico-1": "#2563EB", "--grafico-2": "#E4572E", "--grafico-3": "#0F766E",
+        "--grafico-4": "#7C3AED", "--grafico-5": "#64748B",
+        "--fondo-a": "#E9EEF9", "--fondo-b": "#FAFBFD", "--fondo-c": "#F4ECFA",
+        "--sombra": "0 20px 48px -38px rgb(17 24 39 / .38)",
+      },
+      oscuro: {
+        ...BASE_OSCURO,
+        "--panel": "17, 25, 40", "--panel-sol": "96, 165, 250",
+        "--bg-1": "#090D15", "--bg-2": "#0F1623",
+        "--borde": "#283347",
+        "--acento-1": "#60A5FA", "--acento-2": "#34D399", "--acento-3": "#A78BFA",
+        "--texto": "#E8EDF6", "--texto-suave": "#9BA9BE",
+        "--acento-txt": "#FDBA74", "--acento-txt-2": "#FED7AA",
+        "--linea": "rgb(180 200 230 / .13)", "--linea-2": "rgb(180 200 230 / .24)",
+        "--sup-1": "#111928", "--sup-2": "#0C121D", "--sup-3": "#182236",
+        "--grafico-1": "#60A5FA", "--grafico-2": "#FDBA74", "--grafico-3": "#34D399",
+        "--grafico-4": "#A78BFA", "--grafico-5": "#9BA9BE",
+        "--fondo-a": "#0D1A2E", "--fondo-b": "#080C13", "--fondo-c": "#17142A",
+        "--sombra": "0 24px 60px -34px rgb(0 0 0 / .65)",
+      },
     },
-    forma: { "--radio": "12px", "--radio-2": "8px", "--tam-fuente": "14.5px", "--fuente": '"Inter", system-ui' },
-    efectos: { "--glow": "0.3", "--glass": "0.9", "--vel-anim": "1" },
-  },
-  "navidad-clara": {
-    nombre: "JumperNET 3.0",
-    variables: {
-      "--bg-1": "#F2F6F0", "--bg-2": "#E7F2EA", "--panel": "251, 253, 249", "--panel-sol": "27, 116, 96",
-      "--borde": "#D2E0D6", "--acento-1": "#1B7460", "--acento-2": "#146B59",
-      "--acento-3": "#B68A3E", "--texto": "#1B3029", "--texto-suave": "#476057",
-      "--acento-txt": "#A8432B", "--linea": "rgb(27 48 41 / .11)", "--linea-2": "rgb(27 48 41 / .17)",
-      "--sup-1": "#FBFDF9", "--sup-2": "#F5FAF4", "--sup-3": "#EAF3EC",
-    },
-    forma: { "--radio": "18px", "--radio-2": "12px", "--tam-fuente": "15px", "--fuente": '"Inter", system-ui' },
-    efectos: { "--glow": "0.4", "--glass": "0.85", "--vel-anim": "1" },
   },
 };
 
+export const TEMA_DEFECTO = "jumpernet-classic";
+
+export function temaPorId(id) {
+  return JSON.parse(JSON.stringify(PRESETS[id] || PRESETS[TEMA_DEFECTO]));
+}
+
+function modoActual() {
+  return document.documentElement.dataset.modo === "oscuro" ? "oscuro" : "claro";
+}
+
+export function variablesDeTema(tema, modo = modoActual()) {
+  const variantes = tema?.variantes || {};
+  return variantes[modo] || variantes.claro || tema?.variables || {};
+}
+
 export function aplicaTema(tema) {
   const r = document.documentElement.style;
-  Object.entries(tema.variables || {}).forEach(([k, v]) => r.setProperty(k, v));
+  const modo = modoActual();
+  const vars = variablesDeTema(tema, modo);
+  Object.entries(vars || {}).forEach(([k, v]) => r.setProperty(k, v));
   Object.entries(tema.forma || {}).forEach(([k, v]) => r.setProperty(k, v));
+  /* Los títulos heredan la voz del diseño; si un tema importado no la
+     declara, al menos no se queda con la tipografía del diseño anterior. */
+  if (tema.forma?.["--fuente"] && !tema.forma?.["--fuente-titulo"]) {
+    r.setProperty("--fuente-titulo", tema.forma["--fuente"]);
+  }
   Object.entries(tema.efectos || {}).forEach(([k, v]) => r.setProperty(k, v));
   if ("--vel-anim" in (tema.efectos || {})) {
     document.documentElement.dataset.anim = parseFloat(tema.efectos["--vel-anim"]) > 0 ? "on" : "off";
   }
+  document.documentElement.dataset.tema = tema.id || "personalizado";
 }
 
-export function guardaTema(tema) { localStorage.setItem(CLAVE, JSON.stringify(tema)); }
-function esPaletaAntiguaClara(t) {
-  const v = t?.variables || {};
-  return String(v["--bg-1"] || "").toLowerCase() === "#eef6fd"
-    && String(v["--texto"] || "").toLowerCase() === "#14283e";
+export function guardaTema(tema) {
+  try { localStorage.setItem(CLAVE, JSON.stringify(tema)); } catch { /* modo privado */ }
+}
+
+function brillo(hex) {
+  const m = String(hex || "").match(/^#?([0-9a-f]{6})$/i);
+  if (!m) return 255;
+  const n = parseInt(m[1], 16);
+  return ((n >> 16) & 255) * .299 + ((n >> 8) & 255) * .587 + (n & 255) * .114;
+}
+
+function migraAntiguo(t) {
+  if (!t || !t.variables) return null;
+  const esOscuro = brillo(t.variables["--bg-1"]) < 128;
+  const id = esOscuro ? "midnight" : "grafito";
+  const base = temaPorId(id);
+  const variante = esOscuro ? "oscuro" : "claro";
+  return {
+    ...base,
+    id: "migrado",
+    nombre: t.nombre || base.nombre,
+    migrado: true,
+    variantes: {
+      ...base.variantes,
+      [variante]: { ...base.variantes[variante], ...t.variables },
+    },
+    forma: { ...base.forma, ...(t.forma || {}) },
+    efectos: { ...base.efectos, ...(t.efectos || {}) },
+    cssExtra: t.cssExtra || "",
+  };
 }
 
 export function cargaTema() {
   try {
-    const t = JSON.parse(localStorage.getItem(CLAVE));
-    if (t && t.variables) {
-      /* el preset claro antiguo se queda guardado en algunos navegadores:
-         se migra en vez de seguir pintando la paleta azul anterior */
-      if (esPaletaAntiguaClara(t)) return JSON.parse(JSON.stringify(PRESETS["navidad-clara"]));
-      return t;
-    }
+    const t = JSON.parse(localStorage.getItem(CLAVE) || localStorage.getItem("jumpernat-tema-v2"));
+    if (t?.variantes) return t;
+    const migrado = migraAntiguo(t);
+    if (migrado) { guardaTema(migrado); return migrado; }
+    if (t?.id && PRESETS[t.id]) return temaPorId(t.id);
   } catch { /* tema roto: preset */ }
-  return JSON.parse(JSON.stringify(PRESETS["navidad-clara"]));
+  return temaPorId(TEMA_DEFECTO);
 }
-export function temaPorId(id) {  return JSON.parse(JSON.stringify(PRESETS[id] || PRESETS["navidad-clara"])); }
 
 export function useTemas() {
   const [tema, setTema] = useState(cargaTema);

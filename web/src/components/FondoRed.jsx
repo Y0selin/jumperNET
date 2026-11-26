@@ -20,7 +20,7 @@ function aRgb(valor, respaldo) {
   return nums && nums.length >= 3 ? nums.slice(0, 3).join(",") : respaldo;
 }
 
-export default function FondoRed() {
+export default function FondoRed({ className = "" }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -292,5 +292,5 @@ export default function FondoRed() {
     };
   }, []);
 
-  return <canvas ref={ref} className="fondo-red" aria-hidden="true" />;
+  return <canvas ref={ref} className={`fondo-red ${className}`.trim()} aria-hidden="true" />;
 }

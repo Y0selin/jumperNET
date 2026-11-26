@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import GlifosFondo from "./GlifosFondo.jsx";
 import Nieve from "./Nieve.jsx";
+import FondoRed from "./FondoRed.jsx";
+import Estadisticas from "./Estadisticas.jsx";
 import Logo from "./Logo.jsx";
 import BotonModo from "./BotonModo.jsx";
 import PlanBadge from "./PlanBadge.jsx";
@@ -234,6 +236,7 @@ export default function Panel({
           <Nodos yo={yo} aviso={aviso} />
         </div>
       );
+      case "estadisticas": return <Estadisticas yo={yo} plan={plan} aviso={aviso} />;
       case "circuito": return <MisCircuitos yo={yo} plan={plan} aviso={aviso} navega={navega} />;
       case "circuitos": return <MisCircuitos yo={yo} plan={plan} aviso={aviso} navega={navega} />;
       case "explorer": return <NetworkExplorer yo={yo} plan={plan} aviso={aviso} />;
@@ -352,6 +355,8 @@ export default function Panel({
   if (cargandoCuenta && !yo) {
     return (
       <>
+        <FondoRed className="fondo-red-panel" />
+        <div className="pu-atmosfera" aria-hidden><i /><i /><i /></div>
         <GlifosFondo /><Nieve tenue />
         <div className="cascara pu-solo-cargando"><CargandoPanel /></div>
       </>
@@ -360,6 +365,8 @@ export default function Panel({
 
   return (
     <>
+      <FondoRed className="fondo-red-panel" />
+      <div className="pu-atmosfera" aria-hidden><i /><i /><i /></div>
       <GlifosFondo />
       <Nieve tenue />
       <div className="pn-aurora" aria-hidden><i /><i /><i /></div>

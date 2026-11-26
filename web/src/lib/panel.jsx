@@ -22,6 +22,7 @@ export const NAV_FREE = [
     id: "red", titulo: "Red", items: [
       { id: "red", txt: "Panel de red", ico: "network" },
       { id: "nodos", txt: "Nodos disponibles", ico: "nodes" },
+      { id: "estadisticas", txt: "Estadísticas y rendimiento", ico: "chart" },
       { id: "circuito", txt: "Mi circuito", ico: "route" },
       { id: "ip", txt: "Comprobación de IP", ico: "globe" },
       { id: "diagnostico", txt: "Diagnóstico básico", ico: "pulse" },
@@ -76,6 +77,7 @@ export const NAV_PRO = [
     id: "red", titulo: "Red y conexiones", items: [
       { id: "red", txt: "Panel de red", ico: "network" },
       { id: "nodos", txt: "Gestor de nodos", ico: "nodes" },
+      { id: "estadisticas", txt: "Estadísticas y rendimiento", ico: "chart", pro: true },
       { id: "explorer", txt: "Network Explorer", ico: "radar", pro: true },
       { id: "circuitos", txt: "Mis circuitos", ico: "route", pro: true },
       { id: "disenador", txt: "Diseñador de circuitos", ico: "pen", pro: true },
@@ -156,6 +158,7 @@ export const TITULOS_PANEL = {
   novedades: ["Novedades", "lo último que ha cambiado en JumperNET"],
   red: ["Panel de red", "el interruptor maestro y tu conexión"],
   nodos: ["Nodos", "la red viva, sin adornos"],
+  estadisticas: ["Estadísticas y rendimiento", "latencia, tráfico y disponibilidad medidos"],
   circuito: ["Mi circuito", "los relés que recorren tu tráfico"],
   circuitos: ["Mis circuitos", "tus configuraciones guardadas en este navegador"],
   explorer: ["Network Explorer", "explora nodos y conexiones"],
