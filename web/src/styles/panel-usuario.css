@@ -811,3 +811,108 @@
   .pu-precio-opciones { grid-template-columns: 1fr 1fr; }
   .pu-plan-hero .pu-datos { grid-template-columns: 1fr 1fr; }
 }
+
+/* ============================================================
+   MODO CLARO · contraste real y superficies limpias
+   La base crema y los textos de 8 px se perdían sobre blanco.
+   Esta capa se carga después de panel.css y navidad.css.
+   ============================================================ */
+html[data-modo="claro"] .pu-cascara .principal { background: #f3f8fc; }
+html[data-modo="claro"] .pu-cascara .lateral {
+  background: linear-gradient(180deg, #FFFFFF, #F7FBFE);
+  border-right-color: #d5e4ef;
+  box-shadow: 12px 0 34px -34px rgb(20 40 62 / .45);
+}
+html[data-modo="claro"] .pu-cascara.es-pro .lateral {
+  background: linear-gradient(180deg, #ECF9F5, #FFFFFF 240px);
+}
+html[data-modo="claro"] .pu-cascara .lateral-marca { background: transparent; border-bottom-color: #d5e4ef; }
+html[data-modo="claro"] .pu-cascara .lateral-perfil {
+  background: linear-gradient(90deg, rgb(22 125 104 / .07), transparent);
+  border-bottom-color: #d5e4ef;
+}
+html[data-modo="claro"] .pu-cascara .lateral-titulo,
+html[data-modo="claro"] .pu-cascara .pu-grupo-boton {
+  color: #a4371f;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  opacity: 1;
+}
+html[data-modo="claro"] .pu-cascara .pu-grupo.abierto .pu-grupo-boton { color: #8f2c16; }
+html[data-modo="claro"] .pu-cascara .pu-grupo-boton:hover { background: #e9f2f9; color: #14283e; }
+html[data-modo="claro"] .pu-cascara .lateral-btn { color: #334b63; }
+html[data-modo="claro"] .pu-cascara .lateral-btn:hover { background: #edf5fb; color: #14283e; }
+html[data-modo="claro"] .pu-cascara .lateral-btn.activa,
+html[data-modo="claro"] .pu-cascara.es-pro .lateral-btn.activa {
+  color: #14283e;
+  background: linear-gradient(90deg, rgb(22 125 104 / .14), transparent);
+  border-color: rgb(22 125 104 / .32);
+  box-shadow: inset 3px 0 0 #167d68;
+}
+html[data-modo="claro"] .pu-cascara .lateral-btn .ico,
+html[data-modo="claro"] .pu-cascara .lateral-btn.activa .ico { color: #0f6b59; }
+html[data-modo="claro"] .pu-cascara .pu-nav-pro { color: #0f6b59; background: #e7f5f0; }
+html[data-modo="claro"] .pu-cascara .pu-nav-lock { color: #805016; background: #fbf2df; }
+html[data-modo="claro"] .pu-cascara .lateral-btn.bloqueada { opacity: .82; }
+html[data-modo="claro"] .pu-cascara .lateral-pie { color: #52697c; border-top-color: #d5e4ef; }
+html[data-modo="claro"] .pu-cascara .lateral-pie-url { color: #64798a; opacity: 1; }
+html[data-modo="claro"] .pu-cascara .barra-sup {
+  background: rgb(255 255 255 / .94);
+  border-bottom-color: #d5e4ef;
+}
+html[data-modo="claro"] .pu-cascara .barra-sup .prompt { color: #405a72; }
+html[data-modo="claro"] .pu-cascara .barra-sup .prompt b { color: #b33a20; }
+html[data-modo="claro"] .pu-cascara .barra-sup .prompt i { color: #14283e; }
+html[data-modo="claro"] .pu-cascara .pn-fecha { color: #52697c; opacity: 1; }
+html[data-modo="claro"] .pu-cascara .chip { background: #FFFFFF; border-color: #cfdee9; color: #334b63; }
+html[data-modo="claro"] .pu-cascara .migas,
+html[data-modo="claro"] .pu-cascara .pu-kicker { color: #a4371f; font-weight: 700; }
+html[data-modo="claro"] .pu-cascara .pu-migas-estado { color: #52697c; }
+html[data-modo="claro"] .pu-cascara .pu-cab p,
+html[data-modo="claro"] .pu-cascara .pu-texto,
+html[data-modo="claro"] .pu-cascara .pu-nota { color: #3a5068; }
+html[data-modo="claro"] .pu-cascara .pu-pie { color: #52697c; opacity: 1; }
+
+html[data-modo="claro"] .pu-cascara .tarjeta,
+html[data-modo="claro"] .pu-cascara .pu-bento {
+  background: linear-gradient(160deg, #FFFFFF, #F9FCFF);
+  border-color: #d5e4ef;
+  box-shadow: 0 18px 42px -38px rgb(20 40 62 / .38);
+}
+html[data-modo="claro"] .pu-cascara .pu-hero {
+  background:
+    radial-gradient(circle at 82% 30%, rgb(255 99 71 / .08), transparent 42%),
+    linear-gradient(135deg, rgb(22 125 104 / .045), transparent 52%),
+    #FFFFFF;
+  border-color: #d5e4ef;
+}
+html[data-modo="claro"] .pu-cascara.es-pro .pu-hero {
+  background:
+    radial-gradient(circle at 80% 28%, rgb(22 125 104 / .13), transparent 42%),
+    linear-gradient(135deg, rgb(22 125 104 / .06), transparent 54%),
+    #FFFFFF;
+}
+html[data-modo="claro"] .pu-cascara .pu-hero h1 em { color: #c2401f; }
+html[data-modo="claro"] .pu-cascara .pu-plan-hero {
+  background: linear-gradient(135deg, rgb(255 99 71 / .06), transparent 62%), #FFFFFF;
+  border-color: #d5e4ef;
+}
+html[data-modo="claro"] .pu-cascara .pu-vacio { background: #F8FBFE; border-color: #cfdee9; }
+html[data-modo="claro"] .pu-cascara .pu-datos { background: #d5e4ef; border-color: #d5e4ef; }
+html[data-modo="claro"] .pu-cascara .pu-datos > span { background: #FFFFFF; }
+html[data-modo="claro"] .pu-cascara .pu-datos small,
+html[data-modo="claro"] .pu-cascara .pu-datos i { color: #405a72; }
+html[data-modo="claro"] .pu-cascara .pu-tabs-mini button { color: #3a5068; }
+html[data-modo="claro"] .pu-cascara .pu-tabs-mini button.on { background: #b33a20; color: #FFFFFF; }
+html[data-modo="claro"] .pu-cascara .pu-precio-opciones button.on { background: #fff1ed; }
+html[data-modo="claro"] .pu-cascara .pu-gate-precio b,
+html[data-modo="claro"] .pu-cascara .pu-gate-orbe b { color: #0f6b59; }
+html[data-modo="claro"] .pu-cascara .pu-gate-cerrar { color: #3a5068; }
+html[data-modo="claro"] .pu-cascara .pu-cv-rol { fill: #a4371f; }
+html[data-modo="claro"] .pu-cascara .pu-cv-punto { fill: #167d68; }
+html[data-modo="claro"] .pu-cascara .pu-cv-halo { fill: rgb(22 125 104 / .12); stroke: rgb(22 125 104 / .3); }
+html[data-modo="claro"] .pu-cascara .pu-explorador-nodo.ruta circle { fill: rgb(22 125 104 / .2); stroke: #167d68; }
+html[data-modo="claro"] .pu-cascara input,
+html[data-modo="claro"] .pu-cascara select,
+html[data-modo="claro"] .pu-cascara textarea { color: #14283e; }

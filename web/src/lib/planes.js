@@ -44,6 +44,24 @@ export function precioConPromo(precio, promo = true) {
   return { descuento, primerPago: Math.max(0, bruto - descuento) };
 }
 
+/* Cálculo local de respaldo. Solo se usa para la demo mientras la API de
+   precios no esté publicada; el flujo lo etiqueta como no validado. */
+export function calculaPrecioLocal(saltos = SALTOS_MIN, promo = true) {
+  const n = normalizaSaltos(saltos);
+  const precio = precioPro(n);
+  const { descuento, primerPago } = precioConPromo(precio, promo);
+  return {
+    saltos: n,
+    precio_base: PRECIO_BASE_PRO,
+    extras: extrasPro(n),
+    precio,
+    descuento,
+    primer_pago: primerPago,
+    renovacion: precio,
+    local: true,
+  };
+}
+
 /** Características visibles de Pro para el número de saltos elegido. */
 export function caracteristicasPro(saltos = SALTOS_MIN) {
   const n = normalizaSaltos(saltos);

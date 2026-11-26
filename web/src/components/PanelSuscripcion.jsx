@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useCarrito, cambiaSaltosPro } from "../lib/carrito.js";
 import {
   PROMO, precioPro, normalizaSaltos, SALTOS_MIN, SALTOS_MAX,
-  actualizaDemoPro, desactivaDemoPro, fechaCorta, DIAS_DEMO,
+  actualizaDemoPro, desactivaDemoPro, fechaCorta, DIAS_DEMO, calculaPrecioLocal,
 } from "../lib/planes.js";
 import { precioPro as precioServidor, solicitarSuscripcion } from "../lib/api.js";
 
@@ -139,18 +139,26 @@ export function PersonalizarSuscripcion({ yo, plan, navega, aviso }) {
   const [modal, setModal] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
+  const [notaLocal, setNotaLocal] = useState("");
   const [solicitud, setSolicitud] = useState(yo?.solicitud_suscripcion || null);
 
   useEffect(() => { setRevision(null); }, [saltos]);
 
   async function revisar() {
-    setCargando(true); setError("");
+    setCargando(true); setError(""); setNotaLocal("");
     try {
       const r = await precioServidor(saltos, true);
-      setRevision(r);
+      setRevision({ ...r, local: false });
       setModal(true);
     } catch (e) {
-      setError(e.message);
+      const apiPendiente = e?.estado === 404 || e?.estado === 501 || /sin conexión con la API/i.test(e?.message || "");
+      if (demo && apiPendiente) {
+        setRevision(calculaPrecioLocal(saltos, true));
+        setNotaLocal("La API de precios todavía no está publicada. Este importe es el mismo cálculo local de la demo y no se ha cobrado nada.");
+        setModal(true);
+      } else {
+        setError(e.message);
+      }
     } finally { setCargando(false); }
   }
 
@@ -166,6 +174,7 @@ export function PersonalizarSuscripcion({ yo, plan, navega, aviso }) {
         setSolicitud(d?.solicitud || { saltos, precio: revision?.precio ?? precioPro(saltos), estado: "pendiente", fecha: Date.now() / 1000 });
         aviso?.("solicitud registrada · pendiente de confirmación, sin cargo", "ok");
       }
+      setNotaLocal("");
       setModal(false);
     } catch (e) {
       setError(e.message);
@@ -218,7 +227,12 @@ export function PersonalizarSuscripcion({ yo, plan, navega, aviso }) {
             <button className="btn" type="button" onClick={() => navega?.("plan")}>Volver a mi plan</button>
           </div>
           {error && <p className="pu-error">{error}</p>}
-          <p className="pu-nota">El importe de la revisión lo calcula la API. La promoción no se puede verificar sin pasarela: se muestra como estimación y el equipo confirma la elegibilidad.</p>
+          {notaLocal && <p className="pu-nota pu-nota-aviso">{notaLocal}</p>}
+          <p className="pu-nota">
+            {demo
+              ? "En demo el cambio se guarda solo en este navegador. Si la API de precios no está publicada, se usa el mismo cálculo local y se avisa; nada se cobra."
+              : "El importe de la revisión lo calcula la API. La promoción no se puede verificar sin pasarela: se muestra como estimación y el equipo confirma la elegibilidad."}
+          </p>
         </section>
 
         <aside className="tarjeta">
@@ -250,6 +264,9 @@ export function PersonalizarSuscripcion({ yo, plan, navega, aviso }) {
                 ? "Se actualizará solo la demo de este navegador. El plan real del backend no cambia y no se cobra nada."
                 : "La solicitud quedará pendiente de confirmación. No se aplica el cambio ni se cobra hasta que el equipo lo valide."}
             </p>
+            {revision?.local && (
+              <p className="pu-nota pu-nota-aviso">Cálculo local de la demo: la API de precios aún no está publicada y este importe no se ha validado en el servidor.</p>
+            )}
             <dl className="pu-totales">
               <div><dt>Precio base</dt><dd>{euros(5)}</dd></div>
               <div><dt>Saltos adicionales</dt><dd>{saltos > 3 ? `+${euros(saltos - 3)}` : "—"}</dd></div>

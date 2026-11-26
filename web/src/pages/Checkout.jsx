@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useCarrito, marcarPromoUsada, vaciaCarrito } from "../lib/carrito.js";
-import { activaDemoPro, fechaCorta, DIAS_DEMO, PROMO, precioPro } from "../lib/planes.js";
+import { useCarrito, vaciaCarrito } from "../lib/carrito.js";
+import { activaDemoPro, calculaPrecioLocal, fechaCorta, DIAS_DEMO, PROMO, precioPro } from "../lib/planes.js";
 import { getToken, getUsuarioGuardado, precioPro as precioServidor } from "../lib/api.js";
 
 /* Contratación en tres pasos. No hay pasarela conectada: el paso de pago es
@@ -8,6 +8,10 @@ import { getToken, getUsuarioGuardado, precioPro as precioServidor } from "../li
    Al terminar se activa un Pro de DEMO local, nunca un cobro real. */
 
 const euros = (n) => n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+
+function apiPendiente(e) {
+  return e?.estado === 404 || e?.estado === 501 || /sin conexión con la API/i.test(e?.message || "");
+}
 
 export default function Checkout({ aviso }) {
   const carrito = useCarrito();
@@ -31,20 +35,34 @@ export default function Checkout({ aviso }) {
     setErrorPrecio("");
     try {
       /* El precio definitivo sale del backend. Si no coincide con la vista
-         previa, no continuamos: nunca cobramos ni activamos con un importe
-         manipulado en el navegador. */
-      const validado = await precioServidor(carrito.saltos, carrito.promo);
-      if (Number(validado.precio) !== Number(precioPro(carrito.saltos))) {
-        setErrorPrecio("El importe del servidor no coincide con la vista previa. Vuelve a cargar el carrito.");
-        return;
+         previa, no continuamos: nunca activamos con un importe manipulado.
+         Solo si la API de precios aún no está publicada se usa el mismo
+         cálculo local de la demo y se avisa con claridad. */
+      let validado;
+      let validadoPorServidor = true;
+      try {
+        validado = await precioServidor(carrito.saltos, carrito.promo);
+        if (Number(validado.precio) !== Number(precioPro(carrito.saltos))) {
+          setErrorPrecio("El importe del servidor no coincide con la vista previa. Vuelve a cargar el carrito.");
+          return;
+        }
+      } catch (e) {
+        if (!apiPendiente(e)) throw e;
+        validado = calculaPrecioLocal(carrito.saltos, carrito.promo);
+        validadoPorServidor = false;
       }
       const primerPago = carrito.promo ? validado.primer_pago : validado.precio;
-      setCompra({ ...validado, saltos: carrito.saltos, primerPago });
-      marcarPromoUsada();
+      setCompra({ ...validado, saltos: carrito.saltos, primerPago, validadoPorServidor });
+      /* La promo se queda para la primera compra real: una demo no la consume. */
       setDemo(activaDemoPro(usuario?.id, carrito.saltos));
       vaciaCarrito();
       setPaso(3);
-      aviso?.("modo de prueba activado · no se ha realizado ningún cargo", "ok");
+      aviso?.(
+        validadoPorServidor
+          ? "modo de prueba activado · no se ha realizado ningún cargo"
+          : "demo activada con cálculo local · API de precios pendiente, sin cargo",
+        "ok"
+      );
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
       setErrorPrecio(`No pudimos validar el importe con el servidor: ${e.message}`);
@@ -89,6 +107,12 @@ export default function Checkout({ aviso }) {
           <a className="jn-btn jn-btn-pro" href="#/panel">Ir a mi panel <span aria-hidden>→</span></a>
           <a className="jn-btn jn-btn-suave" href="#/tarifas">Volver a tarifas</a>
         </div>
+        {compra?.validadoPorServidor === false && (
+          <p className="jn-checkout-nota">
+            <b>API de precios pendiente.</b> La demo se ha activado con el mismo cálculo local, sin cargo.
+            El importe definitivo se validará en el servidor cuando contrates de verdad.
+          </p>
+        )}
         <p className="jn-checkout-nota">
           Para contratar de verdad, el equipo tiene que confirmar el pago y activar Pro desde
           administración. Este modo demo no modifica tu plan en el servidor.
@@ -159,6 +183,7 @@ export default function Checkout({ aviso }) {
                 <div className="primer"><dt>Primer pago</dt><dd>{euros(carrito.primerPago)}</dd></div>
                 <div className="renovacion"><dt>Renovaciones</dt><dd>{euros(carrito.renovacion)} al mes</dd></div>
               </dl>
+              <p className="jn-checkout-nota">El 10 % de bienvenida se aplica al primer pago y no se consume al completar la demo.</p>
 
               {!conSesion ? (
                 <div className="jn-checkout-cuenta">
@@ -207,7 +232,10 @@ export default function Checkout({ aviso }) {
                 </button>
                 <button type="button" className="jn-btn jn-btn-suave" onClick={() => setPaso(1)} disabled={validando}>Volver</button>
               </div>
-              <p className="jn-checkout-nota">Al continuar, el servidor recalcula el precio de {carrito.saltos} saltos y comprueba que coincide antes de activar la demo.</p>
+              <p className="jn-checkout-nota">
+                El servidor valida el precio de {carrito.saltos} saltos cuando la API está disponible. Si aún no está publicada,
+                la demo se activa con el mismo cálculo local y se avisa; no se cobra nada.
+              </p>
             </>
           )}
         </div>

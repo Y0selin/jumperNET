@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import GlifosFondo from "./GlifosFondo.jsx";
 import Nieve from "./Nieve.jsx";
 import Logo from "./Logo.jsx";
@@ -124,6 +124,7 @@ export default function Panel({
     try { return localStorage.getItem("jumpernet-panel-plegado") === "1"; } catch { return false; }
   });
   const [abiertos, setAbiertos] = useState(() => ({ general: true, red: true }));
+  const planVisto = useRef(null);
   const [gate, setGate] = useState(null);
   const [carritoAbierto, setCarritoAbierto] = useState(false);
   const [pegada, setPegada] = useState(false);
@@ -145,7 +146,22 @@ export default function Panel({
   useEffect(() => {
     const itemActual = itemDe(yo, tab) || (tab === "admin" && (yo?.rol === "admin" || yo?.rol === "moderador") ? { id: "admin" } : null);
     if (!itemActual) setTab("inicio");
-  }, [tab, yo?.plan, yo?.rol]);
+  }, [tab, yo?.plan, yo?.rol, plan.id, plan.demo]);
+
+  /* Al entrar o pasar a Pro, los grupos con herramientas nuevas deben quedar
+     a la vista. Cuenta y Soporte se dejan plegados para no alargar el menú. */
+  useEffect(() => {
+    const clave = `${plan.id}:${plan.demo ? "demo" : "real"}`;
+    if (planVisto.current === clave) return;
+    const primeraVez = planVisto.current === null;
+    planVisto.current = clave;
+    const gruposPro = ["general", "red", "seguridad", "herramientas", "suscripcion"];
+    if (plan.id !== "free" && (primeraVez || plan.demo)) {
+      setAbiertos(Object.fromEntries(
+        grupos.filter((g) => gruposPro.includes(g.id)).map((g) => [g.id, true])
+      ));
+    }
+  }, [plan.id, plan.demo, grupos]);
 
   useEffect(() => {
     try { sessionStorage.setItem("jumpernet-panel-tab", tab); } catch { /* sin sesión */ }

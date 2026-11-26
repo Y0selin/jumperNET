@@ -18,7 +18,10 @@ import {
  * que la interfaz lo dice con claridad. */
 
 const CLAVE = "jumpernet-carrito-v2";
-const CLAVE_PROMO = "jumpernet-promo-usada-v1";
+/* v2: la demo anterior consumía la promo antes de una compra real. La clave
+   antigua se limpia para que ese fallo no deje el descuento bloqueado. */
+const CLAVE_PROMO = "jumpernet-promo-usada-v2";
+const CLAVE_PROMO_DEMO = "jumpernet-promo-usada-v1";
 const EVENTO = "jumpernet-carrito";
 
 export const PRECIO_PRO = PRECIO_BASE_PRO;
@@ -40,7 +43,10 @@ function escribe(estado) {
 }
 
 export function promoUsada() {
-  try { return localStorage.getItem(CLAVE_PROMO) === "1"; } catch { return false; }
+  try {
+    localStorage.removeItem(CLAVE_PROMO_DEMO);
+    return localStorage.getItem(CLAVE_PROMO) === "1";
+  } catch { return false; }
 }
 
 export function marcarPromoUsada() {
