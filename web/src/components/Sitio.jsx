@@ -8,6 +8,9 @@ import FondoRed from "./FondoRed.jsx";
 import Visita from "./Visita.jsx";
 import AvisoDocs from "./AvisoDocs.jsx";
 import Buscador from "./Buscador.jsx";
+import Oferta from "./Oferta.jsx";
+import { BotonCarrito } from "./Carrito.jsx";
+import { BotonCampana } from "./Notificaciones.jsx";
 import { ENLACES } from "../lib/contenido.js";
 import { DOCS_URL } from "../lib/enlaces.js";
 import { NOMBRES } from "../lib/equipo.js";
@@ -32,6 +35,8 @@ const TITULOS = {
   "/video": "El viaje en vídeo",
   "/lab": "Laboratorio interactivo",
   "/acceso": "Entrar o crear cuenta",
+  "/contacto": "Contacto y soporte",
+  "/pago": "Contratar un plan",
   "/panel": "Panel",
 };
 
@@ -154,6 +159,8 @@ export default function Sitio({ ruta, enSesion, children }) {
               onClick={() => window.dispatchEvent(new Event("jumpernet-tour"))}
               aria-label="Abrir la visita guiada" title="Visita guiada">?</button>
           )}
+          <BotonCampana />
+          <BotonCarrito compacto />
           <BotonModo />
           {enSesion ? (
             <a className="btn primario" href="#/panel">Abrir panel <span aria-hidden>→</span></a>
@@ -192,6 +199,7 @@ export default function Sitio({ ruta, enSesion, children }) {
       <Reproductor />
       <VideoModal abierto={videoAbierto} cerrar={() => setVideoAbierto(false)} />
       <Buscador abierto={buscador} cerrar={() => setBuscador(false)} />
+      <Oferta activa={activa} />
 
       <footer className="sp-pie">
         <div className="sp-pie-arriba">
@@ -228,6 +236,7 @@ export default function Sitio({ ruta, enSesion, children }) {
             <a href={DOCS_URL} target="_blank" rel="noreferrer">Documentación ↗</a>
             <a href="https://github.com/y0selin/jumperNET" target="_blank" rel="noreferrer">GitHub ↗</a>
             <a href="#/dudas">Preguntas frecuentes</a>
+            <a href="#/contacto">Contacto y soporte</a>
             <a href="#/descargas">Descargas</a>
             <a href="#/video">El viaje en vídeo</a>
           </div>

@@ -14,6 +14,8 @@ import "./styles/novedades31.css";
 import "./styles/portada32.css";
 import "./styles/premium.css";
 import "./styles/laboratorio.css";
+import "./styles/evolucion.css";
+import "./styles/saas.css";
 
 if (!document.documentElement.dataset.modo) document.documentElement.dataset.modo = "claro";
 createRoot(document.getElementById("root")).render(<App />);

@@ -8,19 +8,7 @@ import Diagnostico from "./Diagnostico.jsx";
 import Revela from "./Revela.jsx";
 import { TarjetaHoy } from "./Hoy.jsx";
 import { haceCuanto } from "../lib/fecha.js";
-
-const CLAVE_LOG = "jumpernet-actividad";
-
-function leeLog() {
-  try {
-    const bruto = JSON.parse(localStorage.getItem(CLAVE_LOG) || "[]");
-    return Array.isArray(bruto) ? bruto.slice(0, 12) : [];
-  } catch { return []; }
-}
-
-function guardaLog(lista) {
-  try { localStorage.setItem(CLAVE_LOG, JSON.stringify(lista.slice(0, 12))); } catch { /* modo privado */ }
-}
+import { guardaActividad, leeActividad } from "../lib/actividad.js";
 
 /* ── chispa de latencia: las últimas medidas reales de la API ── */
 function ChispaLatencia({ muestras }) {
@@ -457,7 +445,7 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
   const [saltosSel, setSel] = useState(3);   // nº deseado de saltos (plan pro)
   const [modoSel, setModo] = useState("todos"); // "todos" | "externos"
   const [muestras, setMuestras] = useState([]); // latencias medidas de la API
-  const [log, setLog] = useState(leeLog);      // actividad local del panel
+  const [log, setLog] = useState(() => leeActividad(12)); // actividad local del panel
   const divMapa = useRef(null);
   const mapa = useRef(null);
   const capa = useRef(null);
@@ -466,7 +454,7 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
     const item = { t: Date.now(), texto, tipo };
     setLog((l) => {
       const nuevo = [item, ...l].slice(0, 12);
-      guardaLog(nuevo);
+      guardaActividad(nuevo);
       return nuevo;
     });
   };
@@ -572,8 +560,11 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
     try {
       const r = await comprobar(clave);
       setPrueba(r);
-      if (r.ok) aviso(r.cambia_tu_ip ? "¡funciona! el destino te ve con otra IP" : "el circuito responde (tu IP no cambia porque ya sales por ahí)", "ok");
-      else aviso(r.error || "la comprobación falló", "error");
+      if (r.ok) {
+        try { localStorage.setItem("jumpernet-ip-comprobada", String(Date.now())); } catch { /* privado */ }
+        apunta(r.cambia_tu_ip ? "comprobación: el destino ve otra IP" : "comprobación real completada");
+        aviso(r.cambia_tu_ip ? "¡funciona! el destino te ve con otra IP" : "el circuito responde (tu IP no cambia porque ya sales por ahí)", "ok");
+      } else aviso(r.error || "la comprobación falló", "error");
     } catch (e) { aviso(e.message, "error"); }
     finally { setProbando(false); }
   }
