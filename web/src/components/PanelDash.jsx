@@ -283,6 +283,7 @@ export default function PanelDash({ yo, plan, variante = "inicio", prefs, navega
           {acceso("nodos", esPro ? "Gestor de nodos" : "Nodos disponibles", "⛓")}
           {acceso("ip", "Comprobar mi IP", "◎")}
           {acceso("diagnostico", "Diagnóstico", "⌁")}
+          {acceso("informes", "Informe PDF", "▤")}
           {esPro ? acceso("explorer", "Network Explorer", "◈") : acceso("mejorar", "Descubrir Pro", "⚡")}
           {esPro ? acceso("disenador", "Diseñar circuito", "✦") : acceso("guias", "Guías", "▤")}
         </div>

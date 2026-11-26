@@ -25,6 +25,7 @@ export const NAV_FREE = [
       { id: "circuito", txt: "Mi circuito", ico: "route" },
       { id: "ip", txt: "Comprobación de IP", ico: "globe" },
       { id: "diagnostico", txt: "Diagnóstico básico", ico: "pulse" },
+      { id: "informes", txt: "Informes PDF", ico: "file" },
     ],
   },
   {
@@ -79,6 +80,7 @@ export const NAV_PRO = [
       { id: "circuitos", txt: "Mis circuitos", ico: "route", pro: true },
       { id: "disenador", txt: "Diseñador de circuitos", ico: "pen", pro: true },
       { id: "monitor", txt: "Monitor de rendimiento", ico: "chart", pro: true },
+      { id: "informes", txt: "Informes PDF", ico: "file" },
     ],
   },
   {
@@ -163,6 +165,7 @@ export const TITULOS_PANEL = {
   ip: ["Comprobación de IP", "la prueba de que sales por otro sitio"],
   inspector: ["Inspector de paquetes", "capas de cifrado, sin capturar nada"],
   diagnostico: ["Diagnóstico", "comprobaciones de API, sesión y nodos"],
+  informes: ["Informes PDF", "estado, configuración y resultados de tu red"],
   terminal: ["Terminal", "comandos educativos, ningún shell real"],
   lab: ["JumperNET Lab", "experimentos de red seguros"],
   comparador: ["Comparador de circuitos", "qué cambia al añadir saltos"],
@@ -201,6 +204,7 @@ export const ICONOS_PANEL = {
   flask: <><path d="M9 3h6M10 3v5l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 17l-5-9V3" /><path d="M7.5 15h9" /></>,
   sim: <><rect x="3" y="4" width="18" height="13" rx="2" /><path d="M8 21h8M12 17v4M7 9h4M7 12h7" /></>,
   download: <><path d="M12 3v12M7 10l5 5 5-5" /><path d="M4 19h16" /></>,
+  file: <><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v5h5" /><path d="M9 13h6M9 17h4" /></>,
   book: <><path d="M4 5.2A2.2 2.2 0 0 1 6.2 3H20v15.5H6.2A2.2 2.2 0 0 0 4 20.7z" /><path d="M4 20.7V5.2M8 7h8M8 10.5h5" /></>,
   user: <><circle cx="12" cy="8" r="3.4" /><path d="M4.5 21c0-4 3.3-6.2 7.5-6.2s7.5 2.2 7.5 6.2" /></>,
   card: <><rect x="2.8" y="5" width="18.4" height="14" rx="2.5" /><path d="M2.8 9.6h18.4M6.5 14.8h4" /></>,
@@ -290,6 +294,10 @@ export function leePrefCircuito(yo) {
     }
   } catch { /* sin almacenamiento */ }
   return { saltos: Math.min(3, max), modo: "todos" };
+}
+
+export function hayPrefCircuitoGuardada() {
+  try { return !!localStorage.getItem(CLAVE_CIRCUITO); } catch { return false; }
 }
 
 export function guardaPrefCircuito(pref) {

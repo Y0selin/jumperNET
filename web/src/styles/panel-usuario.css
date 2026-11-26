@@ -986,3 +986,29 @@ html[data-modo="claro"] .pu-cascara .pu-terminal-form .btn {
   background: var(--sup-1);
   color: var(--texto);
 }
+
+/* ── informes PDF ─────────────────────────────────────────────────────── */
+.pu-informe-acciones { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.pu-informe-acciones .seccion { margin-bottom: 0; }
+.pu-informe-botonera { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 4px; }
+.pu-informe-botonera .btn { min-height: 38px; }
+.pu-informe-lista {
+  display: grid; gap: 9px; margin: 0; padding: 0; list-style: none;
+}
+.pu-informe-lista li {
+  position: relative; padding-left: 21px; color: var(--texto-suave);
+  font-size: 12.5px; line-height: 1.55;
+}
+.pu-informe-lista li::before {
+  content: "✓"; position: absolute; left: 0; top: 0;
+  color: var(--acento-1); font-weight: 800;
+}
+.pu-informe-lista b { color: var(--texto); }
+.pu-informe-cab { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pu-informe-cab .seccion { margin-bottom: 10px; }
+.pu-informe-fecha { color: var(--texto-suave); font-size: 10px; }
+.pu-informe-vacio { margin-top: 0; }
+@media (max-width: 700px) {
+  .pu-informe-botonera { width: 100%; }
+  .pu-informe-botonera .btn { flex: 1 1 100%; }
+}

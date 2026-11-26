@@ -10,6 +10,7 @@
     "test:e2e": "node scripts/e2e.mjs"
   },
   "dependencies": {
+    "jspdf": "^4.2.1",
     "leaflet": "^1.9.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

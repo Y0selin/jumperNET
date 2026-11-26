@@ -8,6 +8,7 @@ import CarritoPanel from "./CarritoPanel.jsx";
 import Red from "./Red.jsx";
 import Nodos from "./Nodos.jsx";
 import Diagnostico from "./Diagnostico.jsx";
+import InformesPanel from "./InformesPanel.jsx";
 import Cuenta from "./Cuenta.jsx";
 import Ajustes from "./Ajustes.jsx";
 import Admin from "./Admin.jsx";
@@ -241,6 +242,7 @@ export default function Panel({
       case "seguridad": return <CentroSeguridad yo={yo} plan={plan} />;
       case "ip": return <ComprobacionIP yo={yo} aviso={aviso} navega={navega} />;
       case "inspector": return <InspectorPaquetes yo={yo} plan={plan} />;
+      case "informes": return <InformesPanel yo={yo} aviso={aviso} navega={navega} />;
       case "diagnostico": return (
         <div className="pu-pagina">
           <header className="pu-cab">

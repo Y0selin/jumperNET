@@ -593,7 +593,14 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
      pestaña. Así una segunda conexión no reutiliza un contenedor desmontado. */
   useEffect(() => {
     if (!yo?.activo || mapa.current || !divMapa.current) return;
-    const m = L.map(divMapa.current, { attributionControl: false });
+    const m = L.map(divMapa.current, {
+      attributionControl: false,
+      /* el mapa se destruye al apagar la red: sin transiciones de zoom que
+         puedan seguir tocando panes ya retirados */
+      zoomAnimation: false,
+      fadeAnimation: false,
+      markerZoomAnimation: false,
+    });
     let vivo = true;
     // FONDO VECTORIAL ÚNICO: los proveedores de tiles responden HTTP 200 con
     // la imagen del mensaje «API KEY REQUIRED» (no hay tileerror que detectar,
