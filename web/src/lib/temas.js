@@ -78,9 +78,11 @@ export const PRESETS = {
   "navidad-clara": {
     nombre: "JumperNET 3.0",
     variables: {
-      "--bg-1": "#EEF6FD", "--bg-2": "#FFFFFF", "--panel": "255, 255, 255", "--panel-sol": "8, 127, 104",
-      "--borde": "#d7e6f4", "--acento-1": "#087f68", "--acento-2": "#14283e",
-      "--acento-3": "#d6a84b", "--texto": "#14283E", "--texto-suave": "#52697c",
+      "--bg-1": "#F2F6F0", "--bg-2": "#E7F2EA", "--panel": "251, 253, 249", "--panel-sol": "27, 116, 96",
+      "--borde": "#D2E0D6", "--acento-1": "#1B7460", "--acento-2": "#146B59",
+      "--acento-3": "#B68A3E", "--texto": "#1B3029", "--texto-suave": "#476057",
+      "--acento-txt": "#A8432B", "--linea": "rgb(27 48 41 / .11)", "--linea-2": "rgb(27 48 41 / .17)",
+      "--sup-1": "#FBFDF9", "--sup-2": "#F5FAF4", "--sup-3": "#EAF3EC",
     },
     forma: { "--radio": "18px", "--radio-2": "12px", "--tam-fuente": "15px", "--fuente": '"Inter", system-ui' },
     efectos: { "--glow": "0.4", "--glass": "0.85", "--vel-anim": "1" },
@@ -98,22 +100,28 @@ export function aplicaTema(tema) {
 }
 
 export function guardaTema(tema) { localStorage.setItem(CLAVE, JSON.stringify(tema)); }
+function esPaletaAntiguaClara(t) {
+  const v = t?.variables || {};
+  return String(v["--bg-1"] || "").toLowerCase() === "#eef6fd"
+    && String(v["--texto"] || "").toLowerCase() === "#14283e";
+}
+
 export function cargaTema() {
   try {
     const t = JSON.parse(localStorage.getItem(CLAVE));
-    if (t && t.variables) return t;
+    if (t && t.variables) {
+      /* el preset claro antiguo se queda guardado en algunos navegadores:
+         se migra en vez de seguir pintando la paleta azul anterior */
+      if (esPaletaAntiguaClara(t)) return JSON.parse(JSON.stringify(PRESETS["navidad-clara"]));
+      return t;
+    }
   } catch { /* tema roto: preset */ }
   return JSON.parse(JSON.stringify(PRESETS["navidad-clara"]));
 }
 export function temaPorId(id) {  return JSON.parse(JSON.stringify(PRESETS[id] || PRESETS["navidad-clara"])); }
 
 export function useTemas() {
-  const [tema, setTema] = useState(() => {
-    try {
-      const persisted = localStorage.getItem(CLAVE);
-      return persisted ? JSON.parse(persisted) : PRESETS["navidad-clara"];
-    } catch { return PRESETS["navidad-clara"]; }
-  });
+  const [tema, setTema] = useState(cargaTema);
 
   useEffect(() => {
     document.dispatchEvent(new Event("toggle-tema"));

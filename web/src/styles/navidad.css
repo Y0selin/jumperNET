@@ -7,31 +7,31 @@
 
 /* ─────────── paleta clara: papel, pino, coral y oro ─────────── */
 html[data-modo="claro"] {
-  --bg-1: #FFFFFF;
-  --bg-2: #EFF8FF;
-  --panel: 255, 255, 255;
-  --panel-sol: 22, 125, 104;
-  --borde: #dce8f2;
-  --acento-1: #FF6347;
-  --acento-2: #167D68;
-  --acento-3: #D6A84B;
-  --texto: #14283E;
-  --texto-suave: #3a5068;
+  --bg-1: #F2F6F0;
+  --bg-2: #E7F2EA;
+  --panel: 251, 253, 249;
+  --panel-sol: 29, 117, 98;
+  --borde: #D2E0D6;
+  --acento-1: #1B7460;
+  --acento-2: #146B59;
+  --acento-3: #B68A3E;
+  --texto: #1B3029;
+  --texto-suave: #476057;
   --tinta: #FFFFFF;
-  --acento-txt: #d24a2c;
-  --acento-txt-2: #e8563a;
-  --linea: rgb(20 40 62 / .10);
-  --linea-2: rgb(20 40 62 / .16);
-  --sup-1: #FFFFFF;
-  --sup-2: #F7FBFE;
-  --sup-3: #EFF8FF;
-  --hover: rgb(20 40 62 / .05);
-  --cristal: rgb(255 255 255 / .92);
-  --cristal-2: #FFFFFF;
+  --acento-txt: #A8432B;
+  --acento-txt-2: #BE5338;
+  --linea: rgb(27 48 41 / .11);
+  --linea-2: rgb(27 48 41 / .17);
+  --sup-1: #FBFDF9;
+  --sup-2: #F5FAF4;
+  --sup-3: #EAF3EC;
+  --hover: rgb(27 48 41 / .055);
+  --cristal: rgb(251 253 249 / .92);
+  --cristal-2: #FBFDF9;
 }
 
 html[data-modo="claro"] body {
-  background: #FFFFFF;
+  background: #F2F6F0;
   color: var(--texto);
 }
 html[data-modo="claro"] body::before {

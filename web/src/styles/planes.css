@@ -1759,3 +1759,97 @@ html[data-modo="oscuro"] .jn-dock-item.activa:hover { color: #04231d; }
   .jn-dock-item:hover { transform: none; }
   .jn-plan:hover { transform: none; }
 }
+
+/* ============================================================
+   MODO CLARO · el Pro deja de ser una isla oscura
+   La tarjeta y su circuito comparten el papel verdoso del resto.
+   El modo oscuro conserva la versión azul profunda.
+   ============================================================ */
+html[data-modo="claro"] .jn-plan-pro {
+  --texto: #1B3029;
+  --texto-suave: #476057;
+  --jn-linea: #CBDDD2;
+  --jn-sup: #F8FCF7;
+  --bg-2: #EAF3EC;
+  border-color: #9FC7B6;
+  background:
+    radial-gradient(105% 70% at 84% 0%, rgb(29 117 98 / .15), transparent 58%),
+    radial-gradient(80% 60% at 0% 100%, rgb(217 93 65 / .06), transparent 62%),
+    linear-gradient(160deg, #F3FAF5, #EAF4EC 62%, #F8FBF4);
+  box-shadow: 0 34px 70px -48px rgb(27 48 41 / .5), inset 0 1px 0 #FFFFFF;
+}
+html[data-modo="claro"] .jn-plan-pro:hover {
+  border-color: #6FAE99;
+  box-shadow: 0 38px 76px -48px rgb(27 48 41 / .55), 0 0 38px -20px rgb(29 117 98 / .32), inset 0 1px 0 #FFFFFF;
+}
+html[data-modo="claro"] .jn-plan-pro .jn-plan-halo {
+  background: radial-gradient(70% 44% at 50% 0%, rgb(29 117 98 / .16), transparent 70%);
+}
+html[data-modo="claro"] .jn-plan-pro .jn-plan-ico {
+  border-color: #A9CDBE;
+  background: #E3F2EB;
+  color: #1B7460;
+}
+html[data-modo="claro"] .jn-plan-pro .jn-plan-flag {
+  background: #1B7460;
+  color: #FFFFFF;
+}
+html[data-modo="claro"] .jn-plan-pro .jn-plan-desc { color: #476057; }
+html[data-modo="claro"] .jn-plan-pro .jn-plan-etq { color: #1B7460; }
+html[data-modo="claro"] .jn-plan-pro .jn-plan-precio b,
+html[data-modo="claro"] .jn-plan-pro .jn-plan-moneda { color: #1B3029; }
+html[data-modo="claro"] .jn-plan-pro .jn-plan-precio i { color: #476057; }
+html[data-modo="claro"] .jn-plan-pro .jn-plan-estreno { color: #A8432B; }
+html[data-modo="claro"] .jn-plan-pro .jn-plan-actual-tag {
+  background: #E3F2EB;
+  border-color: #A9CDBE;
+  color: #1B7460;
+}
+html[data-modo="claro"] .jn-plan-pro .jn-btn-suave {
+  border-color: #B9D2C5;
+  background: #F8FCF7;
+  color: #1B3029;
+}
+html[data-modo="claro"] .jn-plan-pro .jn-btn-suave:hover {
+  border-color: #1B7460;
+  background: #EAF4EC;
+  color: #1B7460;
+}
+html[data-modo="claro"] .jn-plan-pro .jn-circ {
+  border-color: #C9DDD2;
+  background:
+    radial-gradient(80% 120% at 50% 0%, rgb(29 117 98 / .10), transparent 70%),
+    linear-gradient(180deg, #F8FCF8, #EDF6EF);
+}
+html[data-modo="claro"] .jn-plan-pro .jn-circ-punto { fill: #1B7460; }
+html[data-modo="claro"] .jn-plan-pro .jn-circ-halo { fill: rgb(29 117 98 / .16); }
+html[data-modo="claro"] .jn-plan-pro .jn-circ-num,
+html[data-modo="claro"] .jn-plan-pro .jn-circ-extremo { fill: #5C7369; }
+html[data-modo="claro"] .jn-plan-pro .jn-circ-pie { color: #5C7369; }
+html[data-modo="claro"] .jn-plan-pro .jn-plan-lista li { border-bottom-color: #D5E4DC; }
+html[data-modo="claro"] .jn-plan-pro .jn-plan-check {
+  background: #E3F2EB;
+  color: #1B7460;
+}
+html[data-modo="claro"] .jn-plan-pro .jn-plan-lista summary:hover { color: #1B7460; }
+html[data-modo="claro"] .jn-plan-pro .jn-plan-lista details p { color: #476057; }
+html[data-modo="claro"] .jn-plan-pro .jn-plan-lista summary::after { color: #5C7369; }
+html[data-modo="claro"] .jn-plan-pro .jn-plan-nota { color: #5C7369; }
+
+html[data-modo="claro"] .jn-circ-control-cab { color: #5C7369; }
+html[data-modo="claro"] .jn-circ-control-cab b { color: #1B7460; }
+html[data-modo="claro"] .jn-circ-ticks span { color: #5C7369; }
+html[data-modo="claro"] .jn-circ-ticks span.on { color: #1B7460; }
+html[data-modo="claro"] .jn-circ-control input[type="range"] { accent-color: #1B7460; }
+
+html[data-modo="claro"] .jn-btn-oscuro {
+  border: 1px solid #D9C497;
+  background: #F3EAD6;
+  color: #4A3818;
+  box-shadow: 0 16px 30px -24px rgb(74 56 24 / .35), inset 0 1px 0 #FFFFFF;
+}
+html[data-modo="claro"] .jn-btn-oscuro:hover {
+  background: #EADDBF;
+  color: #38290F;
+  filter: none;
+}

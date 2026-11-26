@@ -594,6 +594,7 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
   useEffect(() => {
     if (!yo?.activo || mapa.current || !divMapa.current) return;
     const m = L.map(divMapa.current, { attributionControl: false });
+    let vivo = true;
     // FONDO VECTORIAL ÚNICO: los proveedores de tiles responden HTTP 200 con
     // la imagen del mensaje «API KEY REQUIRED» (no hay tileerror que detectar,
     // el mapa queda en hueso) y encima dependen de terceros. Con el GeoJSON
@@ -603,6 +604,7 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
       try {
         const r = await fetch(`${import.meta.env.BASE_URL}mundo.json`);
         const mundo = await r.json();
+        if (!vivo) return;
         L.geoJSON(mundo, {
           style: { color: "#3a3a44", weight: .6, fillColor: "#1c1c24", fillOpacity: 1 },
           interactive: false,
@@ -614,6 +616,7 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
     m.setView([40, -30], 3);
     const t = setTimeout(() => m.invalidateSize(), 80);
     return () => {
+      vivo = false;
       clearTimeout(t);
       m.remove();
       mapa.current = null;

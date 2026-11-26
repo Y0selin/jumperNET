@@ -7,13 +7,16 @@ const CLAVE = "jumpernet-modo-v1";
 export const MODOS = {
   claro: {
     nombre: "Claro",
-    color: "#EEF6FD",
+    color: "#F2F6F0",
     vars: {
-      "--bg-1": "#EEF6FD", "--bg-2": "#FFFFFF",
-      "--panel": "255, 255, 255", "--panel-sol": "8, 127, 104",
-      "--borde": "#d7e6f4", "--acento-1": "#087f68",
-      "--acento-2": "#14283e", "--acento-3": "#d6a84b",
-      "--texto": "#14283E", "--texto-suave": "#52697c",
+      "--bg-1": "#F2F6F0", "--bg-2": "#E7F2EA",
+      "--panel": "251, 253, 249", "--panel-sol": "27, 116, 96",
+      "--borde": "#D2E0D6", "--acento-1": "#1B7460",
+      "--acento-2": "#146B59", "--acento-3": "#B68A3E",
+      "--texto": "#1B3029", "--texto-suave": "#476057",
+      "--acento-txt": "#A8432B", "--acento-txt-2": "#BE5338",
+      "--linea": "rgb(27 48 41 / .11)", "--linea-2": "rgb(27 48 41 / .17)",
+      "--sup-1": "#FBFDF9", "--sup-2": "#F5FAF4", "--sup-3": "#EAF3EC",
     },
   },
   oscuro: {
@@ -25,6 +28,9 @@ export const MODOS = {
       "--borde": "#1f3a52", "--acento-1": "#35c7a7",
       "--acento-2": "#d6a84b", "--acento-3": "#e9c178",
       "--texto": "#F1F7FD", "--texto-suave": "#A8C1D4",
+      "--acento-txt": "#ffa38f", "--acento-txt-2": "#ffb9a8",
+      "--linea": "rgb(160 200 230 / .14)", "--linea-2": "rgb(160 200 230 / .26)",
+      "--sup-1": "#102436", "--sup-2": "#0d2031", "--sup-3": "#152c40",
     },
   },
 };

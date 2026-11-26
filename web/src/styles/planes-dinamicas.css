@@ -97,3 +97,17 @@
   .jn-item-saltos-opciones button { padding: 6px 1px 5px; }
   .jn-item-saltos-opciones small { font-size: 7px; }
 }
+
+/* El desglose y los controles del Pro también siguen el papel claro. */
+html[data-modo="claro"] .jn-plan-pro .jn-plan-desglose { color: #476057; }
+html[data-modo="claro"] .jn-plan-pro .jn-plan-desglose .extra { color: #1B7460; }
+html[data-modo="claro"] .jn-plan-pro .jn-plan-desglose .total { color: #1B3029; }
+html[data-modo="claro"] .jn-circ-paso button {
+  border-color: #B9D2C5;
+  background: #F8FCF7;
+  color: #1B3029;
+}
+html[data-modo="claro"] .jn-circ-paso button:hover:not(:disabled) {
+  border-color: #1B7460;
+  background: #E3F2EB;
+}

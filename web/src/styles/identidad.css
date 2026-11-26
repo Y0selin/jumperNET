@@ -8,31 +8,31 @@
 
 /* ─────────── 1 · paleta ─────────── */
 html[data-modo="claro"] {
-  --bg-1: #eef6fd;
-  --bg-2: #ffffff;
-  --panel: 255, 255, 255;
-  --panel-sol: 8, 127, 104;
-  --borde: #d7e6f4;
-  --acento-1: #087f68;
-  --acento-2: #14283e;
-  --acento-3: #d6a84b;
-  --texto: #14283e;
-  --texto-suave: #52697c;
+  --bg-1: #F2F6F0;
+  --bg-2: #E7F2EA;
+  --panel: 251, 253, 249;
+  --panel-sol: 27, 116, 96;
+  --borde: #D2E0D6;
+  --acento-1: #1B7460;
+  --acento-2: #146B59;
+  --acento-3: #B68A3E;
+  --texto: #1B3029;
+  --texto-suave: #476057;
   --tinta: #ffffff;
-  --acento-txt: #c2401f;
-  --acento-txt-2: #d9583a;
-  --linea: rgb(20 40 62 / .10);
-  --linea-2: rgb(20 40 62 / .18);
-  --sup-1: #ffffff;
-  --sup-2: #f7fbff;
-  --sup-3: #eff7ff;
-  --hover: rgb(20 40 62 / .05);
-  --cristal: rgb(255 255 255 / .90);
-  --cristal-2: #ffffff;
+  --acento-txt: #A8432B;
+  --acento-txt-2: #BE5338;
+  --linea: rgb(27 48 41 / .11);
+  --linea-2: rgb(27 48 41 / .17);
+  --sup-1: #FBFDF9;
+  --sup-2: #F5FAF4;
+  --sup-3: #EAF3EC;
+  --hover: rgb(27 48 41 / .055);
+  --cristal: rgb(251 253 249 / .92);
+  --cristal-2: #FBFDF9;
   --radio: 18px;
   --radio-2: 12px;
   --fuente-titulo: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --sombra-panel: 0 24px 60px -44px rgb(20 40 62 / .50);
+  --sombra-panel: 0 24px 60px -44px rgb(27 48 41 / .35);
 }
 
 html[data-modo="oscuro"] {
@@ -65,10 +65,11 @@ html[data-modo="oscuro"] {
 
 /* ─────────── 2 · fondo ─────────── */
 html[data-modo="claro"] body {
-  background:
-    radial-gradient(58% 42% at 84% -4%, rgb(8 127 104 / .08), transparent 70%),
-    radial-gradient(52% 40% at -6% 8%, rgb(214 168 75 / .12), transparent 72%),
-    linear-gradient(180deg, #f3faff 0%, #ffffff 44%, #eef6fd 100%) !important;
+  background-color: #F2F6F0 !important;
+  background-image:
+    radial-gradient(58% 42% at 84% -4%, rgb(29 117 98 / .10), transparent 70%),
+    radial-gradient(52% 40% at -6% 8%, rgb(182 138 62 / .10), transparent 72%),
+    linear-gradient(180deg, #F7FAF4 0%, #F2F6F0 50%, #EAF2EB 100%) !important;
   background-attachment: fixed !important;
 }
 html[data-modo="oscuro"] body {
@@ -203,13 +204,13 @@ html[data-modo="oscuro"] .pp .pp-marca-txt span { color: var(--acento-1) !import
 
 /* ─────────── 5 · botones ─────────── */
 html[data-modo="claro"] .pp .btn {
-  background: #ffffff !important;
+  background: var(--sup-1) !important;
   border: 1px solid var(--borde) !important;
   color: var(--texto) !important;
-  box-shadow: 0 12px 26px -24px rgb(20 40 62 / .45);
+  box-shadow: 0 12px 26px -24px rgb(27 48 41 / .32);
 }
 html[data-modo="claro"] .pp .btn:hover {
-  background: #ffffff !important;
+  background: var(--sup-2) !important;
   border-color: var(--acento-1) !important;
   color: var(--acento-1) !important;
   transform: translateY(-1px);
@@ -218,7 +219,7 @@ html[data-modo="claro"] .pp .btn.primario {
   background: linear-gradient(135deg, var(--acento-1), color-mix(in srgb, var(--acento-1) 84%, #04231d)) !important;
   border-color: transparent !important;
   color: #ffffff !important;
-  box-shadow: 0 16px 32px -20px rgb(8 127 104 / .85) !important;
+  box-shadow: 0 16px 32px -20px rgb(27 116 96 / .55) !important;
 }
 html[data-modo="claro"] .pp .btn.primario:hover {
   background: linear-gradient(135deg, color-mix(in srgb, var(--acento-1) 88%, #ffffff), color-mix(in srgb, var(--acento-1) 84%, #04231d)) !important;
@@ -260,18 +261,18 @@ html[data-modo="claro"] .pp .hn-panel,
 html[data-modo="claro"] .pp .tarjeta-descarga {
   background: var(--sup-1) !important;
   border-color: var(--borde) !important;
-  box-shadow: 0 20px 46px -40px rgb(20 40 62 / .45);
+  box-shadow: 0 20px 46px -40px rgb(27 48 41 / .32);
 }
 .pp .sp-ficha, .pp .sp-limite, .pp .pp-pieza, .pp .sp-tres-item {
   border-radius: var(--radio) !important;
 }
-.pp .tarjeta:hover { border-color: rgb(8 127 104 / .35); }
+.pp .tarjeta:hover { border-color: rgb(27 116 96 / .38); }
 
 /* ─────────── 7 · barra de navegación inferior ─────────── */
 html[data-modo="claro"] .pp-dock {
-  background: rgb(255 255 255 / .92) !important;
+  background: rgb(251 253 249 / .94) !important;
   border: 1px solid var(--borde) !important;
-  box-shadow: 0 24px 50px -34px rgb(20 40 62 / .45), inset 0 1px 0 #ffffff !important;
+  box-shadow: 0 24px 50px -34px rgb(27 48 41 / .35), inset 0 1px 0 #ffffff !important;
 }
 html[data-modo="oscuro"] .pp-dock {
   background: rgb(13 30 45 / .92) !important;
@@ -283,7 +284,7 @@ html[data-modo="oscuro"] .pp-dock {
 .pp .dock-enlace.activa {
   background: var(--acento-1) !important;
   color: #ffffff !important;
-  box-shadow: 0 12px 24px -16px rgb(8 127 104 / .8) !important;
+  box-shadow: 0 12px 24px -16px rgb(27 116 96 / .55) !important;
 }
 html[data-modo="oscuro"] .pp .dock-enlace.activa { color: #04231d !important; }
 .pp .dock-enlace.activa .dock-ico { color: inherit; }
@@ -291,7 +292,7 @@ html[data-modo="oscuro"] .pp .dock-enlace.activa { color: #04231d !important; }
 /* ─────────── 8 · pie ─────────── */
 html[data-modo="claro"] .pp .sp-pie {
   border-top: 1px solid var(--borde) !important;
-  background: linear-gradient(180deg, rgb(255 255 255 / 0), rgb(239 247 255 / .9)) !important;
+  background: linear-gradient(180deg, rgb(251 253 249 / 0), rgb(234 243 236 / .92)) !important;
 }
 .pp .sp-pie-tit { color: var(--acento-1) !important; }
 .pp .sp-pie-columnas a:hover { color: var(--acento-1) !important; }
@@ -341,7 +342,7 @@ html[data-modo="oscuro"] .pp .hn-ficha-dos strong { color: var(--texto) !importa
 .pp .cmp-modos button.on {
   background: linear-gradient(140deg, var(--acento-1), color-mix(in srgb, var(--acento-1) 80%, #04231d)) !important;
   color: #ffffff !important;
-  box-shadow: 0 8px 20px -14px rgb(8 127 104 / .9) !important;
+  box-shadow: 0 8px 20px -14px rgb(27 116 96 / .55) !important;
 }
 html[data-modo="oscuro"] .pp .cmp-modos button.on { color: #04231d !important; }
 
@@ -349,12 +350,12 @@ html[data-modo="oscuro"] .pp .cmp-modos button.on { color: #04231d !important; }
 /* ─────────── 12 · atmósfera y bandas ─────────── */
 html[data-modo="claro"] body::before {
   background-image:
-    linear-gradient(rgb(20 40 62 / .028) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(20 40 62 / .028) 1px, transparent 1px),
-    radial-gradient(920px 660px at 88% -10%, rgb(8 127 104 / .12), transparent 68%),
-    radial-gradient(780px 600px at -6% 12%, rgb(214 168 75 / .16), transparent 70%),
-    radial-gradient(700px 560px at 62% 108%, rgb(255 99 71 / .07), transparent 72%),
-    linear-gradient(180deg, #f4fbff 0%, #ffffff 52%, #eef6fd 100%) !important;
+    linear-gradient(rgb(27 48 41 / .026) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(27 48 41 / .026) 1px, transparent 1px),
+    radial-gradient(920px 660px at 88% -10%, rgb(29 117 98 / .14), transparent 68%),
+    radial-gradient(780px 600px at -6% 12%, rgb(182 138 62 / .12), transparent 70%),
+    radial-gradient(700px 560px at 62% 108%, rgb(217 93 65 / .06), transparent 72%),
+    linear-gradient(180deg, #F7FAF4 0%, #F2F6F0 52%, #EAF2EB 100%) !important;
   background-size: 46px 46px, 46px 46px, auto, auto, auto, auto;
 }
 html[data-modo="oscuro"] body::before {

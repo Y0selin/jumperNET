@@ -923,8 +923,8 @@ html[data-modo="oscuro"] body::before {
 
 /* ── superficies claras con más relieve ── */
 html[data-modo="claro"] .pp .tarjeta {
-  border-color: #d9e7f2 !important;
-  box-shadow: 0 26px 64px -56px rgb(20 40 62 / .55), inset 0 1px 0 #ffffff !important;
+  border-color: #D2E0D6 !important;
+  box-shadow: 0 26px 64px -56px rgb(27 48 41 / .4), inset 0 1px 0 #FBFDF9 !important;
 }
 html[data-modo="claro"] .pp .pp-indice {
   box-shadow: 0 34px 80px -64px rgb(20 40 62 / .5), inset 0 1px 0 #ffffff;
