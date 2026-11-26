@@ -21,7 +21,9 @@ import Dudas from "./pages/Dudas.jsx";
 import DescargasPagina from "./pages/DescargasPagina.jsx";
 import VideoPagina from "./pages/VideoPagina.jsx";
 import Laboratorio from "./pages/Laboratorio.jsx";
+import Checkout from "./pages/Checkout.jsx";
 import Acceso from "./pages/Acceso.jsx";
+import PlanBadge from "./components/PlanBadge.jsx";
 import { useRuta, baseRuta, ir } from "./lib/router.js";
 import { me, setToken, getToken, getUsuarioGuardado, guardaUsuario } from "./lib/api.js";
 import { aplicaTema, cargaTema } from "./lib/temas.js";
@@ -118,7 +120,14 @@ export default function App() {
     setCargandoCuenta(true);
     me().then((d) => {
       const nombre = d?.alias || (d?.email || "").split("@")[0] || "tú";
-      setYo(d); guardaUsuario(d); setTab("red"); ir("/panel");
+      setYo(d); guardaUsuario(d); setTab("red");
+      /* si venías de contratación, vuelves ahí y no pierdes el carrito */
+      let destino = "/panel";
+      try {
+        const vuelta = sessionStorage.getItem("jumpernet-volver");
+        if (vuelta) { destino = vuelta; sessionStorage.removeItem("jumpernet-volver"); }
+      } catch { /* sin sesión de pestaña */ }
+      ir(destino);
       aviso(`¡Hola, ${nombre}! 👋 · cuenta #${d.id}`);
     })
       .catch(() => {
@@ -142,6 +151,7 @@ export default function App() {
     else if (activa === "/descargas") pagina = <DescargasPagina />;
     else if (activa === "/video") pagina = <VideoPagina />;
     else if (activa === "/lab") pagina = <Laboratorio />;
+    else if (activa === "/checkout") pagina = <Checkout aviso={aviso} />;
     else if (activa === "/acceso") {
       pagina = <Acceso modo={ruta.includes("registro") ? "registro" : "login"} alEntrar={alEntrar} aviso={aviso} />;
     }
@@ -216,9 +226,11 @@ export default function App() {
           </a>
 
           <div className="lateral-perfil">
-            <span className="lateral-avatar" aria-hidden>{inicialCuenta}</span>              <span className="lateral-perfil-txt">
+            <span className="lateral-avatar" aria-hidden>{inicialCuenta}</span>
+            <span className="lateral-perfil-txt">
               <b>{nombreCuenta}</b>
-              <span className="mono">#{yo?.id ?? "—"} · {yo?.plan || "free"} · {activo ? "en línea" : "red off"}</span>
+              <span className="mono">#{yo?.id ?? "—"} · {activo ? "en línea" : "red off"}</span>
+              <PlanBadge yo={yo} compacto />
             </span>
             <span className={`punto-vivo ${activo ? "" : "apagado"}`} aria-hidden />
           </div>
@@ -292,6 +304,7 @@ export default function App() {
               {hoy.diaCorto} {hoy.numero} {hoy.mesCorto} · S{hoy.semana}
             </span>
             <span style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+              <PlanBadge yo={yo} compacto />
               <BotonModo compacto />
               <span className={`chip ${activo ? "vivo" : "muerto"}`}>{activo ? "RED ACTIVA" : "RED OFF"}</span>
               <button className="btn" onClick={() => { setTab("nodos"); setLateral(false); }} title="Ver todos los nodos">

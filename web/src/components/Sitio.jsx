@@ -8,6 +8,9 @@ import FondoRed from "./FondoRed.jsx";
 import Visita from "./Visita.jsx";
 import AvisoDocs from "./AvisoDocs.jsx";
 import Buscador from "./Buscador.jsx";
+import CarritoPanel from "./CarritoPanel.jsx";
+import PromoAviso from "./PromoAviso.jsx";
+import { useCarrito } from "../lib/carrito.js";
 import { ENLACES } from "../lib/contenido.js";
 import { DOCS_URL } from "../lib/enlaces.js";
 import { NOMBRES } from "../lib/equipo.js";
@@ -32,7 +35,21 @@ const TITULOS = {
   "/video": "El viaje en vídeo",
   "/lab": "Laboratorio interactivo",
   "/acceso": "Entrar o crear cuenta",
+  "/checkout": "Contratación",
   "/panel": "Panel",
+};
+
+/* Iconos de línea del dock: nada de emojis ni glifos de fuente. */
+const DOCK_ICONOS = {
+  "/": <><path d="M3 10.7 12 3l9 7.7" /><path d="M5 9.5V21h14V9.5" /><path d="M9.5 21v-6h5v6" /></>,
+  "/usos": <><circle cx="12" cy="12" r="8.4" /><circle cx="12" cy="12" r="3.6" /><path d="M12 3.6V7M12 17v3.4M3.6 12H7M17 12h3.4" /></>,
+  "/proyecto": <><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5M3 16l9 5 9-5" /></>,
+  "/equipo": <><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.4 2.7-5.5 6-5.5s6 2.1 6 5.5" /><path d="M16 5.4a3 3 0 0 1 0 5.7M17.5 14.7c2 .7 3.5 2.4 3.5 5.3" /></>,
+  "/funciona": <><circle cx="5" cy="6" r="2.2" /><circle cx="19" cy="6" r="2.2" /><circle cx="12" cy="18" r="2.2" /><path d="M7.2 6h9.6M6.5 8l4.3 7.8M17.5 8l-4.3 7.8" /></>,
+  "/lab": <><rect x="3" y="4" width="18" height="16" rx="2.5" /><path d="m7 9 2.7 2.7L7 14.4M12.5 14.5H17" /></>,
+  "/tarifas": <><rect x="2.8" y="5" width="18.4" height="14" rx="2.5" /><path d="M2.8 9.6h18.4M6.5 14.8h4" /></>,
+  "/dudas": <><circle cx="12" cy="12" r="8.6" /><path d="M9.6 9.3a2.5 2.5 0 1 1 3.7 2.3c-.8.4-1.3 1-1.3 2" /><path d="M12 17.1h.01" /></>,
+  "/recursos": <><path d="M4 5.2A2.2 2.2 0 0 1 6.2 3H20v15.5H6.2A2.2 2.2 0 0 0 4 20.7z" /><path d="M4 20.7V5.2M8 7h8M8 10.5h5" /></>,
 };
 
 export default function Sitio({ ruta, enSesion, children }) {
@@ -41,6 +58,8 @@ export default function Sitio({ ruta, enSesion, children }) {
   const [progreso, setProgreso] = useState(0);
   const [videoAbierto, setVideoAbierto] = useState(false);
   const [buscador, setBuscador] = useState(false);
+  const [carritoAbierto, setCarritoAbierto] = useState(false);
+  const carrito = useCarrito();
   const activa = baseRuta(ruta);
 
   useEffect(() => {
@@ -66,7 +85,14 @@ export default function Sitio({ ruta, enSesion, children }) {
     return () => window.removeEventListener("jumpernet-video", abre);
   }, []);
 
-  useEffect(() => { setVideoAbierto(false); setBuscador(false); }, [activa]);
+  useEffect(() => { setVideoAbierto(false); setBuscador(false); setCarritoAbierto(false); }, [activa]);
+
+  /* el carrito se abre desde la barra, el dock o cualquier CTA de tarifas */
+  useEffect(() => {
+    const abre = () => setCarritoAbierto(true);
+    window.addEventListener("jumpernet-carrito-abrir", abre);
+    return () => window.removeEventListener("jumpernet-carrito-abrir", abre);
+  }, []);
 
   /* Ctrl/Cmd + K: el buscador global, desde cualquier página */
   useEffect(() => {
@@ -154,6 +180,16 @@ export default function Sitio({ ruta, enSesion, children }) {
               onClick={() => window.dispatchEvent(new Event("jumpernet-tour"))}
               aria-label="Abrir la visita guiada" title="Visita guiada">?</button>
           )}
+          <button type="button" className={`jn-cartbtn ${carrito.cantidad ? "con-plan" : ""}`}
+            onClick={() => setCarritoAbierto(true)}
+            aria-label={carrito.cantidad ? `Abrir el carrito, ${carrito.cantidad} plan` : "Abrir el carrito, vacío"}
+            title="Carrito">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M3 4h2l2.4 10.2a1.6 1.6 0 0 0 1.6 1.3h7.7a1.6 1.6 0 0 0 1.6-1.2L20.5 8H6" />
+              <circle cx="9.5" cy="19.5" r="1.2" /><circle cx="17" cy="19.5" r="1.2" />
+            </svg>
+            {carrito.cantidad > 0 && <span className="jn-cartbtn-badge">{carrito.cantidad}</span>}
+          </button>
           <BotonModo />
           {enSesion ? (
             <a className="btn primario" href="#/panel">Abrir panel <span aria-hidden>→</span></a>
@@ -175,20 +211,28 @@ export default function Sitio({ ruta, enSesion, children }) {
         <div className="sp-pagina" key={activa}>{children}</div>
       </main>
 
-      <nav className="pp-dock" aria-label="Páginas del sitio">
-        <div className="dock-lista">
+      <nav className="pp-dock jn-dock" aria-label="Páginas del sitio">
+        <span className="jn-dock-luz" aria-hidden />
+        <div className="jn-dock-lista">
           {ENLACES.map((e) => (
             <a key={e.ruta} href={`#${e.ruta}`}
-              className={`dock-enlace ${activa === e.ruta ? "activa" : ""}`}
+              className={`jn-dock-item ${activa === e.ruta ? "activa" : ""}`}
               data-tour={e.ruta === "/recursos" ? "recursos" : undefined}
               aria-current={activa === e.ruta ? "page" : undefined}>
-              <span className="dock-ico" aria-hidden>{e.ico}</span>
-              <span className="dock-txt">{e.corto}</span>
+              <span className="jn-dock-ico" aria-hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                  {DOCK_ICONOS[e.ruta]}
+                </svg>
+              </span>
+              <span className="jn-dock-txt">{e.corto}</span>
+              <span className="jn-dock-tip" aria-hidden>{e.texto}</span>
             </a>
           ))}
         </div>
       </nav>
 
+      <CarritoPanel abierto={carritoAbierto} cerrar={() => setCarritoAbierto(false)} />
+      <PromoAviso />
       <Reproductor />
       <VideoModal abierto={videoAbierto} cerrar={() => setVideoAbierto(false)} />
       <Buscador abierto={buscador} cerrar={() => setBuscador(false)} />

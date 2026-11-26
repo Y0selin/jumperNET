@@ -1,125 +1,281 @@
-import Revela from "./Revela.jsx";
+import { useEffect, useState } from "react";
+import CircuitoPlan from "./CircuitoPlan.jsx";
+import ContactoVentas from "./ContactoVentas.jsx";
+import { PLANES, PROMO, COMPARATIVA, planDe } from "../lib/planes.js";
+import { agregaPro, promoUsada, useCarrito } from "../lib/carrito.js";
+import { getToken, getUsuarioGuardado } from "../lib/api.js";
 
-/* Tarifas · los tres planes de la red.
-   free        → 3 saltos, cifrado base, refresco 1 vez al día
-   pro         → hasta 7 saltos, cifrado bueno, refresco cada 10 h
-   empresarial → todo lo anterior + ventas, plan dedicado a medida                */
+/* Sección de tarifas: tres planes reales, circuito interactivo, comparación
+   y promoción de bienvenida. Nada de esta sección abre una conexión: las
+   previsualizaciones son educativas. */
 
-const PLANES = [
-  {
-    id: "free",
-    nombre: "Free",
-    precio: "0 €",
-    periodo: "siempre",
-    tono: "tono-c",
-    ico: "🌱",
-    desc: "Para empezar a trastear con la red y comprobar que tu IP cambia de verdad.",
-    puntos: [
-      { t: "3 saltos en nodos", bueno: true },
-      { t: "cifrado mínimo entre saltos", lista: true },
-      { t: "refresco del circuito 1 vez al día", lista: true },
-      { t: "elección de nº de saltos", malo: true },
-    ],
-    cta: { texto: "▶ Crear mi cuenta gratis", modo: "registro" },
-  },
-  {
-    id: "pro",
-    nombre: "Pro",
-    precio: "5 €",
-    periodo: "al mes",
-    estrella: true,
-    tono: "tono-a",
-    ico: "⚡",
-    desc: "La experiencia completa: tú decides cuán largo quieres el circuito.",
-    puntos: [
-      { t: "todo lo del plan Free", bueno: true },
-      { t: "hasta 7 saltos en nodos", bueno: true },
-      { t: "cifrado bueno entre saltos", bueno: true },
-      { t: "refresco del circuito cada 10 h", bueno: true },
-      { t: "elige cuántos saltos quieres (3…7)", bueno: true },
-    ],
-    cta: { texto: "▶ Empezar con Pro", modo: "registro" },
-  },
-  {
-    id: "empresarial",
-    nombre: "Empresarial",
-    precio: "a medida",
-    periodo: "habla con ventas",
-    tono: "tono-b",
-    ico: "🏛",
-    desc: "Consumos dedicados, SLA salidas específicas y soporte directo con el equipo.",
-    puntos: [
-      { t: "todo lo del plan Pro", bueno: true },
-      { t: "consumos y salidas dedicadas", lista: true },
-      { t: "trato directo con ventas", lista: true },
-      { t: "plan personalizado (se concreta contigo)", lista: true },
-    ],
-    cta: { texto: "✉ Hablar con ventas", modo: "ventas", href: "mailto:diseo-jumpernat-admin@jumpernet.local?subject=Plan%20Empresarial%20JumperNET" },
-  },
-];
+const ICONOS = {
+  free: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 21V9" />
+      <path d="M12 9C8 9 5 6.5 5 3c4 0 7 2.5 7 6Z" />
+      <path d="M12 13c4 0 7-2.5 7-6-4 0-7 2.5-7 6Z" />
+      <path d="M7 21h10" />
+    </svg>
+  ),
+  pro: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M13 2 4.5 13.5H11L9.5 22 19 10h-6.5L13 2Z" />
+    </svg>
+  ),
+  empresarial: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 21V5.5A2.5 2.5 0 0 1 6.5 3H14v18" />
+      <path d="M14 9h4.5A1.5 1.5 0 0 1 20 10.5V21" />
+      <path d="M2 21h20M7 7h3M7 11h3M7 15h3M16.5 13h1M16.5 17h1" />
+    </svg>
+  ),
+};
+
+const Check = ({ off = false }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    {off ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="m5 12.5 4.5 4.5L19 7" />}
+  </svg>
+);
+
+const euros = (n) => n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 
 export default function Tarifas({ irAuth, dentroPanel = false }) {
+  const [saltosPro, setSaltosPro] = useState(planDe(getUsuarioGuardado()).saltosMax === 7 ? 5 : 3);
+  const [verTodas, setVerTodas] = useState(true);
+  const [contacto, setContacto] = useState(false);
+  const [anadido, setAnadido] = useState(false);
+  const [promoVisible, setPromoVisible] = useState(true);
+  const [usuario, setUsuario] = useState(() => getUsuarioGuardado());
+  const carrito = useCarrito();
+
+  useEffect(() => {
+    let vivo = true;
+    const refresca = () => vivo && setUsuario(getUsuarioGuardado());
+    window.addEventListener("jumpernet-plan", refresca);
+    window.addEventListener("storage", refresca);
+    return () => {
+      vivo = false;
+      window.removeEventListener("jumpernet-plan", refresca);
+      window.removeEventListener("storage", refresca);
+    };
+  }, []);
+
+  const actual = usuario && getToken() ? planDe(usuario) : null;
+  const esProReal = actual?.id === "pro" && !actual.demo;
+  const demo = !!actual?.demo;
+  const descuentoDisponible = !promoUsada();
+
+  function configurarPro() {
+    if (esProReal) { window.location.hash = "#/panel"; return; }
+    agregaPro();
+    setAnadido(true);
+    setTimeout(() => setAnadido(false), 2200);
+    window.dispatchEvent(new CustomEvent("jumpernet-carrito-abrir"));
+  }
+
+  const filas = COMPARATIVA.flatMap((g) => g.filas.map((f) => ({ ...f, grupo: g.grupo }))).filter(
+    (f) => verTodas || f.free !== f.pro || f.pro !== f.emp
+  );
+
   return (
-    <div style={{ display: "grid", gap: 18 }}>
+    <div className="jn-planes">
       {!dentroPanel && (
-        <div className="cab-seccion">
-          <div className="cubo-ico">◈</div>
-          <div>
-            <span className="migas">público · planes</span>
-            <h1>Tarifas de la red</h1>
-            <p className="sub">Una barra de supersaltos con tres velocidades: elige cuántos nodos hay entre tú y la salida.</p>
+        <header className="jn-planes-cab">
+          <span className="jn-eyebrow"><i aria-hidden /> planes · red jumpernet</span>
+          <h1 className="jn-planes-h1">
+            Elige cuánto <span className="jn-grad">recorre tu conexión</span>
+          </h1>
+          <p className="jn-planes-lead">
+            Tres planes, un mismo cifrado y ningún cobro escondido. Free para probarlo todo,
+            Pro para decidir el tamaño del circuito y Empresarial para infraestructura a medida.
+          </p>
+          <div className="jn-planes-meta">
+            <span><Check /> Sin tarjeta para empezar</span>
+            <span><Check /> Cancela cuando quieras</span>
+            <span><Check /> Previsualizaciones educativas</span>
           </div>
-        </div>
+        </header>
       )}
 
-      <div className="descargas-malla" style={{ gap: 16 }}>
-        {PLANES.map((p, i) => (
-          <Revela key={p.id} className="tarjeta-descarga apa" retardo={i + 1} style={{ position: "relative" }}>
-            <div className="tarjeta" style={{ margin: 0, border: 0, background: "transparent", padding: 0, position: "relative" }}>
-              {p.estrella && (
-                <span className="chip vivo" style={{ position: "absolute", top: -12, right: 10, zIndex: 2, fontSize: 10.5 }}>
-                  ★ la favorita
-                </span>
-              )}
-              <div className="cabeza-descarga">
-                <div className="ico-descarga">{p.ico}</div>
+      {promoVisible && descuentoDisponible && (
+        <aside className="jn-promo" role="note">
+          <span className="jn-promo-ico" aria-hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 12v8H4v-8M2 7h20v5H2zM12 22V7M12 7C9 7 7 5.7 7 4a2.5 2.5 0 0 1 5 0c0 1.3 0 3 0 3Zm0 0c3 0 5-1.3 5-3a2.5 2.5 0 0 0-5 0" />
+            </svg>
+          </span>
+          <div className="jn-promo-txt">
+            <b>{PROMO.titulo}.</b>
+            <span>{PROMO.texto}</span>
+          </div>
+          <code className="jn-promo-codigo">{PROMO.codigo}</code>
+          <button type="button" className="jn-promo-cerrar" onClick={() => setPromoVisible(false)} aria-label="Cerrar la promoción">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
+        </aside>
+      )}
+
+      <div className="jn-planes-rejilla">
+        {PLANES.map((p) => {
+          const esPro = p.id === "pro";
+          const esActual = actual?.id === p.id;
+          return (
+            <article key={p.id} className={`jn-plan jn-plan-${p.id} ${p.destacado ? "destacado" : ""} ${esActual ? "actual" : ""}`}>
+              <span className="jn-plan-halo" aria-hidden />
+
+              {p.destacado && !esActual && <span className="jn-plan-flag">Más elegido</span>}
+              {esActual && <span className="jn-plan-actual-tag">{demo ? "tu plan · demo" : "tu plan actual"}</span>}
+
+              <header className="jn-plan-cab">
+                <span className="jn-plan-ico">{ICONOS[p.id]}</span>
                 <div>
-                  <div className="titulo-descarga">{p.nombre}</div>
-                  <div className="meta-descarga mono">
-                    <b style={{ color: "var(--texto)", fontSize: 15 }}>{p.precio}</b> · {p.periodo}
-                  </div>
+                  <h2>{p.nombre}</h2>
+                  <span className="jn-plan-etq mono">{p.etiqueta}</span>
                 </div>
-              </div>
-              <p className="nota" style={{ fontSize: 12.5, marginTop: 10 }}>{p.desc}</p>
-              <div style={{ display: "grid", gap: 7, marginTop: 12, minHeight: 150, alignContent: "start" }}>
-                {p.puntos.map((pt) => (
-                  <div key={pt.t} style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13 }}>
-                    <span style={{ color: pt.malo ? "#8a8a92" : "var(--acento-1)", fontWeight: 700 }}>
-                      {pt.malo ? "✕" : pt.bueno ? "✓" : "·"}
-                    </span>
-                    <span style={{ color: pt.malo ? "var(--texto-suave)" : undefined }}>{pt.t}</span>
-                  </div>
-                ))}
-              </div>
-              <div style={{ marginTop: 14 }}>
-                {p.cta.href ? (
-                  <a className="btn-descarga" href={p.cta.href}>
-                    {p.cta.texto} <span>↗</span>
-                  </a>
+              </header>
+
+              <p className="jn-plan-desc">{p.resumen}</p>
+
+              <div className={`jn-plan-precio ${p.precio == null ? "a-medida" : ""}`}>
+                {p.precio == null ? (
+                  <b>A medida</b>
                 ) : (
-                  <button className="btn-descarga" style={{ cursor: "pointer", width: "100%" }} onClick={() => irAuth?.(p.cta.modo)}>
-                    {p.cta.texto} <span>→</span>
+                  <>
+                    <b>{p.precio}</b>
+                    <span className="jn-plan-moneda">€</span>
+                    <i>{p.periodo}</i>
+                  </>
+                )}
+                {p.precio == null && <i>precio personalizado</i>}
+              </div>
+
+              {esPro && descuentoDisponible && (
+                <p className="jn-plan-estreno mono">
+                  primer pago {euros(4.5)} con {PROMO.codigo} · luego {euros(5)}/mes
+                </p>
+              )}
+              {p.precio === 0 && <p className="jn-plan-estreno mono">sin tarjeta · sin fecha de caducidad</p>}
+              {p.precio == null && <p className="jn-plan-estreno mono">según capacidad y configuración</p>}
+
+              <CircuitoPlan
+                saltos={esPro ? saltosPro : p.id === "empresarial" ? 7 : 3}
+                tono={p.id}
+                interactivo={esPro}
+                onCambio={setSaltosPro}
+                compacto
+              />
+
+              <ul className="jn-plan-lista">
+                {p.caracteristicas.map((c) => (
+                  <li key={c.titulo}>
+                    <span className="jn-plan-check"><Check /></span>
+                    <details>
+                      <summary>{c.titulo}</summary>
+                      <p>{c.detalle}</p>
+                    </details>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="jn-plan-pie">
+                {p.id === "free" && (
+                  <button
+                    type="button"
+                    className="jn-btn jn-btn-suave"
+                    onClick={() => (actual ? (window.location.hash = "#/panel") : irAuth?.("registro"))}
+                  >
+                    {actual ? "Abrir mi panel" : p.cta}
+                    <span aria-hidden>→</span>
                   </button>
                 )}
+                {p.id === "pro" && (
+                  <button type="button" className="jn-btn jn-btn-pro" onClick={configurarPro}>
+                    <span className="jn-btn-ico" aria-hidden>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 4h2l2.4 10.2a1.6 1.6 0 0 0 1.6 1.3h7.7a1.6 1.6 0 0 0 1.6-1.2L20.5 8H6" />
+                        <circle cx="9.5" cy="19.5" r="1.2" /><circle cx="17" cy="19.5" r="1.2" />
+                      </svg>
+                    </span>
+                    {esProReal ? "Abrir mi plan" : anadido ? "Añadido al carrito" : carrito.cantidad ? "Ver en el carrito" : p.cta}
+                    <span aria-hidden>{anadido ? "✓" : "→"}</span>
+                  </button>
+                )}
+                {p.id === "empresarial" && (
+                  <button type="button" className="jn-btn jn-btn-oscuro" onClick={() => setContacto(true)}>
+                    {p.cta}
+                    <span aria-hidden>→</span>
+                  </button>
+                )}
+                <p className="jn-plan-nota">
+                  {p.id === "free" && "Cuenta en 20 segundos · sin pasar por el carrito"}
+                  {p.id === "pro" && "Se añade al carrito y revisas antes de continuar"}
+                  {p.id === "empresarial" && "Sin alta automática: primero hablamos"}
+                </p>
               </div>
-            </div>
-          </Revela>
-        ))}
+            </article>
+          );
+        })}
       </div>
 
-      <p className="nota mono" style={{ textAlign: "center", fontSize: 11 }}>
-        el plan lo cambia el administrador — si compras Pro te llega activado en tu cuenta sin tocar nada más
+      <p className="jn-planes-aviso">
+        Más saltos significan más intermediarios y algo más de latencia; no vendemos un plan como
+        «más seguro» solo por tener más nodos. El cifrado es el mismo en todos los planes.
       </p>
+
+      <section className="jn-comparar" aria-label="Comparación de planes">
+        <div className="jn-comparar-cab">
+          <div>
+            <span className="jn-eyebrow"><i aria-hidden /> comparación</span>
+            <h2>Lo importante, lado a lado</h2>
+          </div>
+          <label className="jn-switch">
+            <input type="checkbox" checked={!verTodas} onChange={(e) => setVerTodas(!e.target.checked)} />
+            <span aria-hidden />
+            Ver solo diferencias
+          </label>
+        </div>
+
+        <div className="jn-tabla-envoltura">
+          <table className="jn-tabla">
+            <thead>
+              <tr>
+                <th scope="col">Característica</th>
+                <th scope="col">Free</th>
+                <th scope="col" className="pro">Pro</th>
+                <th scope="col">Empresarial</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filas.map((f) => (
+                <tr key={`${f.grupo}-${f.etiqueta}`}>
+                  <th scope="row">
+                    <span className="jn-tabla-grupo mono">{f.grupo}</span>
+                    {f.etiqueta}
+                  </th>
+                  {["free", "pro", "emp"].map((k) => (
+                    <td key={k} className={k === "pro" ? "pro" : ""}>
+                      {typeof f[k] === "boolean" ? (
+                        <span className={`jn-tabla-si ${f[k] ? "si" : "no"}`} aria-label={f[k] ? "Incluido" : "No incluido"}>
+                          <Check off={!f[k]} />
+                        </span>
+                      ) : (
+                        f[k]
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="jn-comparar-pie">
+          Los límites de saltos y refresco los aplica el backend. El plan se activa desde el panel
+          de administración: no hay pasarela de pago conectada todavía.
+        </p>
+      </section>
+
+      <ContactoVentas abierto={contacto} cerrar={() => setContacto(false)} />
     </div>
   );
 }

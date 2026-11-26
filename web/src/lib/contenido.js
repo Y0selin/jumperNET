@@ -12,6 +12,7 @@ export const FRASES = [
 /* Solo las páginas principales: la cabecera tiene que leerse de un vistazo.
    Descargas y el resto siguen en el pie y en el directorio de la portada. */
 export const ENLACES = [
+  { ruta: "/", texto: "Inicio", corto: "Inicio", ico: "⌂" },
   { ruta: "/usos", texto: "Para qué sirve", corto: "Usos", ico: "◎" },
   { ruta: "/proyecto", texto: "Proyecto", corto: "Proyecto", ico: "◈" },
   { ruta: "/equipo", texto: "El equipo", corto: "Equipo", ico: "✦" },

@@ -8,6 +8,7 @@ import Diagnostico from "./Diagnostico.jsx";
 import Revela from "./Revela.jsx";
 import { TarjetaHoy } from "./Hoy.jsx";
 import { haceCuanto } from "../lib/fecha.js";
+import { planDe } from "../lib/planes.js";
 
 const CLAVE_LOG = "jumpernet-actividad";
 
@@ -59,6 +60,68 @@ function ChispaLatencia({ muestras }) {
         <span>{v.length} medidas</span>
       </div>
     </div>
+  );
+}
+
+/* ── plan contratado: límites reales del backend, sin inventar métricas ── */
+function tiempoRestante(ms) {
+  if (ms == null) return null;
+  if (ms <= 0) return "disponible ahora";
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  return h > 0 ? `en ${h} h ${m} min` : `en ${Math.max(1, m)} min`;
+}
+
+function PlanRed({ yo, activo }) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const refresca = () => setTick((t) => t + 1);
+    window.addEventListener("jumpernet-plan", refresca);
+    return () => window.removeEventListener("jumpernet-plan", refresca);
+  }, []);
+  const plan = planDe(yo);
+  const cadaH = yo?.refresco_cada_h || (plan.id === "free" ? 24 : 10);
+  const proximo = yo?.ultimo_cambio ? yo.ultimo_cambio * 1000 + cadaH * 3600000 : null;
+  const restante = activo && proximo ? tiempoRestante(proximo - Date.now()) : null;
+
+  return (
+    <section className={`tarjeta pn-plan-red pn-plan-red-${plan.id}`}>
+      <div className="pn-plan-red-cab">
+        <span className="pn-kicker">tu plan</span>
+        <span className={`chip mono pn-plan-red-chip ${plan.demo ? "acento" : ""}`}>
+          {plan.nombre}{plan.demo ? " · demo" : ""}
+        </span>
+      </div>
+      <div className="pn-plan-red-cuerpo">
+        <div className="pn-plan-red-tit">
+          <b>{plan.nombre}</b>
+          <span className="nota">
+            {plan.demo
+              ? `Vista previa de Pro durante ${Math.max(1, Math.ceil((plan.hasta - Date.now()) / 86400000))} días. Los límites reales de tu cuenta siguen viniendo del backend (${yo?.saltos_max || 3} saltos).`
+              : plan.id === "free"
+                ? "3 saltos fijos, cifrado JENC y refresco diario. Sin caducidad."
+                : plan.id === "pro"
+                  ? "Eliges de 3 a 7 saltos y refrescas el circuito cada 10 h."
+                  : "Infraestructura y configuración acordadas con el equipo."}
+          </span>
+        </div>
+        <div className="pn-plan-red-datos">
+          <span><small>saltos</small><b>{activo ? `${yo?.circuito?.length || 0} / ${yo?.saltos_max || plan.saltosMax || 3}` : `máx. ${yo?.saltos_max || plan.saltosMax || 3}`}</b></span>
+          <span><small>cifrado</small><b>{activo ? "JENC activo" : "JENC en espera"}</b></span>
+          <span><small>próximo refresco</small><b>{activo ? (restante || "—") : `cada ${cadaH} h`}</b></span>
+        </div>
+      </div>
+      <div className="pn-plan-red-pie">
+        <span className="nota mono">
+          {plan.demo
+            ? "demo local: los permisos reales siguen viniendo del backend"
+            : plan.id === "free" ? "el plan lo aplica el backend · sin cargos" : "plan aplicado por el backend"}
+        </span>
+        {plan.id === "free" && !plan.demo && (
+          <a className="pn-plan-red-link" href="#/tarifas">Desbloquear 4–7 saltos <span aria-hidden>→</span></a>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -207,7 +270,7 @@ function SelectorSaltos({ yo, saltosSel, setSel, ocupado }) {
       </div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {[3, 4, 5, 6, 7].map((n) => {
-          const bloqueado = !puede || (n === 4 && max < 4);
+          const bloqueado = !puede && n > 3;
           const prohibido = n > max;
           const sel = saltosSel === n;
           return (
@@ -224,15 +287,21 @@ function SelectorSaltos({ yo, saltosSel, setSel, ocupado }) {
                 ? `tu plan permite hasta ${max}`
                 : bloqueado ? "elegir nº de saltos es del plan Pro" : `conectar con ${n} saltos`}>
               {n} saltos
-              {n === 3 && <span style={{ position: "absolute", top: -8, right: -4, fontSize: 10 }}>🔒</span>}
+              {(prohibido || bloqueado) && (
+                <svg className="pn-candado" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <rect x="4.5" y="10.5" width="15" height="10" rx="2.2" />
+                  <path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7" />
+                </svg>
+              )}
             </button>
           );
         })}
       </div>
       {!puede ? (
-        <p className="nota" style={{ marginTop: 8, fontSize: 12 }}>
-          🔒 Con el plan <b>Free</b> la conexión usa siempre 3 saltos fijos.
-          Con el plan <b>Pro</b> eliges cuántos quieres, de 3 a 7 — y refrescas el circuito cada 10 h en vez de 1 vez al día.
+        <p className="nota pn-saltos-aviso" style={{ marginTop: 8, fontSize: 12 }}>
+          Con el plan <b>Free</b> la conexión usa siempre 3 saltos fijos. Con <b>Pro</b> eliges
+          cuántos quieres, de 3 a 7, y refrescas el circuito cada 10 h.
+          <a href="#/tarifas">Ver los planes →</a>
         </p>
       ) : (
         <p className="nota" style={{ marginTop: 8, fontSize: 12 }}>
@@ -531,12 +600,12 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
     const c = capa.current; c.clearLayers();
     const activo = !!yo?.activo;
     const puntos = [];
-    if (geoTu?.ok) {
+    if (geoTu?.ok && Number.isFinite(geoTu.lat) && Number.isFinite(geoTu.lon)) {
       puntos.push([geoTu.lat, geoTu.lon]);
       L.marker([geoTu.lat, geoTu.lon], { icon: marca("tu") }).addTo(c)
         .bindPopup(`<b>TÚ</b><br>${[geoTu.ciudad, geoTu.region, geoTu.pais].filter(Boolean).join(", ")}<br>IP ${geoTu.ip}${geoTu.org ? `<br>${geoTu.org}` : ""}`);
     }
-    if (geoSal?.ok) {
+    if (geoSal?.ok && Number.isFinite(geoSal.lat) && Number.isFinite(geoSal.lon)) {
       puntos.push([geoSal.lat, geoSal.lon]);
       L.marker([geoSal.lat, geoSal.lon], { icon: marca("srv") }).addTo(c)
         .bindPopup(`<b>Salida del circuito</b><br>${[geoSal.ciudad, geoSal.region, geoSal.pais].filter(Boolean).join(", ")}<br>IP ${geoSal.ip}<br>${geoSal.org || ""}`);
@@ -664,6 +733,8 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
       <div className="pn-mosaico">
         <div className="pn-principal">
 
+          <PlanRed yo={yo} activo={activo} />
+
           <Interruptor
             activo={activo} ocupado={ocupado}
             alCambiar={() => accion(activo ? () => desconectar_() : () => conectar(saltosSel, modoSel),
@@ -680,6 +751,24 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
             <SelectorSaltos yo={yo} saltosSel={saltosSel} setSel={setSel} ocupado={ocupado} />
           </div>
 
+          {!activo && (
+            <div className="tarjeta pn-off-aviso">
+              <h2 className="seccion">Todo listo, nada conectado</h2>
+              <p className="nota">
+                La red está apagada. Cuando pulses el interruptor, el backend elige los nodos,
+                abre el circuito y te devuelve la IP de salida real. Aquí no se muestra ningún
+                estado de conexión que no haya confirmado el servidor.
+              </p>
+              <div className="pn-off-puntos">
+                <span><b>1</b> eliges plan y saltos</span>
+                <span><b>2</b> activas el interruptor</span>
+                <span><b>3</b> compruebas la IP de salida</span>
+              </div>
+            </div>
+          )}
+
+          {activo && (
+          <>
           <TablonVivo yo={yo} aviso={aviso} alMedir={mideLatencia} />
 
           {/* ── verificación real del circuito ── */}
@@ -807,6 +896,8 @@ export default function Red({ yo: yo0, aviso, alRecargar }) {
               {" "}Los 3 saltos corren en el mismo servidor de salida, así que solo hay dos puntos reales: tú y la salida.
             </p>
           </Revela>
+          </>
+          )}
         </div>
 
         <aside className="pn-lado">
