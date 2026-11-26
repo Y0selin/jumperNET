@@ -36,7 +36,7 @@ export const PRESETS = {
   "jumpernet-classic": {
     id: "jumpernet-classic",
     nombre: "JumperNET Classic",
-    descripcion: "La identidad de siempre: esmeralda, coral y superficies de hielo.",
+    descripcion: "Esmeralda de día; noche azul tinta con hielo y coral.",
     etiqueta: "Identidad",
     forma: {
       "--radio": "18px", "--radio-2": "12px", "--tam-fuente": "15px",
@@ -59,15 +59,18 @@ export const PRESETS = {
       },
       oscuro: {
         ...BASE_OSCURO,
-        "--bg-1": "#071A18", "--bg-2": "#0A2521",
-        "--borde": "#1D453D",
-        "--acento-1": "#3DDCAB", "--acento-2": "#35C7A7", "--acento-3": "#E7C37A",
-        "--texto": "#EAF7F2", "--texto-suave": "#9DBBB2",
-        "--acento-txt": "#FF8A6E", "--acento-txt-2": "#FFA38F",
-        "--grafico-1": "#3DDCAB", "--grafico-2": "#FF8A6E", "--grafico-3": "#7DD3FC",
-        "--grafico-4": "#E7C37A", "--grafico-5": "#A8C1D4",
-        "--fondo-a": "#06201C", "--fondo-b": "#061512", "--fondo-c": "#12241F",
-        "--sombra": "0 24px 60px -34px rgb(0 0 0 / .62)",
+        "--panel": "20, 33, 53", "--panel-sol": "138, 216, 245",
+        "--bg-1": "#101B2D", "--bg-2": "#18283F",
+        "--borde": "#2D4460",
+        "--acento-1": "#8AD8F5", "--acento-2": "#FF9E82", "--acento-3": "#F2C97D",
+        "--texto": "#F3F7FF", "--texto-suave": "#AFC0D5",
+        "--acento-txt": "#FFB09A", "--acento-txt-2": "#FFD0C2",
+        "--linea": "rgb(176 205 240 / .15)", "--linea-2": "rgb(176 205 240 / .27)",
+        "--sup-1": "#16243A", "--sup-2": "#111C2D", "--sup-3": "#1D2F49",
+        "--grafico-1": "#8AD8F5", "--grafico-2": "#FF9E82", "--grafico-3": "#A5B4FC",
+        "--grafico-4": "#F2C97D", "--grafico-5": "#9FB3CA",
+        "--fondo-a": "#102540", "--fondo-b": "#0A1524", "--fondo-c": "#1B2438",
+        "--sombra": "0 24px 60px -34px rgb(3 8 18 / .58)",
       },
     },
   },
@@ -366,7 +369,14 @@ function migraAntiguo(t) {
 export function cargaTema() {
   try {
     const t = JSON.parse(localStorage.getItem(CLAVE) || localStorage.getItem("jumpernat-tema-v2"));
-    if (t?.variantes) return t;
+    if (t?.variantes) {
+      /* Un preset guardado se relee del catálogo para recibir mejoras de
+         paleta; las personalizaciones y el CSS extra se conservan. */
+      if (t.id && PRESETS[t.id] && !t.personalizado) {
+        return { ...temaPorId(t.id), cssExtra: t.cssExtra || "" };
+      }
+      return t;
+    }
     const migrado = migraAntiguo(t);
     if (migrado) { guardaTema(migrado); return migrado; }
     if (t?.id && PRESETS[t.id]) return temaPorId(t.id);

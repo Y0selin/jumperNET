@@ -7,6 +7,16 @@
 
 html, body { overflow-x: clip; }
 
+/* El tema por defecto estrena una noche azul tinta: más luz, cero verde.
+   Esta capa manda sobre el fondo verde fijo de identidad.css. */
+html[data-modo="oscuro"][data-tema="jumpernet-classic"] body {
+  background:
+    radial-gradient(58% 42% at 84% -4%, rgb(138 216 245 / .16), transparent 70%),
+    radial-gradient(46% 38% at -4% 6%, rgb(255 158 130 / .12), transparent 72%),
+    linear-gradient(180deg, #142138 0%, #0F1A2B 55%, #0B1523 100%) !important;
+  background-attachment: fixed !important;
+}
+
 /* ── atmósfera viva, detrás del panel ─────────────────────────────── */
 .pu-atmosfera {
   position: fixed;
