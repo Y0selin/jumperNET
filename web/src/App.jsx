@@ -22,36 +22,34 @@ import DescargasPagina from "./pages/DescargasPagina.jsx";
 import VideoPagina from "./pages/VideoPagina.jsx";
 import Laboratorio from "./pages/Laboratorio.jsx";
 import Acceso from "./pages/Acceso.jsx";
-import MenuPanel from "./components/MenuPanel.jsx";
-import Dashboard from "./components/Dashboard.jsx";
-import MiSuscripcion from "./components/MiSuscripcion.jsx";
-import Pasarela from "./components/Pasarela.jsx";
-import Soporte from "./components/Soporte.jsx";
-import Tarifas from "./components/Tarifas.jsx";
-import { BotonCarrito, PanelCarrito } from "./components/Carrito.jsx";
-import { BotonCampana, PanelNotificaciones } from "./components/Notificaciones.jsx";
 import { useRuta, baseRuta, ir } from "./lib/router.js";
 import { me, setToken, getToken, getUsuarioGuardado, guardaUsuario } from "./lib/api.js";
 import { aplicaTema, cargaTema } from "./lib/temas.js";
 import { aplicaModo, cargaModo } from "./lib/modo.js";
-import { useNotificaciones } from "./lib/notificaciones.js";
-import { planDe, puede } from "./lib/planes.js";
-import { estadoSuscripcion } from "./lib/suscripcion.js";
 import { datosHoy } from "./lib/fecha.js";
 import { VERSION } from "./lib/version.js";
 
-const TABS = {
-  inicio: { t: "Inicio", prompt: "status --inicio" },
-  red: { t: "Panel de red", prompt: "status --red" },
-  nodos: { t: "Gestor de nodos", prompt: "ls -la nodos/" },
-  descargas: { t: "Descargas", prompt: "ls -la descargas/" },
-  cuenta: { t: "Mi cuenta", prompt: "whoami --editar" },
-  ajustes: { t: "Apariencia", prompt: "theme --editar" },
-  admin: { t: "Administración", prompt: "sudo panel-admin --rol admin" },
-  suscripcion: { t: "Mi suscripción", prompt: "billing --estado" },
-  soporte: { t: "Contacto y soporte", prompt: "soporte --nueva" },
-  pago: { t: "Contratar Pro", prompt: "checkout --plan pro" },
+const NAV_SESION = [
+  { grupo: "red", items: [
+    { id: "red", texto: "Panel de red", ico: "◉" },
+    { id: "nodos", texto: "Nodos", ico: "⛓" },
+  ] },
+  { grupo: "tu cuenta", items: [
+    { id: "descargas", texto: "Descargas", ico: "⬇" },
+    { id: "cuenta", texto: "Cuenta", ico: "☻" },
+    { id: "ajustes", texto: "Diseñador", ico: "✦" },
+  ] },
+];
+
+const PROMPT = {
+  red: "status --red",
+  nodos: "ls -la nodos/",
+  descargas: "ls -la descargas/",
+  cuenta: "whoami --editar",
+  ajustes: "theme --editar",
+  admin: "sudo panel-admin --rol admin",
 };
+const DOCS_URL = "https://jumpernet.duckdns.org/docs/";
 
 export default function App() {
   const ruta = useRuta();
@@ -60,16 +58,13 @@ export default function App() {
 
   const [yo, setYo] = useState(() => (getToken() ? getUsuarioGuardado() : null));
   const [cargandoCuenta, setCargandoCuenta] = useState(() => !!getToken());
-  const [tab, setTab] = useState("inicio");
-  const [enfoque, setEnfoque] = useState(() => {
-    try { return localStorage.getItem("jumpernet-enfoque") === "1"; } catch { return false; }
-  });
+  const [tab, setTab] = useState("red");
   const [toasts, setToasts] = useState([]);
-  const [lateral, setLateral] = useState(false);
-  const [pegada, setPegada] = useState(false);
-  const [modalPlan, setModalPlan] = useState(false);
-  const { noLeidas } = useNotificaciones();
+  const [lateral, setLateral] = useState(false);   // menú móvil del panel
+  const [pegada, setPegada] = useState(false);     // topbar con scroll
 
+  /* la ficha guardada pinta el panel al instante; /me la refresca después.
+     Si la API falla, no borramos el número de cuenta ni la sesión. */
   function cargaCuenta() {
     if (!getToken()) { setYo(null); setCargandoCuenta(false); return Promise.resolve(null); }
     setCargandoCuenta(true);
@@ -83,22 +78,21 @@ export default function App() {
       .finally(() => setCargandoCuenta(false));
   }
 
+  /* primero el tema guardado y después el modo: el modo manda en la paleta */
   useEffect(() => { aplicaTema(cargaTema()); aplicaModo(cargaModo()); }, []);
   useEffect(() => {
     if (!getToken()) { setCargandoCuenta(false); return; }
     cargaCuenta();
   }, []);
   useEffect(() => {
-    try { localStorage.setItem("jumpernet-enfoque", enfoque ? "1" : "0"); } catch { /* privado */ }
-  }, [enfoque]);
-  useEffect(() => {
     const alScroll = () => setPegada(window.scrollY > 12);
     window.addEventListener("scroll", alScroll, { passive: true });
     return () => window.removeEventListener("scroll", alScroll);
   }, []);
+  /* spotlight en tarjetas: cada tarjeta ilumina alrededor del cursor */
   useEffect(() => {
     const alMover = (e) => {
-      const t = e.target && e.target.closest ? e.target.closest(".tarjeta, .jns-card") : null;
+      const t = e.target && e.target.closest ? e.target.closest(".tarjeta") : null;
       if (!t) return;
       const r = t.getBoundingClientRect();
       t.style.setProperty("--mx", `${e.clientX - r.left}px`);
@@ -108,46 +102,29 @@ export default function App() {
     return () => window.removeEventListener("pointermove", alMover);
   }, []);
 
+  /* el panel es solo para sesiones: sin token se va a la página de acceso */
   useEffect(() => {
     if (esPanel && !getToken()) ir("/acceso/login");
-    if (esPanel) document.title = `${TABS[tab]?.t || "Panel"} · JumperNET`;
-  }, [esPanel, tab]);
-
-  /* «Notificaciones» del menú abre el panel lateral sin sacarte de la página. */
-  useEffect(() => {
-    if (tab === "notificaciones") {
-      window.dispatchEvent(new Event("jumpernet-abrir-notificaciones"));
-      setTab("inicio");
-    }
-  }, [tab]);
-
-  useEffect(() => { window.scrollTo(0, 0); }, [tab]);
+    if (esPanel) document.title = "Panel de red · JumperNET";
+  }, [esPanel]);
 
   function aviso(texto, tipo = "ok") {
     const id = Date.now() + Math.random();
     setToasts((ts) => [...ts, { id, texto, tipo }]);
-    setTimeout(() => setToasts((ts) => ts.filter((t) => t.id !== id)), 3800);
+    setTimeout(() => setToasts((ts) => ts.filter((t) => t.id !== id)), 3600);
   }
   function salir() { setToken(null); setYo(null); setCargandoCuenta(false); setLateral(false); ir("/"); }
   function alEntrar() {
     setCargandoCuenta(true);
     me().then((d) => {
       const nombre = d?.alias || (d?.email || "").split("@")[0] || "tú";
-      setYo(d); guardaUsuario(d); setTab("inicio"); ir("/panel");
+      setYo(d); guardaUsuario(d); setTab("red"); ir("/panel");
       aviso(`¡Hola, ${nombre}! 👋 · cuenta #${d.id}`);
     })
       .catch(() => {
         aviso("la cuenta está creada, pero no se pudo cargar el panel — reintenta", "error");
       })
       .finally(() => setCargandoCuenta(false));
-  }
-
-  function irSeccion(destino, seccion) {
-    setTab(destino);
-    window.setTimeout(() => {
-      const el = document.getElementById(seccion);
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 120);
   }
 
   const enSesion = !!yo && !!getToken();
@@ -165,8 +142,6 @@ export default function App() {
     else if (activa === "/descargas") pagina = <DescargasPagina />;
     else if (activa === "/video") pagina = <VideoPagina />;
     else if (activa === "/lab") pagina = <Laboratorio />;
-    else if (activa === "/contacto") pagina = <Soporte yo={yo} aviso={aviso} publico />;
-    else if (activa === "/pago") pagina = <Pasarela yo={yo} aviso={aviso} />;
     else if (activa === "/acceso") {
       pagina = <Acceso modo={ruta.includes("registro") ? "registro" : "login"} alEntrar={alEntrar} aviso={aviso} />;
     }
@@ -174,8 +149,6 @@ export default function App() {
     return (
       <Sitio ruta={ruta} enSesion={enSesion}>
         {pagina}
-        <PanelCarrito onPago={() => ir("/pago")} />
-        <PanelNotificaciones />
         <div className="sp-toasts">
           {toasts.map((t) => (
             <div key={t.id} className={`toast-viva ${t.tipo === "error" ? "error" : "ok"}`}>
@@ -212,220 +185,190 @@ export default function App() {
   const hoy = datosHoy();
   const nombreCuenta = yo?.alias || (yo?.email || "invitado").split("@")[0];
   const inicialCuenta = nombreCuenta.trim().charAt(0).toUpperCase();
-  const plan = planDe(yo?.plan);
-  const susc = estadoSuscripcion(yo);
-  const tabActual = TABS[tab] || TABS.inicio;
 
+  const navega = (id) => (
+    <button key={id} className={`lateral-btn ${tab === id ? "activa" : ""}`} onClick={() => { setTab(id); setLateral(false); }}>
+      <span className="ico">{NAV_SESION.flatMap((g) => g.items).find((i) => i.id === id)?.ico}</span>
+      <span>{NAV_SESION.flatMap((g) => g.items).find((i) => i.id === id)?.texto}</span>
+      {id === "red" && (
+        <span className="punto" style={{
+          width: 7, height: 7, borderRadius: "50%", marginLeft: "auto",
+          background: activo ? "var(--acento-1)" : "#7b8781",
+          boxShadow: activo ? "0 0 8px rgb(from var(--acento-1) r g b / .8)" : "none",
+        }} />
+      )}
+    </button>
+  );
+
+  /* ───────── panel (solo con sesión) ───────── */
   return (
     <>
       <GlifosFondo />
       <Nieve tenue />
       <div className="pn-aurora" aria-hidden><i /><i /><i /></div>
+      <div className="cascara">
 
-      <div className={`jns-shell ${enfoque ? "con-enfoque" : ""}`}>
-        <MenuPanel
-          tab={tab}
-          setTab={setTab}
-          yo={yo}
-          abierto={lateral}
-          onCerrar={() => setLateral(false)}
-          noLeidas={noLeidas}
-          onSalir={salir}
-        />
+        {/* ───────── barra lateral ───────── */}
+        <aside className={`lateral ${lateral ? "abierto" : ""}`}>
+          <a className="lateral-marca" href="#/">
+            <Logo tam={36} />
+            <span className="nombre">Jumper<span>NET</span><span className="cursor">_</span></span>
+          </a>
 
-        <div className="jns-principal">
-          <header className={`jns-topbar ${pegada ? "pegada" : ""}`}>
-            <button className="jns-hamburguesa" onClick={() => setLateral(true)} aria-label="Abrir el menú">☰</button>
+          <div className="lateral-perfil">
+            <span className="lateral-avatar" aria-hidden>{inicialCuenta}</span>              <span className="lateral-perfil-txt">
+              <b>{nombreCuenta}</b>
+              <span className="mono">#{yo?.id ?? "—"} · {yo?.plan || "free"} · {activo ? "en línea" : "red off"}</span>
+            </span>
+            <span className={`punto-vivo ${activo ? "" : "apagado"}`} aria-hidden />
+          </div>
 
-            <div className="jns-miga">
-              <span className="mono">panel</span>
-              <span aria-hidden>/</span>
-              <b>{tabActual.t}</b>
-            </div>
-
-            <span className="jns-top-fecha mono" title={hoy.completa}>{hoy.diaCorto} {hoy.numero} {hoy.mesCorto} · S{hoy.semana}</span>
-
-            <div className="jns-top-acciones">
-              <button
-                type="button"
-                className={`jns-chip plan tono-${plan.tono}`}
-                onClick={() => setModalPlan(true)}
-                title="Ver mi plan y las opciones de mejora"
-              >
-                {plan.ico} {plan.nombre}
-                <span className={`jns-top-plan-estado ${susc.estado}`} aria-hidden />
+          <div className="lateral-cuerpo">
+            <div className="lateral-grupo">
+              <div className="lateral-titulo">// público</div>
+              <a className="lateral-btn" href="#/"><span className="ico">⌂</span><span>Inicio</span></a>
+              <a className="lateral-btn" href="#/equipo"><span className="ico">✦</span><span>El equipo</span></a>
+              <a className="lateral-btn" href="#/funciona"><span className="ico">⌁</span><span>Cómo funciona</span></a>
+              <a className="lateral-btn" href="#/dudas"><span className="ico">?</span><span>Dudas</span></a>
+              <button className={`lateral-btn ${tab === "descargas" ? "activa" : ""}`} onClick={() => { setTab("descargas"); setLateral(false); }}>
+                <span className="ico">⬇</span><span>Descargas</span>
               </button>
-
-              <span className={`jns-chip ${activo ? "vivo" : "muerto"} mono top-red`}>{activo ? "RED ACTIVA" : "RED OFF"}</span>
-
-              <BotonCampana />
-              <BotonCarrito compacto />
-              <BotonModo compacto />
-
-              <button
-                type="button"
-                className={`jns-top-ico ${enfoque ? "activo" : ""}`}
-                onClick={() => setEnfoque((v) => !v)}
-                aria-pressed={enfoque}
-                title={enfoque ? "Mostrar la barra lateral" : "Ocultar la barra lateral"}
-                aria-label={enfoque ? "Mostrar la barra lateral" : "Ocultar la barra lateral"}
-              >⛶</button>
+              <a className="lateral-btn" href="#/tarifas"><span className="ico">◈</span><span>Tarifas</span></a>
+              <a className="lateral-btn link-externa" href={DOCS_URL} target="_blank" rel="noreferrer">
+                <span className="ico">▤</span><span>Documentación</span><span style={{ marginLeft: "auto", opacity: .6, fontSize: 10 }}>↗</span>
+              </a>
             </div>
+
+            {(yo?.rol === "admin" || yo?.rol === "moderador") && (
+              <div className="lateral-grupo">
+                <div className="lateral-titulo">// gestión</div>
+                <button className={`lateral-btn ${tab === "admin" ? "activa" : ""}`} onClick={() => { setTab("admin"); setLateral(false); }}>
+                  <span className="ico">🛡</span><span>{yo?.rol === "admin" ? "Administración" : "Moderación"}</span>
+                  <span className="punto-vivo" style={{ marginLeft: "auto" }} />
+                </button>
+              </div>
+            )}
+
+            {NAV_SESION.map((g) => (
+              <div className="lateral-grupo" key={g.grupo}>
+                <div className="lateral-titulo">// {g.grupo}</div>
+                {g.items.map((i) => navega(i.id))}
+              </div>
+            ))}
+
+            <div className="lateral-grupo">
+              <div className="lateral-titulo">// sesión</div>
+              <button className="lateral-btn" onClick={salir}><span className="ico">⏻</span><span>Salir</span></button>
+            </div>
+          </div>
+
+          <div className="lateral-promo lateral-hoy" role="note" aria-label={`Hoy es ${hoy.completa}`}>
+            <span className="lateral-hoy-dia mono" aria-hidden>{hoy.numero}</span>
+            <span>
+              <b>{hoy.dia}</b>
+              <small>{hoy.mes} {hoy.anio} · semana {hoy.semana}</small>
+            </span>
+          </div>
+
+          <div className="lateral-pie">
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span className={`punto-vivo ${activo ? "" : "apagado"}`} />
+              {activo ? "red activa · 3 saltos" : "red apagada"}
+            </span>
+            <span className="lateral-pie-url">jumpernet.duckdns.org</span>
+          </div>
+        </aside>
+
+        {lateral && <div className="velo" onClick={() => setLateral(false)} />}
+
+        {/* ───────── topbar + contenido ───────── */}
+        <div className="principal">
+          <header className={`barra-sup ${pegada ? "pegada" : ""}`}>
+            <button className="hamburguesa" onClick={() => setLateral(true)} aria-label="Abrir menú">☰</button>
+            <span className="prompt">
+              <b>{nombreCuenta}</b>@jumpernet:<i>~/{tab}</i>$ {PROMPT[tab]}
+            </span>
+            <span className="pn-fecha mono" title={hoy.completa}>
+              {hoy.diaCorto} {hoy.numero} {hoy.mesCorto} · S{hoy.semana}
+            </span>
+            <span style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+              <BotonModo compacto />
+              <span className={`chip ${activo ? "vivo" : "muerto"}`}>{activo ? "RED ACTIVA" : "RED OFF"}</span>
+              <button className="btn" onClick={() => { setTab("nodos"); setLateral(false); }} title="Ver todos los nodos">
+                ⛓ {yo?.circuito?.length ? `${yo.circuito.length}/3` : "0/3"}
+              </button>
+              <a className="btn" href="#/" style={{ textDecoration: "none" }}>Web pública</a>
+              <button className="btn" onClick={salir}>Salir</button>
+            </span>
           </header>
 
-          <main className="jns-contenido">
-            <div className="jns-vista" key={tab}>
-              {tab === "inicio" && (
-                <Dashboard
-                  yo={yo}
-                  setTab={setTab}
-                  irSeccion={irSeccion}
-                  aviso={aviso}
-                  alRecargar={(d) => { setYo(d); guardaUsuario(d); }}
-                />
+          <main className="contenido">
+            <div className="vista" key={tab}>
+              {tab === "admin" && (yo?.rol === "admin" || yo?.rol === "moderador") && (
+                <Admin yo={yo} aviso={aviso} />
               )}
 
-              {tab === "suscripcion" && (
-                <MiSuscripcion yo={yo} aviso={aviso} alCambiarPlan={() => setTab("pago")} />
-              )}
-
-              {tab === "pago" && (
-                <div className="jns-pago-envoltura">
-                  <button type="button" className="jns-link" onClick={() => setTab("suscripcion")}>← Volver a mi suscripción</button>
-                  <Pasarela yo={yo} aviso={aviso} alTerminar={() => setTab("suscripcion")} />
-                </div>
-              )}
-
-              {tab === "soporte" && (
-                <Soporte yo={yo} aviso={aviso} />
-              )}
-
-              {tab === "ajustes" && !puede(yo, "personalizacion") ? (
-                <div className="jns-panel bloqueado">
-                  <div className="jns-bloqueo">
-                    <span className="jns-bloqueo-ico" aria-hidden>🔒</span>
-                    <span className="jns-kicker">plan {plan.nombre}</span>
-                    <h2>La personalización del panel es del plan Pro</h2>
-                    <p className="jns-mini">
-                      Con Pro puedes cambiar colores, tipografía, forma y efectos del panel, y guardarlos
-                      en tu cuenta. La seguridad, la comprobación de IP y el botón de apagado siguen
-                      disponibles en todos los planes.
-                    </p>
-                    <div className="jns-plan-mini-acciones">
-                      <button type="button" className="jns-btn primario" onClick={() => setTab("pago")}>Ver el plan Pro</button>
-                      <button type="button" className="jns-btn" onClick={() => setTab("red")}>Seguir usando la red</button>
+              {tab === "descargas" && (
+                <div className="apa">
+                  <div className="cab-seccion">
+                    <div className="cubo-ico">⬇</div>
+                    <div>
+                      <span className="migas">público / descargas</span>
+                      <h1>Descarga y navega por el circuito</h1>
+                      <p className="sub">Tres maneras de usar tu red: la extensión para el navegador que ya tienes, o el navegador completo para Windows y Linux (ya viene conectado).</p>
                     </div>
                   </div>
+                  <Descargas />
                 </div>
-              ) : (
-                <>
-                  {tab === "descargas" && (
-                    <div className="jns-apa">
-                      <div className="jns-cab">
-                        <div>
-                          <span className="jns-kicker">público / descargas</span>
-                          <h1>Descarga y navega por el circuito</h1>
-                          <p className="jns-mini">La extensión para el navegador que ya tienes, o el navegador completo para Windows y Linux (ya viene conectado).</p>
-                        </div>
-                      </div>
-                      <Descargas />
-                    </div>
-                  )}
-
-                  {tab === "red" && <Red yo={yo} alRecargar={(d) => { setYo(d); guardaUsuario(d); }} aviso={aviso} />}
-
-                  {tab === "nodos" && (
-                    <div className="jns-apa">
-                      <div className="jns-cab">
-                        <div>
-                          <span className="jns-kicker">panel / nodos</span>
-                          <h1>Los nodos de la red</h1>
-                          <p className="jns-mini">Todos los saltos registrados, con estado, latencia medida y conexiones que están reenviando ahora mismo.</p>
-                        </div>
-                      </div>
-                      <Nodos yo={yo} aviso={aviso} />
-                    </div>
-                  )}
-
-                  {tab === "cuenta" && (
-                    <Cuenta yo={yo} aviso={aviso} alSalir={salir} irRed={() => setTab("red")} alRecargar={(d) => { setYo(d); guardaUsuario(d); }} />
-                  )}
-
-                  {tab === "ajustes" && (
-                    <div className="jns-apa">
-                      <div className="jns-cab">
-                        <div>
-                          <span className="jns-kicker">panel / apariencia</span>
-                          <h1>Diseñador del tema</h1>
-                          <p className="jns-mini">Colores, forma, tipografía, efectos y CSS libre — en vivo y solo en tu navegador.</p>
-                        </div>
-                      </div>
-                      <Ajustes aviso={aviso} />
-                    </div>
-                  )}
-
-                  {tab === "admin" && (yo?.rol === "admin" || yo?.rol === "moderador") && (
-                    <Admin yo={yo} aviso={aviso} />
-                  )}
-                </>
               )}
 
-              <footer className="jns-pie-panel mono">
+              {tab === "red" && <Red yo={yo} alRecargar={(d) => { setYo(d); guardaUsuario(d); }} aviso={aviso} />}
+
+              {tab === "nodos" && (
+                <div className="apa">
+                  <div className="cab-seccion">
+                    <div className="cubo-ico">⛓</div>
+                    <div>
+                      <span className="migas">panel / nodos</span>
+                      <h1>Los nodos de la red</h1>
+                      <p className="sub">Todos los saltos registrados, con estado, latencia medida y conexiones que están reenviando ahora mismo.</p>
+                    </div>
+                  </div>
+                  <Nodos yo={yo} aviso={aviso} />
+                </div>
+              )}
+
+              {tab === "cuenta" && (
+                <Cuenta yo={yo} aviso={aviso} alSalir={salir} irRed={() => setTab("red")} alRecargar={(d) => { setYo(d); guardaUsuario(d); }} />
+              )}
+
+              {tab === "ajustes" && (
+                <div className="apa">
+                  <div className="cab-seccion">
+                    <div className="cubo-ico">✦</div>
+                    <div>
+                      <span className="migas">panel / diseñador</span>
+                      <h1>Diseñador del tema</h1>
+                      <p className="sub">Colores, forma, tipografía, efectos y CSS libre — en vivo y solo en tu navegador.</p>
+                    </div>
+                  </div>
+                  <Ajustes aviso={aviso} />
+                </div>
+              )}
+
+              <footer className="nota mono" style={{ textAlign: "center", marginTop: 44, fontSize: 10.5 }}>
                 JumperNET v{VERSION} · 3 saltos · ChaCha20-Poly1305 · api: jumpernet.duckdns.org
                 <br />
-                <span>proyecto educativo · la red solo se activa cuando tú lo decides</span>
+                <span style={{ opacity: .7 }}>proyecto educativo · la red solo se activa cuando tú lo decides</span>
                 <br />
-                <span>equipo 2026 · Adrián, Rolando, Fernando, Alex y Yoselin</span>
+                <span style={{ opacity: .55 }}>equipo 2026 · Adrián, Rolando, Fernando, Alex y Yoselin</span>
               </footer>
             </div>
           </main>
         </div>
       </div>
 
-      <PanelCarrito onPago={() => setTab("pago")} />
-      <PanelNotificaciones />
-
-      {modalPlan && (
-        <div className="jns-modal-velo" role="presentation" onClick={() => setModalPlan(false)}>
-          <div className={`jns-modal plan tono-${plan.tono}`} role="dialog" aria-modal="true" aria-labelledby="jns-plan-t" onClick={(e) => e.stopPropagation()}>
-            <div className="jns-modal-cab">
-              <div>
-                <span className="jns-kicker">tu suscripción</span>
-                <h2 id="jns-plan-t">{plan.ico} Plan {plan.nombre}</h2>
-              </div>
-              <button type="button" className="jns-cerrar" onClick={() => setModalPlan(false)} aria-label="Cerrar">✕</button>
-            </div>
-            <div className="jns-plan-modal-estado">
-              <span className={`jns-chip ${susc.estado === "activo" ? "vivo" : susc.estado === "pendiente" ? "aviso" : ""}`}>{susc.etiqueta}</span>
-              <span className="jns-mini mono">{plan.precioTexto} · {plan.periodo}</span>
-            </div>
-            <span className="jns-kicker">incluido</span>
-            <ul className="jns-lista-ok compacta">
-              {plan.incluido.map((x) => <li key={x}><span aria-hidden>✓</span>{x}</li>)}
-            </ul>
-            {plan.limitaciones.length > 0 && (
-              <>
-                <span className="jns-kicker">límites</span>
-                <ul className="jns-lista-no compacta">
-                  {plan.limitaciones.map((x) => <li key={x}><span aria-hidden>–</span>{x}</li>)}
-                </ul>
-              </>
-            )}
-            <div className="jns-modal-acciones">
-              <button type="button" className="jns-btn" onClick={() => { setModalPlan(false); setTab("suscripcion"); }}>Gestionar suscripción</button>
-              {plan.id !== "pro" ? (
-                <button type="button" className="jns-btn primario" onClick={() => { setModalPlan(false); setTab("pago"); }}>
-                  Mejorar a Pro <span aria-hidden>→</span>
-                </button>
-              ) : (
-                <a className="jns-btn" href="#/tarifas">Comparar planes</a>
-              )}
-            </div>
-            <p className="jns-mini">El plan lo confirma el servidor. Esta ventana solo enseña lo que tu cuenta tiene activo.</p>
-          </div>
-        </div>
-      )}
-
+      {/* avisos */}
       <div className="sp-toasts fijos">
         {toasts.map((t) => (
           <div key={t.id} className={`toast-viva ${t.tipo === "error" ? "error" : "ok"}`}>
@@ -433,10 +376,6 @@ export default function App() {
           </div>
         ))}
       </div>
-
-      <span className="jns-sr" aria-live="polite">
-        {nombreCuenta} · plan {plan.nombre} · {activo ? "red activa" : "red apagada"} · {inicialCuenta}
-      </span>
     </>
   );
 }

@@ -6,9 +6,13 @@ import Progreso from "../components/Progreso.jsx";
 import MapaCircuito from "../components/MapaCircuito.jsx";
 import CircuitoHero from "../components/CircuitoHero.jsx";
 import Comparador from "../components/Comparador.jsx";
+import Sobre from "../components/Sobre.jsx";
+import SenalRed from "../components/SenalRed.jsx";
+import IndicePortada from "../components/IndicePortada.jsx";
 import Logo from "../components/Logo.jsx";
+import { BandaHoy, PildoraHoy, SelloHoy } from "../components/Hoy.jsx";
 import { VERSION, EDICION, PUBLICADA, NOVEDADES } from "../lib/version.js";
-import { FRASES } from "../lib/contenido.js";
+import { FRASES, PIEZAS } from "../lib/contenido.js";
 import { EQUIPO, NOMBRES } from "../lib/equipo.js";
 import { nodos as nodosApi } from "../lib/api.js";
 
@@ -143,8 +147,6 @@ export default function Inicio() {
   return (
     <>
       <section className="hn-hero" id="inicio" ref={hero} onPointerMove={paralaje} onPointerLeave={suelta}>
-        <div className="hn-aurora" aria-hidden="true"><i /><i /><i /></div>
-
         <div className="hn-guirnalda" aria-hidden="true">
           <svg viewBox="0 0 1200 52" preserveAspectRatio="none">
             <path d="M-20 6 C 180 52 380 52 600 6 S 1020 52 1220 6" />
@@ -160,6 +162,8 @@ export default function Inicio() {
         </div>
 
         <div className="hn-hero-txt">
+          <PildoraHoy />
+
           <span className="hn-eyebrow">
             <span className="punto-vivo" /> jumpernet v{VERSION} · {vivos?.total != null ? `${vivos.total} nodos vivos` : "red en vivo"} · 3 saltos
           </span>
@@ -185,6 +189,12 @@ export default function Inicio() {
             salto y sale a internet por la red de salida. Sin histórico, sin configuración de
             red y sin encenderse hasta que tú lo pides.
           </p>
+
+          <ul className="hn-puntos">
+            <li><span className="hn-punto-ico" aria-hidden>⟳</span><div><b>Gira el circuito</b><span>Cambia los tres relés sin cortar la sesión.</span></div></li>
+            <li><span className="hn-punto-ico" aria-hidden>⏻</span><div><b>Tú decides</b><span>La red llega apagada; el interruptor es tuyo.</span></div></li>
+            <li><span className="hn-punto-ico" aria-hidden>◎</span><div><b>Compruébalo</b><span>Lanza una petición y mira la IP que ve el destino.</span></div></li>
+          </ul>
 
           <div className="hn-acciones">
             <a className="btn primario grande" href="#/acceso/registro">
@@ -213,6 +223,11 @@ export default function Inicio() {
             <div><dt className="mono">salida</dt><dd>80 / 443</dd></div>
             <div><dt className="mono">histórico</dt><dd>0</dd></div>
           </dl>
+
+          <div className="hn-bajo">
+            <Sobre />
+            <SenalRed vivos={vivos} sinApi={sinApi} />
+          </div>
 
           <div className="hn-pie">
             <a className="hn-firma" href="#/equipo"
@@ -264,6 +279,15 @@ export default function Inicio() {
         </div>
       </section>
 
+      <IndicePortada />
+
+      <Revela className="pp-hoy tarjeta">
+        <BandaHoy vivos={vivos} sinApi={sinApi} edicion={EDICION} />
+        <a className="btn primario grande pp-hoy-cta" href="#/panel">
+          Ver el panel de red <span aria-hidden>→</span>
+        </a>
+      </Revela>
+
       <section id="diferencia" className="pp-seccion pp-cmp-sec">
         <Revela className="pp-cab">
           <span className="migas">la diferencia, sin tecnicismos</span>
@@ -312,7 +336,7 @@ export default function Inicio() {
             que puedes encender, apagar y mirar por dentro. Toca cada idea para ver el detalle.
           </p>
         </Revela>
-        <div className="sp-tres pp-pasos">
+        <div className="sp-tres">
           {[
             { i: "01", t: "Entra por SOCKS5", d: "Tu navegador o la terminal apuntan a un proxy SOCKS5 en el puerto 1080. Se autentica con tu cuenta; no hay configuración de red que tocar.", mas: "Puedes probarlo con curl en una terminal o con la extensión del navegador. La red llega apagada: el interruptor del panel es lo que abre el circuito." },
             { i: "02", t: "Tres relés, tres capas", d: "La red elige tres nodos vivos. Cada uno recibe un sobre cifrado que no puede leer: solo sabe a quién entregarlo.", mas: "El cifrado es ChaCha20-Poly1305 y va envolviendo el paquete salto a salto. Si giras el circuito, cambian los nodos sin cortar la sesión." },
@@ -334,6 +358,29 @@ export default function Inicio() {
         <div className="sp-fila-enlace">
           <a className="btn" href="#/proyecto">Ver el proyecto completo <span>→</span></a>
           <a className="btn" href="#/funciona">Cómo funciona, paso a paso <span>→</span></a>
+        </div>
+      </section>
+
+      <section className="pp-seccion" id="piezas">
+        <Revela className="pp-cab">
+          <span className="migas">qué te llevas</span>
+          <h2 className="pp-h2">Cuatro piezas, <span className="texto-gradiente">una red</span></h2>
+        </Revela>
+        <div className="pp-grid">
+          {PIEZAS.map((p, i) => (
+            <Revela key={p.tit} retardo={Math.min(4, i + 1)} className="pp-pieza tarjeta brillo">
+              <div className="pp-pieza-top">
+                <span className="pp-pieza-ico flota" style={{ animationDelay: `${i * 0.35}s` }}>{p.ico}</span>
+                <span className="pp-pieza-tag mono">{p.tag}</span>
+                <span className="pp-pieza-num mono">0{i + 1}</span>
+              </div>
+              <h3>{p.tit}</h3>
+              <p className="nota">{p.txt}</p>
+              <div className="pp-pieza-pies">
+                {p.pies.map((x) => <span key={x} className="chip mono">{x}</span>)}
+              </div>
+            </Revela>
+          ))}
         </div>
       </section>
 
