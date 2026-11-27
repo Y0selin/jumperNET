@@ -12,3 +12,7 @@ descargas/
 # excepción: las descargas oficiales del agente de salida SÍ van al repo (las sirve Pages)
 !web/public/descargas/
 !web/public/descargas/**
+
+# respaldos locales antes de cada rediseño (no se versionan)
+.respaldo/
+navegador/wp-theme/jumpernet-child/.respaldo/

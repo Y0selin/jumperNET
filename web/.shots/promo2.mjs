@@ -1,0 +1,14 @@
+import puppeteer from "puppeteer-core";
+const b = await puppeteer.launch({executablePath:"/usr/bin/chromium",headless:"new",args:["--no-sandbox","--disable-gpu"]});
+const p = await b.newPage();
+await p.setViewport({width:1440,height:1000});
+await p.evaluateOnNewDocument(()=>{localStorage.setItem("jumpernet-modo-v1","oscuro");localStorage.setItem("jumpernet-intro-v31","vista");localStorage.setItem("jumpernet-visita-v31","vista");});
+await p.goto("http://127.0.0.1:5199/",{waitUntil:"networkidle2"});
+await new Promise(r=>setTimeout(r,1800));
+const antes=await p.evaluate(()=>document.querySelector(".jn-aviso").classList.contains("visible"));
+await p.evaluate(()=>window.scrollTo(0,900));
+await new Promise(r=>setTimeout(r,800));
+const despues=await p.evaluate(()=>document.querySelector(".jn-aviso").classList.contains("visible"));
+console.log("visible antes:",antes,"tras scroll:",despues);
+await p.screenshot({path:".shots/rediseno/promo2.png",clip:{x:980,y:760,width:460,height:230}});
+await b.close();
