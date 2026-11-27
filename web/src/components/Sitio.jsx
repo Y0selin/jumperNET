@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Logo from "./Logo.jsx";
 import BotonModo from "./BotonModo.jsx";
 import Reproductor from "./Reproductor.jsx";
 import VideoModal from "./VideoModal.jsx";
 import Nieve from "./Nieve.jsx";
 import FondoRed from "./FondoRed.jsx";
+import Atmosfera from "./Atmosfera.jsx";
+import CentroAvisos from "./CentroAvisos.jsx";
+import CargaPagina from "./CargaPagina.jsx";
 import Visita from "./Visita.jsx";
 import AvisoDocs from "./AvisoDocs.jsx";
 import Buscador from "./Buscador.jsx";
@@ -52,8 +55,13 @@ const DOCK_ICONOS = {
   "/recursos": <><path d="M4 5.2A2.2 2.2 0 0 1 6.2 3H20v15.5H6.2A2.2 2.2 0 0 0 4 20.7z" /><path d="M4 20.7V5.2M8 7h8M8 10.5h5" /></>,
 };
 
+const TOAST_ICONO = { ok: "✓", info: "→", error: "⚠" };
+
 export default function Sitio({ ruta, enSesion, children }) {
   const [pegada, setPegada] = useState(false);
+  const [toasts, setToasts] = useState([]);
+  const [carga, setCarga] = useState(null);
+  const primeraRuta = useRef(true);
   const [arriba, setArriba] = useState(false);
   const [progreso, setProgreso] = useState(0);
   const [videoAbierto, setVideoAbierto] = useState(false);
@@ -77,6 +85,30 @@ export default function Sitio({ ruta, enSesion, children }) {
   useEffect(() => {
     document.title = `${TITULOS[activa] || "JumperNET"} · JumperNET`;
   }, [activa]);
+
+  /* la cortina de carga solo acompaña las navegaciones: en la primera
+     pintura manda la intro de bienvenida de la portada */
+  useEffect(() => {
+    if (primeraRuta.current) { primeraRuta.current = false; return; }
+    setCarga({ ruta: activa, id: `${activa}-${Date.now()}` });
+  }, [activa]);
+
+  /* cualquier componente puede avisar con lanzarAviso(): el mensaje llega
+     aquí y se pinta como toast, sin props ni estado compartido */
+  useEffect(() => {
+    const alAvisar = (e) => {
+      const { texto, tipo = "ok" } = e.detail || {};
+      if (!texto) return;
+      const id = Date.now() + Math.random();
+      setToasts((ts) => [...ts.slice(-2), { id, texto, tipo, sale: false }]);
+      setTimeout(() => {
+        setToasts((ts) => ts.map((t) => (t.id === id ? { ...t, sale: true } : t)));
+        setTimeout(() => setToasts((ts) => ts.filter((t) => t.id !== id)), 280);
+      }, 3600);
+    };
+    window.addEventListener("jumpernet-aviso", alAvisar);
+    return () => window.removeEventListener("jumpernet-aviso", alAvisar);
+  }, []);
 
   /* el hero y el reproductor pueden abrir el vídeo en grande */
   useEffect(() => {
@@ -130,6 +162,10 @@ export default function Sitio({ ruta, enSesion, children }) {
 
   return (
     <div className="pp sp">
+      {carga && (
+        <CargaPagina key={carga.id} ruta={carga.ruta} titulo={TITULOS[carga.ruta] || "jumpernet"} />
+      )}
+      <Atmosfera />
       <FondoRed />
       <Nieve />
       <Visita activa={activa} />
@@ -149,6 +185,7 @@ export default function Sitio({ ruta, enSesion, children }) {
 
         <div className="pp-nav-acciones" data-tour="panel">
           <span className="pp-nav-estado mono"><i aria-hidden /> {enSesion ? "sesión activa" : "red educativa"}</span>
+          <CentroAvisos />
           <button type="button" className="pp-buscar" onClick={() => setBuscador(true)}
             aria-label="Buscar en JumperNET" title="Buscar (Ctrl + K)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
@@ -229,6 +266,18 @@ export default function Sitio({ ruta, enSesion, children }) {
           ))}
         </div>
       </nav>
+
+      <div className="vivo-toasts" role="status" aria-live="polite">
+        {toasts.map((t) => (
+          <div key={t.id} className={`vivo-toast ${t.tipo} ${t.sale ? "sale" : ""}`}>
+            <span className="vivo-toast-ico" aria-hidden>{TOAST_ICONO[t.tipo] || "✓"}</span>
+            <span className="vivo-toast-txt">
+              <b>{t.tipo === "error" ? "no se pudo" : t.tipo === "info" ? "ten en cuenta" : "hecho"}</b>
+              <span>{t.texto}</span>
+            </span>
+          </div>
+        ))}
+      </div>
 
       <CarritoPanel abierto={carritoAbierto} cerrar={() => setCarritoAbierto(false)} />
       <PromoAviso />

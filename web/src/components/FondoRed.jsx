@@ -92,8 +92,8 @@ export default function FondoRed({ className = "" }) {
 
     function pinta(t, dt) {
       ctx.clearRect(0, 0, ancho, alto);
-      const alfaLinea = claro ? 0.2 : 0.14;
-      const alfaNodo = claro ? 0.62 : 0.72;
+      const alfaLinea = claro ? 0.26 : 0.15;
+      const alfaNodo = claro ? 0.7 : 0.74;
       const lejos = 172;
       const ratonCerca = 185;
 
@@ -191,7 +191,8 @@ export default function FondoRed({ className = "" }) {
           ctx.save();
           ctx.shadowBlur = 12;
           ctx.shadowColor = `rgba(${colores.a},0.9)`;
-          ctx.fillStyle = claro ? "rgba(226,73,31,0.9)" : "rgba(255,154,118,0.95)";
+          /* el paquete toma el acento del tema: nada de naranjas heredados */
+          ctx.fillStyle = `rgba(${colores.a},${claro ? 0.85 : 0.95})`;
           ctx.beginPath();
           ctx.arc(x, y, 1.9, 0, Math.PI * 2);
           ctx.fill();

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { lanzarAviso } from "../lib/avisos.js";
 
 /* Circuito del hero: la pieza interactiva de la portada. Se enciende y se
    apaga, se giran los relés y cada parada cuenta qué ve y qué sabe. Es una
@@ -62,6 +63,19 @@ export default function CircuitoHero() {
     setRuta((r) => [r[1], r[2], r[0]]);
     setGiro((g) => g + 1);
     avisa();
+    lanzarAviso("Circuito girado: tres relés nuevos, la misma sesión.", "info");
+  }
+
+  function alternaRed() {
+    const nuevo = !encendido;
+    setEncendido(nuevo);
+    avisa();
+    lanzarAviso(
+      nuevo
+        ? "Circuito encendido · tus paquetes ya salen por tres saltos."
+        : "Circuito apagado: no sale ni un paquete hasta que lo enciendas.",
+      nuevo ? "ok" : "info",
+    );
   }
 
   return (
@@ -77,7 +91,7 @@ export default function CircuitoHero() {
             ⟳ girar
           </button>
           <button type="button" className="hero-switch" role="switch" aria-checked={encendido}
-            aria-label="Encender o apagar la red" onClick={() => { setEncendido((v) => !v); avisa(); }}>
+            aria-label="Encender o apagar la red" onClick={alternaRed}>
             <span />
           </button>
         </div>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { lanzarAviso } from "../lib/avisos.js";
 
 /* Esquema interactivo para la portada: cinco casillas, un paquete que las
    cruza y una ficha que cuenta qué ve y qué sabe cada parada. Sirve para que
@@ -94,7 +95,11 @@ export default function MapaCircuito() {
             aria-pressed={capas} title="Ver las capas de cifrado sobre el paquete">
             ◈ {capas ? "Ocultar capas" : "Ver capas"}
           </button>
-          <button type="button" className="btn primario" onClick={() => { window.dispatchEvent(new Event("jumpernet-mapa")); lanzar(); }}>
+          <button type="button" className="btn primario" onClick={() => {
+            window.dispatchEvent(new Event("jumpernet-mapa"));
+            lanzar();
+            lanzarAviso("Paquete lanzado: entra cifrado y sale por el nodo de salida.", "info");
+          }}>
             {corriendo ? "en tránsito…" : "▶ Lanzar paquete"}
           </button>
         </div>

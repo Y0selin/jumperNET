@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <title>JumperNET · vídeo de portada</title>
-<style>html,body{margin:0;background:#060a08}canvas{display:block}</style>
+<style>html,body{margin:0;background:#081828}canvas{display:block}</style>
 </head>
 <body>
 <canvas id="lienzo" width="1280" height="720"></canvas>
@@ -19,7 +19,7 @@ let ctx = real;
 const off = document.createElement("canvas");
 off.width = W; off.height = H;
 const octx = off.getContext("2d");
-const C = { ac: "#ff5a36", ac2: "#8b7bff", tx: "#f4f0e8", mu: "#a49dae", wa: "#ffb26b", bad: "#ff6b6b" };
+const C = { ac: "#5eead4", ac2: "#7dd3fc", tx: "#edf6ff", mu: "#9db4c9", wa: "#67e8f9", bad: "#fb7185" };
 const MONO = 'ui-monospace, "DejaVu Sans Mono", monospace';
 const SANS = '"DejaVu Sans", "Liberation Sans", Arial, sans-serif';
 
@@ -47,7 +47,7 @@ function txt(s, x, y, o) {
 function tarjeta(x, y, w, h, r, borde) {
   rr(x, y, w, h, r == null ? 16 : r);
   ctx.fillStyle = "rgba(18,13,24,.92)";
-  ctx.strokeStyle = borde || "rgba(255,90,54,.24)";
+  ctx.strokeStyle = borde || "rgba(94,234,212,.24)";
   ctx.lineWidth = 1.4;
   ctx.fill(); ctx.stroke();
 }
@@ -58,7 +58,7 @@ function chip(s, x, y, color, size) {
   ctx.font = '600 ' + size + 'px ' + MONO;
   const w = ctx.measureText(s).width + 24;
   rr(x, y - size / 2 - 8, w, size + 16, 999);
-  ctx.fillStyle = "rgba(255,90,54,.1)";
+  ctx.fillStyle = "rgba(94,234,212,.1)";
   ctx.strokeStyle = (color || C.ac) + "66";
   ctx.fill(); ctx.stroke();
   txt(s, x + 12, y + 1, { size: size, color: color || C.ac, font: MONO, ls: .4 });
@@ -68,10 +68,10 @@ function chip(s, x, y, color, size) {
 
 function fondo(t) {
   const g = ctx.createLinearGradient(0, 0, W, H);
-  g.addColorStop(0, "#0b0813"); g.addColorStop(.55, "#080610"); g.addColorStop(1, "#06050b");
+  g.addColorStop(0, "#081828"); g.addColorStop(.55, "#091d2f"); g.addColorStop(1, "#06121f");
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 
-  const halos = [[290, 160, 430, "255,90,54"], [1010, 540, 470, "139,123,255"]];
+  const halos = [[290, 160, 430, "94,234,212"], [1010, 540, 470, "125,211,252"]];
   for (const h of halos) {
     const rg = ctx.createRadialGradient(h[0], h[1], 0, h[0], h[1], h[2]);
     rg.addColorStop(0, "rgba(" + h[3] + ",.11)"); rg.addColorStop(1, "rgba(" + h[3] + ",0)");
@@ -79,7 +79,7 @@ function fondo(t) {
   }
 
   ctx.save();
-  ctx.strokeStyle = "rgba(255,90,54,.07)";
+  ctx.strokeStyle = "rgba(94,234,212,.07)";
   ctx.lineWidth = 1;
   const off = (t * 9) % 48;
   for (let x = -off; x < W; x += 48) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
@@ -89,7 +89,7 @@ function fondo(t) {
   for (let i = 0; i < 26; i++) {
     const sx = (i * 137.5 + t * (14 + (i % 4) * 5)) % W;
     const sy = (i * 89.3 + Math.sin(t * .55 + i) * 18 + (i * 53 % H) + H) % H;
-    ctx.fillStyle = "rgba(255,90,54," + (.05 + (i % 4) * .025) + ")";
+    ctx.fillStyle = "rgba(94,234,212," + (.05 + (i % 4) * .025) + ")";
     ctx.beginPath(); ctx.arc(sx, sy, 1.2 + (i % 3) * .5, 0, 7); ctx.fill();
   }
 
@@ -106,14 +106,14 @@ function fondo(t) {
       const dx = red[i][0] - red[j][0], dy = red[i][1] - red[j][1];
       const d = Math.hypot(dx, dy);
       if (d > 250) continue;
-      ctx.strokeStyle = "rgba(139,123,255," + ((1 - d / 250) * .11).toFixed(3) + ")";
+      ctx.strokeStyle = "rgba(125,211,252," + ((1 - d / 250) * .11).toFixed(3) + ")";
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(red[i][0], red[i][1]); ctx.lineTo(red[j][0], red[j][1]); ctx.stroke();
     }
   }
   red.forEach(function (n) {
     const r = 1.6 + (n[2] % 3) * .6;
-    ctx.fillStyle = n[2] % 3 === 0 ? "rgba(255,90,54,.32)" : "rgba(139,123,255,.26)";
+    ctx.fillStyle = n[2] % 3 === 0 ? "rgba(94,234,212,.32)" : "rgba(125,211,252,.26)";
     ctx.beginPath(); ctx.arc(n[0], n[1], r, 0, 7); ctx.fill();
   });
   ctx.restore();
@@ -132,7 +132,7 @@ function cabecera(t, t0, kicker, titulo) {
 
 function cable(x1, y1, x2, y2, dash) {
   ctx.save();
-  ctx.strokeStyle = "rgba(46,232,138,.24)";
+  ctx.strokeStyle = "rgba(94,234,212,.24)";
   ctx.lineWidth = 2;
   if (dash) ctx.setLineDash([8, 8]);
   ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
@@ -145,7 +145,7 @@ function paquete(x, y, color, etiqueta, escala) {
   const g = ctx.createRadialGradient(x, y, 0, x, y, 34 * escala);
   g.addColorStop(0, color + "cc"); g.addColorStop(1, color + "00");
   ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 34 * escala, 0, 7); ctx.fill();
-  ctx.fillStyle = "#08120d"; ctx.strokeStyle = color; ctx.lineWidth = 2;
+  ctx.fillStyle = "#071a2a"; ctx.strokeStyle = color; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.arc(x, y, 9 * escala, 0, 7); ctx.fill(); ctx.stroke();
   if (etiqueta) {
     ctx.font = "600 11px " + MONO;
@@ -163,9 +163,9 @@ function marca(x, y, escala, t) {
   ctx.translate(x, y);
   ctx.scale(escala, escala);
   const pulso = .5 + Math.sin((t || 0) * 2.2) * .5;
-  ctx.shadowColor = "rgba(255,90,54,.65)"; ctx.shadowBlur = 28 + pulso * 22;
+  ctx.shadowColor = "rgba(94,234,212,.65)"; ctx.shadowBlur = 28 + pulso * 22;
   const tg = ctx.createLinearGradient(-62, -62, 62, 62);
-  tg.addColorStop(0, "#ff9a6f"); tg.addColorStop(.45, "#ff5a36"); tg.addColorStop(1, "#8b7bff");
+  tg.addColorStop(0, "#a7f3e8"); tg.addColorStop(.45, "#2dd4bf"); tg.addColorStop(1, "#7dd3fc");
   rr(-62, -62, 124, 124, 30);
   ctx.fillStyle = tg; ctx.fill();
   ctx.shadowBlur = 0;
@@ -180,21 +180,21 @@ function marca(x, y, escala, t) {
     ctx.bezierCurveTo(X(30.5), Y(32.2), X(25.9), Y(35.8), X(20.2), Y(35.8));
     ctx.bezierCurveTo(X(15.2), Y(35.8), X(11.6), Y(33), X(10), Y(28.8));
   };
-  ctx.strokeStyle = "#1a0a05"; ctx.lineWidth = 7.8; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.strokeStyle = "#04211b"; ctx.lineWidth = 7.8; ctx.lineCap = "round"; ctx.lineJoin = "round";
   ruta(); ctx.stroke();
   ctx.save();
-  ctx.strokeStyle = "rgba(255,246,238,.95)"; ctx.lineWidth = 2.8;
+  ctx.strokeStyle = "rgba(238,252,255,.95)"; ctx.lineWidth = 2.8;
   ctx.setLineDash([5, 62]); ctx.lineDashOffset = -((t || 0) * 42) % 67;
   ruta(); ctx.stroke();
   ctx.restore();
 
-  [[30.5, 9.5, 4.8, "#1a0a05"], [30.5, 21.6, 3.4, "#1a0a05"], [20.6, 35.5, 4.2, "#1a0a05"], [10.7, 28.9, 5.1, "#fff6ee"]].forEach(function (n) {
+  [[30.5, 9.5, 4.8, "#04211b"], [30.5, 21.6, 3.4, "#04211b"], [20.6, 35.5, 4.2, "#04211b"], [10.7, 28.9, 5.1, "#eefcff"]].forEach(function (n) {
     ctx.beginPath(); ctx.arc(X(n[0]), Y(n[1]), n[2], 0, 7); ctx.fillStyle = n[3]; ctx.fill();
   });
-  ctx.strokeStyle = "#4b2fc0"; ctx.lineWidth = 3.8; ctx.lineCap = "round";
+  ctx.strokeStyle = "#0e7490"; ctx.lineWidth = 3.8; ctx.lineCap = "round";
   ctx.beginPath(); ctx.moveTo(X(10.5), Y(29.6)); ctx.lineTo(X(5.9), Y(31.5));
   ctx.moveTo(X(10.5), Y(29.6)); ctx.lineTo(X(9.3), Y(34.2)); ctx.stroke();
-  ctx.fillStyle = "#fff6ee";
+  ctx.fillStyle = "#eefcff";
   ctx.beginPath(); ctx.arc(X(36.4), Y(17.4), 2.2, 0, 7); ctx.fill();
   ctx.restore();
 }
@@ -207,13 +207,13 @@ function e1(t) {
   const cx = W / 2;
 
   const hg = ctx.createRadialGradient(cx, 250, 0, cx, 250, 260);
-  hg.addColorStop(0, "rgba(255,90,54,.22)"); hg.addColorStop(1, "rgba(255,90,54,0)");
+  hg.addColorStop(0, "rgba(94,234,212,.22)"); hg.addColorStop(1, "rgba(94,234,212,0)");
   ctx.fillStyle = hg; ctx.fillRect(0, 0, W, H);
 
   /* órbitas y paquetes alrededor de la marca */
   for (let i = 0; i < 3; i++) {
     const radio = 150 + i * 38 + Math.sin(t * 1.2 + i) * 7;
-    ctx.strokeStyle = "rgba(255,90,54," + (.2 - i * .045) + ")";
+    ctx.strokeStyle = "rgba(94,234,212," + (.2 - i * .045) + ")";
     ctx.lineWidth = 1.2; ctx.setLineDash([4, 12]);
     ctx.beginPath(); ctx.arc(cx, 250, radio, 0, 7); ctx.stroke();
     const ang = t * (1.1 + i * .35) + i * 2.1;
@@ -243,21 +243,21 @@ function e2(t) {
   const a = easeOut(seg(t, 4.8, 5.6));
 
   /* equipo */
-  tarjeta(110, 300, 260, 190, 18, "rgba(46,232,138,.28)");
+  tarjeta(110, 300, 260, 190, 18, "rgba(94,234,212,.28)");
   ctx.save(); ctx.globalAlpha = a;
-  rr(170, 345, 140, 88, 10); ctx.strokeStyle = "rgba(46,232,138,.6)"; ctx.lineWidth = 2; ctx.stroke();
-  rr(150, 440, 180, 9, 5); ctx.fillStyle = "rgba(46,232,138,.5)"; ctx.fill();
+  rr(170, 345, 140, 88, 10); ctx.strokeStyle = "rgba(94,234,212,.6)"; ctx.lineWidth = 2; ctx.stroke();
+  rr(150, 440, 180, 9, 5); ctx.fillStyle = "rgba(94,234,212,.5)"; ctx.fill();
   txt("TU EQUIPO", 240, 528, { size: 12, color: C.mu, font: MONO, align: "center", ls: 2 });
   ctx.restore();
 
   /* destino */
   const destA = easeOut(seg(t, 5.2, 6));
-  tarjeta(910, 300, 260, 190, 18, "rgba(255,107,107,.32)");
+  tarjeta(910, 300, 260, 190, 18, "rgba(251,113,133,.32)");
   ctx.save(); ctx.globalAlpha = destA;
   for (let i = 0; i < 3; i++) {
     rr(970, 342 + i * 28, 140, 20, 5);
     ctx.fillStyle = "rgba(255,255,255,.05)"; ctx.strokeStyle = "rgba(143,167,155,.28)"; ctx.fill(); ctx.stroke();
-    ctx.fillStyle = i === 2 ? C.bad : "rgba(46,232,138,.65)";
+    ctx.fillStyle = i === 2 ? C.bad : "rgba(94,234,212,.65)";
     ctx.beginPath(); ctx.arc(1090, 352 + i * 28, 3.5, 0, 7); ctx.fill();
   }
   txt("DESTINO", 1040, 528, { size: 12, color: C.mu, font: MONO, align: "center", ls: 2 });
@@ -289,7 +289,7 @@ function e3(t) {
     ctx.save();
     ctx.globalAlpha = ap;
     ctx.translate(0, (1 - ap) * 18);
-    tarjeta(x, y, w, 118, 14, i === 4 ? "rgba(46,232,138,.65)" : "rgba(46,232,138,.24)");
+    tarjeta(x, y, w, 118, 14, i === 4 ? "rgba(94,234,212,.65)" : "rgba(94,234,212,.24)");
     txt(nodos[i], x + w / 2, y + 46, { size: i === 0 ? 19 : 17, color: i === 4 ? C.ac : C.tx, weight: "700", align: "center" });
     txt(subs[i], x + w / 2, y + 78, { size: 10.5, color: C.mu, font: MONO, align: "center", ls: .8 });
     ctx.restore();
@@ -307,7 +307,7 @@ function e3(t) {
   ctx.save(); ctx.globalAlpha = la;
   for (let i = 1; i < 4; i++) {
     const x = x0 + i * (w + gap) - gap / 2;
-    ctx.fillStyle = "rgba(8,18,13,.95)"; ctx.strokeStyle = "rgba(46,232,138,.5)";
+    ctx.fillStyle = "rgba(8,18,13,.95)"; ctx.strokeStyle = "rgba(94,234,212,.5)";
     rr(x - 26, y - 36, 52, 22, 7); ctx.fill(); ctx.stroke();
     txt("JENC", x, y - 25, { size: 10, color: C.ac, font: MONO, align: "center", ls: .6 });
   }
@@ -326,7 +326,7 @@ function e4(t) {
     ["✓", "anti-metadata", "169.254.169.254 fuera", C.ac],
   ];
 
-  tarjeta(110, 260, 520, 280, 18, "rgba(46,232,138,.3)");
+  tarjeta(110, 260, 520, 280, 18, "rgba(94,234,212,.3)");
   ctx.save(); ctx.globalAlpha = a;
   txt("NODO DE SALIDA", 142, 296, { size: 11, color: C.mu, font: MONO, ls: 2.2 });
   items.forEach((it, i) => {
@@ -359,12 +359,12 @@ function e5(t) {
   ctx.save();
   const bx = 470, by = 330, bw = 220, bh = 96;
   rr(bx, by, bw, bh, 999);
-  ctx.fillStyle = on > .5 ? "rgba(46,232,138,.16)" : "rgba(143,167,155,.08)";
-  ctx.strokeStyle = on > .5 ? "rgba(46,232,138,.75)" : "rgba(143,167,155,.35)";
+  ctx.fillStyle = on > .5 ? "rgba(94,234,212,.16)" : "rgba(143,167,155,.08)";
+  ctx.strokeStyle = on > .5 ? "rgba(94,234,212,.75)" : "rgba(143,167,155,.35)";
   ctx.lineWidth = 2; ctx.fill(); ctx.stroke();
   const kx = lerp(bx + 52, bx + bw - 52, on);
-  ctx.shadowColor = "rgba(46,232,138," + (.15 + on * .55) + ")"; ctx.shadowBlur = 30 * on;
-  ctx.fillStyle = on > .5 ? C.ac : "#7d8f86";
+  ctx.shadowColor = "rgba(94,234,212," + (.15 + on * .55) + ")"; ctx.shadowBlur = 30 * on;
+  ctx.fillStyle = on > .5 ? C.ac : "#5f7b93";
   ctx.beginPath(); ctx.arc(kx, by + bh / 2, 32, 0, 7); ctx.fill();
   ctx.shadowBlur = 0;
   txt(on > .5 ? "ENCENDIDA" : "APAGADA", bx + bw / 2, by + bh + 44,
@@ -415,10 +415,10 @@ function e7(t) {
     ctx.save();
     ctx.globalAlpha = a * ap;
     ctx.translate(0, (1 - ap) * 16);
-    ctx.strokeStyle = i % 2 ? "rgba(139,123,255,.55)" : "rgba(255,90,54,.55)";
+    ctx.strokeStyle = i % 2 ? "rgba(125,211,252,.55)" : "rgba(94,234,212,.55)";
     ctx.lineWidth = 1.2;
     rr(x - 88, 386, 176, 74, 18); ctx.stroke();
-    ctx.fillStyle = i % 2 ? "rgba(139,123,255,.09)" : "rgba(255,90,54,.09)"; ctx.fill();
+    ctx.fillStyle = i % 2 ? "rgba(125,211,252,.09)" : "rgba(94,234,212,.09)"; ctx.fill();
     txt(n, x, 416, { size: 20, weight: "700", align: "center" });
     txt("0" + (i + 1), x, 442, { size: 9, color: C.mu, font: MONO, align: "center", ls: 2 });
     ctx.restore();

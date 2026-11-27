@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { aplicaModo, cargaModo, guardaModo } from "../lib/modo.js";
+import { lanzarAviso } from "../lib/avisos.js";
 import { aplicaTema, cargaTema } from "../lib/temas.js";
 
 /* Conmutador de interfaz: oscuro (por defecto) o claro.
@@ -22,6 +23,7 @@ export default function BotonModo({ compacto = false }) {
     aplicaTema(cargaTema());
     guardaModo(nuevo);
     setModo(nuevo);
+    lanzarAviso(`Interfaz ${nuevo === "claro" ? "clara" : "oscura"} activada.`, "info");
   }
 
   /* el buscador global también puede cambiar el modo */

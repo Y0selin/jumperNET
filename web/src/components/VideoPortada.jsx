@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CAPITULOS, DURACION } from "../lib/video.js";
+import { lanzarAviso } from "../lib/avisos.js";
 
 /* Vídeo de portada con música y capítulos.
    Sigue reproduciéndose solo (mudo) al entrar en pantalla; el sonido se
@@ -122,6 +123,7 @@ export default function VideoPortada() {
     if (nuevo) {
       window.dispatchEvent(new Event("jumpernet-callar-musica"));
       v.play().catch(() => {});
+      lanzarAviso("Música del vídeo activada; la música del fondo se calla.", "info");
     }
     setConAudio(nuevo);
   }
