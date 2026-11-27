@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { aplicaModo, cargaModo, guardaModo } from "../lib/modo.js";
 import { aplicaTema, cargaTema } from "../lib/temas.js";
 
-/* Conmutador de interfaz: claro (por defecto) u oscuro.
+/* Conmutador de interfaz: oscuro (por defecto) o claro.
    Aplica la paleta en <html> al momento y la recuerda. */
 export default function BotonModo({ compacto = false }) {
   const [modo, setModo] = useState(cargaModo);

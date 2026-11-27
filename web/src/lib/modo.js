@@ -1,4 +1,4 @@
-/* Modo de interfaz: claro por defecto, oscuro opcional.
+/* Modo de interfaz: oscuro por defecto, claro opcional.
    Escribe la paleta en <html> (igual que el Diseñador) para que toda la
    plataforma —sitio público y panel— cambie de golpe y sin recargar. */
 
@@ -9,28 +9,28 @@ export const MODOS = {
     nombre: "Claro",
     color: "#F2F6F0",
     vars: {
-      "--bg-1": "#F2F6F0", "--bg-2": "#E7F2EA",
-      "--panel": "251, 253, 249", "--panel-sol": "27, 116, 96",
-      "--borde": "#D2E0D6", "--acento-1": "#1B7460",
-      "--acento-2": "#146B59", "--acento-3": "#B68A3E",
-      "--texto": "#1B3029", "--texto-suave": "#476057",
-      "--acento-txt": "#A8432B", "--acento-txt-2": "#BE5338",
-      "--linea": "rgb(27 48 41 / .11)", "--linea-2": "rgb(27 48 41 / .17)",
-      "--sup-1": "#FBFDF9", "--sup-2": "#F5FAF4", "--sup-3": "#EAF3EC",
+      "--bg-1": "#F4F8FC", "--bg-2": "#E8F1FA",
+      "--panel": "255, 255, 255", "--panel-sol": "15, 118, 110",
+      "--borde": "#D6E4F0", "--acento-1": "#0F766E",
+      "--acento-2": "#1E6FA8", "--acento-3": "#0E9488",
+      "--texto": "#0F2338", "--texto-suave": "#4A6278",
+      "--acento-txt": "#0B6B5A", "--acento-txt-2": "#0E7C6B",
+      "--linea": "rgb(16 42 66 / .10)", "--linea-2": "rgb(16 42 66 / .18)",
+      "--sup-1": "#FFFFFF", "--sup-2": "#F7FBFE", "--sup-3": "#ECF4FA",
     },
   },
   oscuro: {
     nombre: "Oscuro",
-    color: "#0A1725",
+    color: "#071524",
     vars: {
-      "--bg-1": "#0A1725", "--bg-2": "#0D1D2C",
-      "--panel": "16, 36, 54", "--panel-sol": "53, 199, 167",
-      "--borde": "#1f3a52", "--acento-1": "#35c7a7",
-      "--acento-2": "#d6a84b", "--acento-3": "#e9c178",
-      "--texto": "#F1F7FD", "--texto-suave": "#A8C1D4",
-      "--acento-txt": "#ffa38f", "--acento-txt-2": "#ffb9a8",
-      "--linea": "rgb(160 200 230 / .14)", "--linea-2": "rgb(160 200 230 / .26)",
-      "--sup-1": "#102436", "--sup-2": "#0d2031", "--sup-3": "#152c40",
+      "--bg-1": "#071524", "--bg-2": "#0A2033",
+      "--panel": "13, 31, 49", "--panel-sol": "94, 234, 212",
+      "--borde": "#1B354D", "--acento-1": "#5EEAD4",
+      "--acento-2": "#7DD3FC", "--acento-3": "#67E8F9",
+      "--texto": "#EDF6FF", "--texto-suave": "#9DB4C9",
+      "--acento-txt": "#8FE9D8", "--acento-txt-2": "#C7F7EE",
+      "--linea": "rgb(150 200 235 / .13)", "--linea-2": "rgb(150 200 235 / .24)",
+      "--sup-1": "#0D2237", "--sup-2": "#0A1B2C", "--sup-3": "#142E45",
     },
   },
 };
@@ -40,7 +40,7 @@ export function cargaModo() {
     const m = localStorage.getItem(CLAVE);
     if (m === "oscuro" || m === "claro") return m;
   } catch { /* almacenamiento bloqueado */ }
-  return "claro";
+  return "oscuro";
 }
 
 export function guardaModo(modo) {

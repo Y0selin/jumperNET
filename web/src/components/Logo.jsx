@@ -11,12 +11,13 @@ export default function Logo({ tam = 38, className = "" }) {
       <svg viewBox="0 0 48 48" fill="none" focusable="false">
         <defs>
           <linearGradient id="jn-mark" x1="0" y1="48" x2="48" y2="0" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stopColor="#167D68" />
-            <stop offset="1" stopColor="#FF6347" />
+            <stop className="logo-jn-parada-a" offset="0" />
+            <stop className="logo-jn-parada-b" offset="1" />
           </linearGradient>
         </defs>
         {/* ruta: J curva con tres saltos y salida */}
         <path
+          className="logo-jn-ruta"
           d="M14 34 C 14 40, 20 42, 26 38 L 30 34 L 30 16 L 38 10"
           stroke="url(#jn-mark)"
           strokeWidth="3.2"
@@ -26,18 +27,18 @@ export default function Logo({ tam = 38, className = "" }) {
         />
         {/* flecha de salida */}
         <path
+          className="logo-jn-salto"
           d="M33 10 L 38 10 L 38 15"
-          stroke="#FF6347"
           strokeWidth="3.2"
           strokeLinecap="round"
           strokeLinejoin="round"
           fill="none"
         />
         {/* tres nodos del circuito */}
-        <circle cx="14" cy="34" r="3.6" fill="#167D68" />
-        <circle cx="30" cy="34" r="3.6" fill="#D6A84B" />
-        <circle cx="30" cy="16" r="3.6" fill="#FF6347" />
-        <circle cx="38" cy="10" r="2.6" fill="#14283E" />
+        <circle className="logo-jn-nodo logo-jn-nodo-a" cx="14" cy="34" r="3.6" />
+        <circle className="logo-jn-nodo logo-jn-nodo-b" cx="30" cy="34" r="3.6" />
+        <circle className="logo-jn-nodo logo-jn-nodo-c" cx="30" cy="16" r="3.6" />
+        <circle className="logo-jn-nodo logo-jn-nodo-fin" cx="38" cy="10" r="2.6" />
       </svg>
     </span>
   );

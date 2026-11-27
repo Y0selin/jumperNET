@@ -33,18 +33,18 @@ const DESTINOS = [
 
 /* Luces de la guirnalda: posición sobre el cable, color y retardo. */
 const LUCES_GUIRNALDA = [
-  { x: 5, y: 17, c: "#f0c97a", d: "0s" },
-  { x: 13, y: 31, c: "#ec7a56", d: "-.5s" },
-  { x: 22, y: 41, c: "#71c6a8", d: "-1s" },
-  { x: 31, y: 43, c: "#f0c97a", d: "-1.5s" },
-  { x: 40, y: 32, c: "#ec7a56", d: "-2s" },
-  { x: 48, y: 15, c: "#71c6a8", d: "-2.5s" },
-  { x: 56, y: 18, c: "#f0c97a", d: "-3s" },
-  { x: 65, y: 33, c: "#ec7a56", d: "-3.5s" },
-  { x: 74, y: 42, c: "#71c6a8", d: "-4s" },
-  { x: 83, y: 40, c: "#f0c97a", d: "-4.5s" },
-  { x: 92, y: 26, c: "#ec7a56", d: "-5s" },
-  { x: 97, y: 11, c: "#71c6a8", d: "-5.5s" },
+  { x: 5, y: 17, c: "#8FE9D8", d: "0s" },
+  { x: 13, y: 31, c: "#7DD3FC", d: "-.5s" },
+  { x: 22, y: 41, c: "#C7E8FF", d: "-1s" },
+  { x: 31, y: 43, c: "#8FE9D8", d: "-1.5s" },
+  { x: 40, y: 32, c: "#7DD3FC", d: "-2s" },
+  { x: 48, y: 15, c: "#C7E8FF", d: "-2.5s" },
+  { x: 56, y: 18, c: "#8FE9D8", d: "-3s" },
+  { x: 65, y: 33, c: "#7DD3FC", d: "-3.5s" },
+  { x: 74, y: 42, c: "#C7E8FF", d: "-4s" },
+  { x: 83, y: 40, c: "#8FE9D8", d: "-4.5s" },
+  { x: 92, y: 26, c: "#7DD3FC", d: "-5s" },
+  { x: 97, y: 11, c: "#C7E8FF", d: "-5.5s" },
 ];
 
 const LETRAS = "JumperNET".split("");
@@ -259,22 +259,9 @@ export default function Inicio() {
             <VideoPortada />
           </div>
 
-          <div className="hn-simulador tarjeta" data-tour="simulador">
-            <div className="hn-simulador-cab">
-              <span className="migas">simulador en vivo</span>
-              <h3>tu circuito de 3 saltos</h3>
-            </div>
+          <div className="hn-simulador" data-tour="simulador">
             <CircuitoHero />
             <span className="hn-pie-visual mono">toca una parada · enciende o apaga la red</span>
-
-            <a className="hn-lab-mini" href="#/lab">
-              <span className="hn-lab-mini-nodos" aria-hidden><i /><i /><i /></span>
-              <span className="hn-lab-mini-txt">
-                <b>JumperNET Lab</b>
-                <span>prueba la consola y tumba un nodo</span>
-              </span>
-              <span className="hn-lab-mini-flecha" aria-hidden>→</span>
-            </a>
           </div>
         </div>
       </section>

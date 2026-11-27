@@ -139,7 +139,14 @@ export default function VideoModal({ abierto, cerrar }) {
           </button>
           <button type="button" className={`video-modal-boton ${sonido ? "on" : ""}`}
             onClick={alternaSonido} aria-pressed={sonido}>
-            {sonido ? "🔊 con música" : "🔇 activar música"}
+            <svg className="video-modal-boton-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M11 5 6.5 8.6H3.5v6.8h3L11 19z" />
+              {sonido
+                ? <><path d="M15 9.2a4 4 0 0 1 0 5.6" /><path d="M17.8 6.4a7.6 7.6 0 0 1 0 11.2" /></>
+                : <><path d="m15 9.5 5 5M20 9.5l-5 5" /></>}
+            </svg>
+            {sonido ? "con música" : "activar música"}
           </button>
           <button type="button" className={`video-modal-boton ${cc ? "on" : ""}`}
             onClick={() => setCc((v) => !v)} aria-pressed={cc}>CC subtítulos</button>

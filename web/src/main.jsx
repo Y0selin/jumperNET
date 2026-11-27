@@ -18,6 +18,7 @@ import "./styles/planes.css";
 import "./styles/planes-dinamicas.css";
 import "./styles/panel-usuario.css";
 import "./styles/saas.css";
+import "./styles/luz.css";
 
-if (!document.documentElement.dataset.modo) document.documentElement.dataset.modo = "claro";
+if (!document.documentElement.dataset.modo) document.documentElement.dataset.modo = "oscuro";
 createRoot(document.getElementById("root")).render(<App />);

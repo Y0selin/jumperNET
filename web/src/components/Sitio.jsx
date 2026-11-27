@@ -148,7 +148,6 @@ export default function Sitio({ ruta, enSesion, children }) {
         </div>
 
         <div className="pp-nav-acciones" data-tour="panel">
-          <span className="pp-nav-badge mono" aria-hidden>EN VIVO</span>
           <span className="pp-nav-estado mono"><i aria-hidden /> {enSesion ? "sesión activa" : "red educativa"}</span>
           <button type="button" className="pp-buscar" onClick={() => setBuscador(true)}
             aria-label="Buscar en JumperNET" title="Buscar (Ctrl + K)">

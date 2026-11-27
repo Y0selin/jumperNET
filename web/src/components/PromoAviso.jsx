@@ -18,14 +18,30 @@ export default function PromoAviso() {
        no hace falta una tarjeta flotante encima del contenido */
     const enContexto = () => /^#\/(tarifas|checkout)/.test(location.hash);
     if (enContexto()) return;
-    const t = setTimeout(() => setVisible(true), 1400);
-    const auto = setTimeout(() => {
-      setVisible(false);
-      try { sessionStorage.setItem(CLAVE_AVISO, "1"); } catch { /* sin persistencia */ }
-    }, 15000);
+    /* fuera del hero: aparece cuando ya has empezado a leer, para no
+       tapar el titular ni el simulador en la primera pantalla */
+    let auto = 0;
+    const muestra = () => {
+      if (window.scrollY < 520) return;
+      window.removeEventListener("scroll", muestra);
+      setVisible(true);
+      auto = setTimeout(() => {
+        setVisible(false);
+        try { sessionStorage.setItem(CLAVE_AVISO, "1"); } catch { /* sin persistencia */ }
+      }, 15000);
+    };
+    const t = setTimeout(() => {
+      if (window.scrollY >= 520) muestra();
+      else window.addEventListener("scroll", muestra, { passive: true });
+    }, 1200);
     const alCambiar = () => { if (enContexto()) setVisible(false); };
     window.addEventListener("hashchange", alCambiar);
-    return () => { clearTimeout(t); clearTimeout(auto); window.removeEventListener("hashchange", alCambiar); };
+    return () => {
+      clearTimeout(t);
+      clearTimeout(auto);
+      window.removeEventListener("scroll", muestra);
+      window.removeEventListener("hashchange", alCambiar);
+    };
   }, []);
 
   useEffect(() => {
