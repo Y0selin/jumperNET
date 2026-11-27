@@ -2,8 +2,11 @@
 # Da de alta al equipo fundador como administradores del panel.
 #
 # Uso:
-#   INTERNAL_TOKEN=xxxx ./crear-admins.sh
-#   INTERNAL_TOKEN=xxxx ./crear-admins.sh fernando@midominio.com otro@midominio.com
+#   INTERNAL_TOKEN=xxxx ./crear-admins.sh tu-correo@tudominio.com [otro@...]
+#
+# No hay un correo «de admin» reservado: el rol va pegado a la cuenta. Pasa el
+# correo con el que entras en la web y esa misma cuenta pasa a admin; si no
+# existe todavía, se crea aquí mismo (no hace falta registrarse antes).
 #
 # Usa POST /admin/semilla, que crea la cuenta si no existe y la deja con rol
 # admin y plan pro; si ya existe, le cambia la contraseña y la promociona.
@@ -13,20 +16,23 @@ set -euo pipefail
 
 API="${API:-https://jumpernet.duckdns.org}"
 CLAVE="${CLAVE:-jumpernet15}"
-: "${INTERNAL_TOKEN:?exporta INTERNAL_TOKEN (lo tienes en el .env del servidor)}"
+if [ "$#" -eq 0 ]; then
+  cat <<'AYUDA'
+Falta el correo. Este script no inventa cuentas: dale el correo real de cada
+persona, el mismo con el que entra en la web.
 
-# Cambia estos correos por los que use cada persona para entrar.
-if [ "$#" -gt 0 ]; then
-  cuentas=("$@")
-else
-  cuentas=(
-    "fernando@jumpernet.es"
-    "alex@jumpernet.es"
-    "yoselin@jumpernet.es"
-    "juno@jumpernet.es"
-    "equipo@jumpernet.es"
-  )
+  INTERNAL_TOKEN=... ./crear-admins.sh fernando@gmail.com
+  INTERNAL_TOKEN=... ./crear-admins.sh uno@gmail.com dos@gmail.com tres@gmail.com
+
+El token está en el servidor, en ~/jumpernat/.env (línea INTERNAL_TOKEN=).
+AYUDA
+  exit 2
 fi
+
+cuentas=("$@")
+
+# el token va después de la ayuda: sin argumentos se explica cómo se usa
+: "${INTERNAL_TOKEN:?exporta INTERNAL_TOKEN (lo tienes en el .env del servidor)}"
 
 echo "API: $API · contraseña: $CLAVE · cuentas: ${#cuentas[@]}"
 fallos=0
