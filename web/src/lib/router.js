@@ -6,9 +6,32 @@ import { useEffect, useState } from "react";
    un refresco daría 404. Con hash, cada página tiene su URL, su historial y
    su botón atrás sin tocar el servidor. */
 
+/* Rutas cortas que la gente escribe a mano en la barra de direcciones. */
+const ALIAS = { "/admin": "/panel/admin" };
+
+/* Páginas conocidas: sirven para reconocer una ruta «de verdad». */
+const PAGINAS = new Set([
+  "panel", "acceso", "usos", "recursos", "proyecto", "equipo", "funciona",
+  "tarifas", "dudas", "descargas", "video", "lab", "checkout", "admin",
+]);
+
+/* Quien escribe /jumperNET/panel/admin o /admin en la barra tiene que llegar a
+   la sala, no a la portada. Vite y GitHub Pages devuelven index.html en esas
+   rutas, así que se reconoce la página por el último tramo del camino y se
+   convierte al hash antes de pintar nada (sin parpadeo de portada). */
+export function rutaDesdeCamino() {
+  if (typeof location === "undefined" || location.hash) return null;
+  const trozos = (location.pathname || "/").split("/").filter(Boolean);
+  const i = trozos.findIndex((t) => PAGINAS.has(t.toLowerCase()));
+  if (i < 0) return null;
+  const ruta = "/" + trozos.slice(i).join("/");
+  return ALIAS[ruta] || ruta;
+}
+
 export function rutaActual() {
   const h = (typeof location !== "undefined" ? location.hash : "").replace(/^#/, "");
-  return h.startsWith("/") ? h : "/";
+  if (h.startsWith("/")) return ALIAS[h] || h;
+  return rutaDesdeCamino() || "/";
 }
 
 /* parte «de página» de una ruta: /acceso/registro → /acceso */
@@ -32,7 +55,7 @@ export function useRuta() {
   const [ruta, setRuta] = useState(rutaActual);
 
   useEffect(() => {
-    if (!location.hash) history.replaceState(null, "", "#/");
+    if (!location.hash) history.replaceState(null, "", "#" + rutaActual());
     /* cada página empieza arriba: con scroll suave global, un scrollTo(0,0)
        normal se queda a medias al cambiar de ruta desde el pie */
     if ("scrollRestoration" in history) history.scrollRestoration = "manual";

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JumperNET</title>
+  <script>
+    /* GitHub Pages no reescribe rutas: /jumperNET/admin responde esta 404.
+       Se reenvía a la portada con la ruta en el hash, que es la que usa la app
+       (#/panel/admin). La carpeta del sitio sale del propio camino de esta
+       página, así que funciona en cualquier subcarpeta. */
+    (function () {
+      var base = location.pathname.replace(/[^/]*$/, "");
+      var ruta = location.pathname.slice(base.length).replace(/\/+$/, "");
+      location.replace(base + "#/" + ruta);
+    })();
+  </script>
+</head>
+<body></body>
+</html>
