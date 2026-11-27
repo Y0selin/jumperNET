@@ -113,6 +113,72 @@ function CargandoPanel() {
   return <div className="pu-cargando"><span className="spin" /><b>Cargando tu panel…</b></div>;
 }
 
+/* La sala de mando no se abre con la llave: el rol lo pone el servidor. Esta
+   pantalla dice qué cuenta eres, qué rol tienes y la orden exacta que convierte
+   esa cuenta en admin, para no dejarte en un callejón sin salida. */
+function SalaCerrada({ yo, aviso, salir, navega, cargaCuenta }) {
+  const [comprobando, setComprobando] = useState(false);
+  const [copiado, setCopiado] = useState(false);
+  const correo = yo?.email || "tu-correo@ejemplo.com";
+  const orden =
+    "curl -X POST https://jumpernet.duckdns.org/admin/semilla \\\n" +
+    "  -H \"x-interno: TOKEN_DEL_SERVIDOR\" \\\n" +
+    "  -H \"Content-Type: application/json\" \\\n" +
+    `  -d '{"email":"${correo}","password":"jumpernet15"}'`;
+
+  async function comprueba() {
+    if (comprobando || !cargaCuenta) return;
+    setComprobando(true);
+    const d = await cargaCuenta();
+    setComprobando(false);
+    if (d?.rol === "admin" || d?.rol === "moderador") {
+      aviso?.(`sala desbloqueada · ahora eres ${d.rol}`, "ok");
+    } else {
+      aviso?.(`el servidor sigue dando el rol ${d?.rol || "usuario"} a esta cuenta`, "error");
+    }
+  }
+
+  async function copia() {
+    try {
+      await navigator.clipboard.writeText(orden);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 1800);
+    } catch {
+      aviso?.("el navegador no dejó copiar: selecciona la orden a mano", "error");
+    }
+  }
+
+  return (
+    <div className="pu-vacio grande">
+      <b>Esta cuenta no tiene la sala de mando</b>
+      <p>
+        Estás dentro como <b>{yo?.alias || "sin alias"}</b> · <b>{yo?.email || `cuenta #${yo?.id ?? "—"}`}</b>,
+        y el servidor le da el rol <b>{yo?.rol || "usuario"}</b>. La sala solo se abre para
+        <b> admin</b> o <b>moderador</b>: el nombre y la llave son la segunda cerradura, no cambian el rol.
+      </p>
+      <p>
+        Para convertir <b>esta misma cuenta</b> en admin, pega esto una vez en el servidor
+        (el token está en su <span className="mono">.env</span> como
+        <span className="mono"> INTERNAL_TOKEN</span>):
+      </p>
+      <pre className="pu-codigo mono">{orden}</pre>
+      <div className="fila-btn">
+        <button className="btn primario" type="button" disabled={comprobando} onClick={comprueba}>
+          {comprobando ? <><span className="spin" /> comprobando…</> : <>Comprobar mi rol otra vez</>}
+        </button>
+        <button className="btn" type="button" onClick={copia}>
+          {copiado ? "✓ orden copiada" : "Copiar la orden"}
+        </button>
+      </div>
+      <div className="fila-btn">
+        <button className="btn" type="button" onClick={() => navega?.("inicio")}>Volver a mi panel</button>
+        <button className="btn" type="button" onClick={salir}>Cambiar de cuenta</button>
+      </div>
+      <p className="mono">#/panel/admin · la llave de la sala es jumpernet15</p>
+    </div>
+  );
+}
+
 export default function Panel({
   yo, aviso, salir, toasts = [], cargandoCuenta, cargaCuenta, alRecargar,
 }) {
@@ -374,24 +440,14 @@ export default function Panel({
         if (yo?.rol === "admin" || yo?.rol === "moderador") {
           return <Admin yo={yo} aviso={aviso} />;
         }
-        const quien = yo?.alias || yo?.email || `cuenta #${yo?.id ?? "—"}`;
         return (
-          <div className="pu-vacio grande">
-            <b>Esta cuenta no tiene la sala de mando</b>
-            <p>
-              Estás dentro como <b>{quien}</b> (#{yo?.id ?? "—"}) y el servidor
-              le da el rol <b>{yo?.rol || "usuario"}</b>. La sala solo se abre
-              para <b>admin</b> o <b>moderador</b>: el nombre y la llave son la
-              segunda cerradura, no cambian el rol.
-            </p>
-            <p className="mono">#/panel/admin · entra con la cuenta fundadora o pide a un admin que suba el rol de esta cuenta en Administración → Usuarios.</p>
-            <div className="fila-btn">
-              <button className="btn primario" type="button" onClick={() => setTab("inicio")}>
-                Volver a mi panel
-              </button>
-              <button className="btn" type="button" onClick={() => { salir(); }}>Cambiar de cuenta</button>
-            </div>
-          </div>
+          <SalaCerrada
+            yo={yo}
+            aviso={aviso}
+            salir={salir}
+            navega={navega}
+            cargaCuenta={cargaCuenta}
+          />
         );
       }
       default: return <CargandoPanel />;
