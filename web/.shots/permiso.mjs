@@ -19,7 +19,7 @@ const b = await puppeteer.launch({
   args: ["--no-sandbox", "--disable-gpu"],
 });
 
-async function abrir({ rol, token = true }) {
+async function abrir({ rol, token = true, hash = "#/panel/admin", clic = false }) {
   const p = await b.newPage();
   await p.setViewport({ width: 1280, height: 900 });
   await p.setRequestInterception(true);
@@ -43,26 +43,45 @@ async function abrir({ rol, token = true }) {
     localStorage.setItem("jumpernet-modo-v1", "oscuro");
     localStorage.setItem("jumpernet-intro-v31", "vista");
   }, token);
-  await p.goto(`${BASE}/#/panel/admin`, { waitUntil: "networkidle2" });
+  await p.goto(`${BASE}/${hash}`, { waitUntil: "networkidle2" });
   await espera(1600);
+  await p.waitForSelector(".lateral-btn", { timeout: 4000 }).catch(() => {});
+
+  /* la entrada debe estar en el menú aunque la cuenta no tenga rol */
+  const menu = await p.evaluate(() =>
+    [...document.querySelectorAll(".lateral-btn")].map((x) => x.textContent.replace(/\s+/g, " ").trim()));
+  const entrada = menu.find((t) => t.includes("Administración")) || null;
+
+  if (clic) {
+    await p.evaluate(() => {
+      const b = [...document.querySelectorAll(".lateral-btn")]
+        .find((x) => x.textContent.includes("Administración"));
+      b?.click();
+    });
+    await espera(600);
+  }
+
   const d = await p.evaluate(() => ({
     hash: location.hash,
     puerta: !!document.querySelector(".jn-adm-puerta"),
     texto: (document.querySelector(".pu-vacio")?.textContent || "").replace(/\s+/g, " ").trim().slice(0, 160),
     volver: sessionStorage.getItem("jumpernet-volver"),
   }));
-  console.log(rol === "sin-sesion" ? "sin sesión" : `rol ${rol}`, JSON.stringify(d));
+  console.log(rol === "sin-sesion" ? "sin sesión" : `rol ${rol}${clic ? " (desde el menú)" : ""}`,
+    JSON.stringify({ ...d, entrada }));
   await p.close();
-  return d;
+  return { ...d, entrada };
 }
 
 const admin = await abrir({ rol: "admin" });
 const usuario = await abrir({ rol: "usuario" });
+const desdeMenu = await abrir({ rol: "usuario", hash: "#/panel", clic: true });
 const sinSesion = await abrir({ rol: null, token: false });
 
 const bien =
-  admin.puerta &&
-  !usuario.puerta && usuario.hash === "#/panel/admin" && usuario.texto.includes("usuario") &&
+  admin.puerta && !!admin.entrada &&
+  !usuario.puerta && usuario.hash === "#/panel/admin" && usuario.texto.includes("usuario") && !!usuario.entrada &&
+  desdeMenu.hash === "#/panel/admin" && desdeMenu.texto.includes("usuario") &&
   sinSesion.hash.includes("/acceso/login") && sinSesion.volver === "/panel/admin" &&
   errores.length === 0;
 

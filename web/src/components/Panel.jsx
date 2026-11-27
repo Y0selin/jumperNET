@@ -131,7 +131,7 @@ export default function Panel({
   const [plegado, setPlegado] = useState(() => {
     try { return localStorage.getItem("jumpernet-panel-plegado") === "1"; } catch { return false; }
   });
-  const [abiertos, setAbiertos] = useState(() => ({ general: true, red: true }));
+  const [abiertos, setAbiertos] = useState(() => ({ general: true, red: true, gestion: true }));
   const planVisto = useRef(null);
   const [gate, setGate] = useState(null);
   const [carritoAbierto, setCarritoAbierto] = useState(false);
@@ -140,9 +140,19 @@ export default function Panel({
 
   const grupos = useMemo(() => {
     const g = [...navDe(yo)];
-    if (yo?.rol === "admin" || yo?.rol === "moderador") {
-      g.push({ id: "gestion", titulo: "Gestión", items: [{ id: "admin", txt: yo.rol === "admin" ? "Administración" : "Moderación", ico: "shield" }] });
-    }
+    /* La entrada de gestión se pinta siempre: quien no tiene rol descubre
+       dónde vive la sala de mando y qué le falta, en vez de no encontrarla
+       nunca en el menú. El contenido y la API siguen pidiendo el rol. */
+    g.push({
+      id: "gestion",
+      titulo: "Gestión",
+      items: [{
+        id: "admin",
+        txt: yo?.rol === "moderador" ? "Moderación" : "Administración",
+        ico: "shield",
+        sinRol: !(yo?.rol === "admin" || yo?.rol === "moderador"),
+      }],
+    });
     return g;
   }, [yo?.plan, yo?.rol, plan.id, plan.demo, plan.saltosMax]);
 
@@ -166,7 +176,7 @@ export default function Panel({
     if (planVisto.current === clave) return;
     const primeraVez = planVisto.current === null;
     planVisto.current = clave;
-    const gruposPro = ["general", "red", "seguridad", "herramientas", "suscripcion"];
+    const gruposPro = ["general", "red", "seguridad", "herramientas", "suscripcion", "gestion"];
     if (plan.id !== "free" && (primeraVez || plan.demo)) {
       setAbiertos(Object.fromEntries(
         grupos.filter((g) => gruposPro.includes(g.id)).map((g) => [g.id, true])
@@ -215,7 +225,8 @@ export default function Panel({
   function navega(id) {
     const it = itemDe(yo, id);
     if (it?.bloqueado) { setGate(it); setLateral(false); return; }
-    if (id === "admin" && !["admin", "moderador"].includes(yo?.rol)) return;
+    /* admin también se abre sin rol: la pestaña explica qué cuenta está
+       dentro y qué le falta, en vez de no hacer nada al pulsar. */
     setTab(id);
     setLateral(false);
   }
@@ -373,7 +384,7 @@ export default function Panel({
               para <b>admin</b> o <b>moderador</b>: el nombre y la llave son la
               segunda cerradura, no cambian el rol.
             </p>
-            <p className="mono">inicia sesión con la cuenta fundadora o pide a un admin que suba el rol de esta cuenta.</p>
+            <p className="mono">#/panel/admin · entra con la cuenta fundadora o pide a un admin que suba el rol de esta cuenta en Administración → Usuarios.</p>
             <div className="fila-btn">
               <button className="btn primario" type="button" onClick={() => setTab("inicio")}>
                 Volver a mi panel
@@ -441,6 +452,7 @@ export default function Panel({
                       <span className="pu-nav-txt">{i.txt}</span>
                       {i.bloqueado && <span className="pu-nav-lock mono">PRO</span>}
                       {i.pro && !i.bloqueado && <span className="pu-nav-pro mono">PRO</span>}
+                      {i.sinRol && <span className="pu-nav-lock mono" title="esta cuenta necesita rol admin">ROL</span>}
                       {i.id === "red" && <span className={`punto-vivo ${yo?.activo ? "" : "apagado"}`} style={{ marginLeft: "auto" }} aria-hidden />}
                       {i.id === "carrito" && carrito.cantidad > 0 && <span className="pu-nav-count mono">{carrito.saltos}</span>}
                     </button>
