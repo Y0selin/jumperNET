@@ -17,6 +17,7 @@ import Admin from "./Admin.jsx";
 import Tarifas from "./Tarifas.jsx";
 import DemoSaltos from "./DemoSaltos.jsx";
 import { useCarrito } from "../lib/carrito.js";
+import { rutaActual } from "../lib/router.js";
 import { planDe, precioPro, SALTOS_MIN } from "../lib/planes.js";
 import {
   navDe, itemDe, TITULOS_PANEL, ICONOS_PANEL, usePrefsPanel,
@@ -120,6 +121,10 @@ export default function Panel({
   const carrito = useCarrito();
   const [prefs, actualizaPrefs] = usePrefsPanel();
   const [tab, setTab] = useState(() => {
+    /* #/panel/admin abre la pestaña directamente: la zona de administración
+       se puede guardar en marcadores y compartir con quien tenga el rol. */
+    const enUrl = rutaActual().match(/^\/panel\/([a-z0-9-]+)/i);
+    if (enUrl) return enUrl[1];
     try { return sessionStorage.getItem("jumpernet-panel-tab") || "inicio"; } catch { return "inicio"; }
   });
   const [lateral, setLateral] = useState(false);
@@ -168,6 +173,12 @@ export default function Panel({
 
   useEffect(() => {
     try { sessionStorage.setItem("jumpernet-panel-tab", tab); } catch { /* sin sesión */ }
+    /* la pestaña vive en la URL sin pasar por el router: replaceState no
+       dispara hashchange y el panel no se vuelve a montar al navegar */
+    try {
+      const destino = `#/panel/${tab}`;
+      if (location.hash !== destino) history.replaceState(null, "", destino);
+    } catch { /* historial bloqueado */ }
     const grupo = grupos.find((g) => g.items.some((i) => i.id === tab));
     if (grupo) setAbiertos((a) => ({ ...a, [grupo.id]: true }));
     if (tab !== "red") window.scrollTo({ top: 0, behavior: "smooth" });

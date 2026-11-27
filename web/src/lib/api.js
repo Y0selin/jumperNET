@@ -34,6 +34,9 @@ export function guardaUsuario(u) {
     id: u.id, email: u.email, alias: u.alias, plan: u.plan,
     activo: u.activo, circuito: u.circuito, saltos_max: u.saltos_max,
     saltos_plan: u.saltos_plan, precio_mes: u.precio_mes,
+    /* el rol viaja en la ficha guardada: la zona de administración debe
+       seguir accesible tras una recarga aunque /me tarde en responder */
+    rol: u.rol,
     solicitud_suscripcion: u.solicitud_suscripcion,
   };
   usuarioMemoria = recorte;
