@@ -1,0 +1,25 @@
+import puppeteer from "puppeteer-core";
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+const b = await puppeteer.launch({ executablePath: "/usr/bin/chromium", headless: "new", args: ["--no-sandbox", "--disable-gpu"] });
+const p = await b.newPage();
+await p.setViewport({ width: 1280, height: 900 });
+const errs = [];
+p.on("pageerror", (e) => errs.push(String(e).slice(0, 100)));
+await p.evaluateOnNewDocument(() => localStorage.setItem("jumpernet-intro-v31", "vista"));
+await p.goto("https://y0selin.github.io/jumperNET/tarifas", { waitUntil: "networkidle2" });
+await espera(1500);
+const antes = await p.evaluate(() => ({ hash: location.hash, titulo: document.title }));
+await p.evaluate(() => { location.hash = "#/equipo"; });
+await espera(120);
+const clase = await p.evaluate(() => getComputedStyle(document.getElementById("root")).animationName);
+await espera(500);
+const despues = await p.evaluate(() => ({ hash: location.hash, titulo: document.title }));
+await p.goto("https://y0selin.github.io/jumperNET/panel/admin", { waitUntil: "networkidle2" });
+await espera(1200);
+const directo = await p.evaluate(() => ({ hash: location.hash, titulo: document.title, vacio: (document.body.innerText || "").trim().length < 20 }));
+console.log(JSON.stringify({ antes, anim: clase, despues, directo, errs }, null, 1));
+const ok = antes.hash === "#/tarifas" && clase === "jn-cambio-pagina" &&
+  despues.hash === "#/equipo" && directo.hash === "#/acceso/login" && !directo.vacio && errs.length === 0;
+console.log(ok ? "OK" : "FALLO");
+await b.close();
+process.exit(ok ? 0 : 1);
