@@ -90,6 +90,15 @@
 .sacude { animation: sacude .42s cubic-bezier(.36,.07,.19,.97) both; }
 .brinca:hover { animation: sube-brillo calc(.35 * var(--veld)) ease both; }
 
+/* ---------- cambio de página ---------- */
+/* Fundido corto y solo de opacidad: no mueve el layout ni crea un contenedor
+   para los elementos fijos del panel. Lo dispara el router en cada ruta. */
+html.jn-cambio-pagina #root { animation: jn-cambio-pagina .3s ease both; }
+@keyframes jn-cambio-pagina {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* ---------- apagado ---------- */
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .001s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; }

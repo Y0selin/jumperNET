@@ -51,6 +51,8 @@ export function ir(ruta) {
   location.hash = destino;
 }
 
+let relojCambio = 0;
+
 export function useRuta() {
   const [ruta, setRuta] = useState(rutaActual);
 
@@ -65,6 +67,13 @@ export function useRuta() {
       if (location.hash && !location.hash.startsWith("#/")) return;
       setRuta(rutaActual());
       const raiz = document.documentElement;
+      /* fundido corto al cambiar de página: el apagado global de animaciones
+         (reduced-motion y data-anim="off") ya lo neutraliza si toca */
+      raiz.classList.remove("jn-cambio-pagina");
+      void raiz.offsetWidth;
+      raiz.classList.add("jn-cambio-pagina");
+      clearTimeout(relojCambio);
+      relojCambio = setTimeout(() => raiz.classList.remove("jn-cambio-pagina"), 340);
       const antes = raiz.style.scrollBehavior;
       raiz.style.scrollBehavior = "auto";
       window.scrollTo(0, 0);
