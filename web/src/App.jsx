@@ -53,8 +53,17 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (esPanel && !getToken()) ir("/acceso/login");
-  }, [esPanel]);
+    if (!esPanel || getToken()) return;
+    /* Guarda a dónde ibas (p. ej. #/panel/admin) para volver ahí después de
+       entrar: sin esto, el login siempre dejaba al usuario en el inicio del
+       panel y la sala de mando parecía inalcanzable. */
+    try {
+      if (!sessionStorage.getItem("jumpernet-volver")) {
+        sessionStorage.setItem("jumpernet-volver", ruta);
+      }
+    } catch { /* sin sesión de pestaña */ }
+    ir("/acceso/login");
+  }, [esPanel, ruta]);
 
   function aviso(texto, tipo = "ok") {
     const id = Date.now() + Math.random();

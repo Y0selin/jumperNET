@@ -152,8 +152,11 @@ export default function Panel({
   const inicial = nombreCuenta.trim().charAt(0).toUpperCase();
 
   useEffect(() => {
-    const itemActual = itemDe(yo, tab) || (tab === "admin" && (yo?.rol === "admin" || yo?.rol === "moderador") ? { id: "admin" } : null);
-    if (!itemActual) setTab("inicio");
+    /* La sala se queda en su pestaña aunque el rol aún no haya llegado de /me
+       (o no sea admin): así #/panel/admin no rebota a inicio en silencio y se
+       puede explicar qué cuenta está dentro y por qué no tiene permiso. */
+    if (tab === "admin") return;
+    if (!itemDe(yo, tab)) setTab("inicio");
   }, [tab, yo?.plan, yo?.rol, plan.id, plan.demo]);
 
   /* Al entrar o pasar a Pro, los grupos con herramientas nuevas deben quedar
@@ -356,9 +359,30 @@ export default function Panel({
       case "contacto": return <ContactoPanel plan={plan} />;
       case "estado": return <EstadoServicio aviso={aviso} />;
       case "organizacion": return <OrganizacionPanel yo={yo} plan={plan} navega={navega} />;
-      case "admin": return (yo?.rol === "admin" || yo?.rol === "moderador")
-        ? <Admin yo={yo} aviso={aviso} />
-        : <div className="pu-vacio grande"><b>Sin permiso.</b><p>Esta sección solo está disponible para administración o moderación.</p></div>;
+      case "admin": {
+        if (yo?.rol === "admin" || yo?.rol === "moderador") {
+          return <Admin yo={yo} aviso={aviso} />;
+        }
+        const quien = yo?.alias || yo?.email || `cuenta #${yo?.id ?? "—"}`;
+        return (
+          <div className="pu-vacio grande">
+            <b>Esta cuenta no tiene la sala de mando</b>
+            <p>
+              Estás dentro como <b>{quien}</b> (#{yo?.id ?? "—"}) y el servidor
+              le da el rol <b>{yo?.rol || "usuario"}</b>. La sala solo se abre
+              para <b>admin</b> o <b>moderador</b>: el nombre y la llave son la
+              segunda cerradura, no cambian el rol.
+            </p>
+            <p className="mono">inicia sesión con la cuenta fundadora o pide a un admin que suba el rol de esta cuenta.</p>
+            <div className="fila-btn">
+              <button className="btn primario" type="button" onClick={() => setTab("inicio")}>
+                Volver a mi panel
+              </button>
+              <button className="btn" type="button" onClick={() => { salir(); }}>Cambiar de cuenta</button>
+            </div>
+          </div>
+        );
+      }
       default: return <CargandoPanel />;
     }
   }
