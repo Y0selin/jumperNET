@@ -143,7 +143,7 @@ await p.reload({ waitUntil: "networkidle2" });
 await p.waitForSelector(".jn-adm-puerta", { timeout: 15000 });
 await espera(500);
 await p.screenshot({ path: ".shots/admin/puerta-claro.png" });
-await entrar("jumpernet");
+await entrar("jumpernet15");
 await p.waitForSelector(".jn-adm-cab", { timeout: 15000 });
 await espera(1000);
 await estado("sala clara");

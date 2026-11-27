@@ -16,11 +16,17 @@ const ESPERA = 60 * 1000;
 
 export const MAX_INTENTOS = 5;
 
-/* Quién tiene llave. Cambia aquí los nombres y las claves: el primero es el
-   que se usa por defecto. Se comparan sin mayúsculas ni tildes. */
+/* Llaves válidas para cualquiera de los nombres de abajo. Se comparan sin
+   mayúsculas, tildes ni espacios. */
+export const CLAVES = ["jumpernet15", "jumpernet"];
+
+/* Quién tiene llave. Cambia aquí los nombres: el primero es el que aparece
+   como ejemplo en la puerta. */
 export const ACCESOS = [
-  { usuario: "fernando", nombre: "Fernando", cargo: "Fundador", llave: "jumpernet" },
-  { usuario: "juno", nombre: "Juno", cargo: "Fundador", llave: "jumpernet" },
+  { usuario: "fernando", nombre: "Fernando", cargo: "Fundador" },
+  { usuario: "alex", nombre: "Alex", cargo: "Fundador" },
+  { usuario: "yoselin", nombre: "Yoselin", cargo: "Fundador" },
+  { usuario: "juno", nombre: "Juno", cargo: "Fundador" },
 ];
 
 function normaliza(texto) {
@@ -88,7 +94,7 @@ export function pruebaLlave(nombre, llave) {
     (a) => n && (normaliza(a.usuario) === n || normaliza(a.nombre) === n),
   );
 
-  if (!acceso || !k || normaliza(acceso.llave) !== k) {
+  if (!acceso || !k || !CLAVES.some((c) => normaliza(c) === k)) {
     const fallos = leeIntentos().fallos + 1;
     const bloqueado = fallos >= MAX_INTENTOS;
     guardaIntentos({
