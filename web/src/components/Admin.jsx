@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   adminUsuarios, adminDashboard, adminEditar, adminBorrar, adminBorrarNodo, nodos,
 } from "../lib/api.js";
 import Revela from "./Revela.jsx";
+import PuertaAdmin from "./PuertaAdmin.jsx";
+import { leeSesion, cierraSesion } from "../lib/llave.js";
 
 /* Zona de administración y moderación.
  *
@@ -16,6 +18,10 @@ import Revela from "./Revela.jsx";
  *
  * Todo lo que se ve sale de /admin/dashboard, /admin/usuarios y /nodos. Nada
  * de métricas inventadas: cuando un dato no existe, se dice.
+ *
+ * La sala tiene además una segunda cerradura local (PuertaAdmin): el rol lo
+ * decide el servidor, la llave solo evita que quede abierta en un navegador
+ * ajeno. Al cerrarla se desmonta todo y se dejan de pedir datos.
  */
 
 const ROL_ICO = { admin: "🛡", moderador: "⚖", usuario: "☺" };
@@ -69,6 +75,68 @@ function hace(t) {
   return `hace ${Math.round(h / 24)} d`;
 }
 
+/* ── piezas vivas de la cabecera y los indicadores ─────────────────── */
+
+function saludoDia() {
+  const h = new Date().getHours();
+  if (h < 6) return "Madrugada";
+  if (h < 13) return "Buenos días";
+  if (h < 20) return "Buenas tardes";
+  return "Buenas noches";
+}
+
+/* Reloj aislado: se repinta él solo cada segundo y no arrastra a la tabla. */
+function Reloj() {
+  const [ahora, setAhora] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setAhora(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <span className="jn-adm-reloj">
+      {ahora.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+    </span>
+  );
+}
+
+/* Cifras que suben al entrar: 650 ms, sin saltos y respetando reduced motion. */
+function Contador({ valor, sufijo = "" }) {
+  const numero = Number.isFinite(valor) ? valor : null;
+  const [n, setN] = useState(0);
+
+  useEffect(() => {
+    if (numero == null) return undefined;
+    const quieto = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (quieto) { setN(numero); return undefined; }
+    const t0 = performance.now();
+    let raf = 0;
+    const paso = (t) => {
+      const p = Math.min(1, (t - t0) / 650);
+      const e = 1 - Math.pow(1 - p, 3);
+      setN(Math.round(numero * e));
+      if (p < 1) raf = requestAnimationFrame(paso);
+      else setN(numero);
+    };
+    raf = requestAnimationFrame(paso);
+    return () => cancelAnimationFrame(raf);
+  }, [numero]);
+
+  return <>{numero == null ? (valor ?? "—") : n}{sufijo}</>;
+}
+
+/* Mini gráfico de las últimas 8 semanas para la tarjeta de altas. */
+function Chispa({ serie }) {
+  const max = Math.max(1, ...serie);
+  const puntos = serie.map((v, i) => `${(i / Math.max(1, serie.length - 1)) * 100},${28 - (v / max) * 24}`).join(" ");
+  return (
+    <svg className="jn-adm-chispa" viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden>
+      <polygon points={`0,30 ${puntos} 100,30`} fill="currentColor" opacity=".12" />
+      <polyline points={puntos} fill="none" stroke="currentColor" strokeWidth="1.6"
+        strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
 /* ── barras horizontales reutilizables ─────────────────────────────────── */
 function Barras({ datos, sufijo = "" }) {
   const max = Math.max(1, ...datos.map((d) => d.valor || 0));
@@ -86,7 +154,7 @@ function Barras({ datos, sufijo = "" }) {
 }
 
 /* ── fila editable de la tabla de cuentas ──────────────────────────────── */
-function FilaUsuario({ u, esAdmin, aviso, onBorrado, onCambio, anota }) {
+function FilaUsuario({ u, esAdmin, aviso, onBorrado, onCambio, anota, onCopia }) {
   const [oculta, setOculta] = useState(true);
   const [ocupado, setOcu] = useState(false);
   const [confBorra, setConf] = useState(false);
@@ -125,7 +193,8 @@ function FilaUsuario({ u, esAdmin, aviso, onBorrado, onCambio, anota }) {
           <span className="jn-adm-avatar" aria-hidden>{(u.alias || u.email || "?").trim().charAt(0).toUpperCase()}</span>
           <span>
             <b>{u.alias || (u.email || "").split("@")[0] || "sin nombre"}</b>
-            <small className="mono">{u.email}</small>
+            <button type="button" className="jn-adm-correo mono" onClick={() => onCopia?.(u.email)}
+              title="Copiar el correo al portapapeles">{u.email}</button>
             <small className="mono">#{u.id} · alta {fecha(u.alta)}</small>
           </span>
         </div>
@@ -234,8 +303,9 @@ function FilaUsuario({ u, esAdmin, aviso, onBorrado, onCambio, anota }) {
   );
 }
 
-export default function Admin({ yo, aviso }) {
+function SalaMando({ yo, aviso, sesion, alCerrar }) {
   const esAdmin = yo?.rol === "admin";
+  const buscaRef = useRef(null);
   const [tab, setTab] = useState("resumen");
   const [dash, setDash] = useState(null);
   const [usuarios, setUsuarios] = useState([]);
@@ -250,6 +320,47 @@ export default function Admin({ yo, aviso }) {
   const [fPlan, setFPlan] = useState("todos");
   const [fRed, setFRed] = useState("todos");
   const [orden, setOrden] = useState("alta");
+
+  useEffect(() => { document.title = "Sala de mando · JumperNET"; }, []);
+
+  /* “/” lleva el foco a la búsqueda desde cualquier pestaña; Escape la limpia. */
+  useEffect(() => {
+    const alPulsar = (e) => {
+      const etiqueta = document.activeElement?.tagName || "";
+      if (e.key === "/" && !/^(INPUT|TEXTAREA|SELECT)$/.test(etiqueta)) {
+        e.preventDefault();
+        setTab("usuarios");
+        setTimeout(() => buscaRef.current?.focus(), 60);
+      }
+      if (e.key === "Escape" && document.activeElement === buscaRef.current) setBusca("");
+    };
+    window.addEventListener("keydown", alPulsar);
+    return () => window.removeEventListener("keydown", alPulsar);
+  }, []);
+
+  async function copia(texto) {
+    if (!texto) return;
+    try {
+      await navigator.clipboard.writeText(texto);
+    } catch {
+      /* sin permiso de portapapeles (http, iframe, navegador viejo):
+         seleccionamos un textarea oculto y copiamos a la antigua */
+      try {
+        const area = document.createElement("textarea");
+        area.value = texto;
+        area.setAttribute("readonly", "");
+        area.style.cssText = "position:fixed;opacity:0;pointer-events:none";
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand("copy");
+        area.remove();
+      } catch {
+        aviso("este navegador no deja copiar al portapapeles", "error");
+        return;
+      }
+    }
+    aviso(`${texto} copiado ✓`, "ok");
+  }
 
   function anota(texto, tipo = "ok") {
     const lista = [{ t: Date.now(), texto, tipo }, ...leeRegistro()].slice(0, 20);
@@ -365,6 +476,13 @@ export default function Admin({ yo, aviso }) {
     return lista.sort(ordena[orden] || ordena.alta);
   }, [usuarios, busca, fRol, fPlan, fRed, orden]);
 
+  const filtrosActivos = (busca.trim() ? 1 : 0)
+    + (fRol !== "todos" ? 1 : 0) + (fPlan !== "todos" ? 1 : 0) + (fRed !== "todos" ? 1 : 0);
+
+  function limpiaFiltros() {
+    setBusca(""); setFRol("todos"); setFPlan("todos"); setFRed("todos");
+  }
+
   function cambiaUsuario(id, cambios) {
     setUsuarios((us) => us.map((u) => (u.id === id ? { ...u, ...cambios, saltos_plan: cambios.saltos_plan ?? u.saltos_plan } : u)));
   }
@@ -409,17 +527,32 @@ export default function Admin({ yo, aviso }) {
   return (
     <div className="jn-adm">
       <header className="jn-adm-cab">
-        <div className="jn-adm-cab-txt">
-          <span className="migas mono">panel / gestión / {esAdmin ? "administración" : "moderación"}</span>
-          <h1>{esAdmin ? "Sala de mando" : "Moderación"}</h1>
-          <p>
-            {esAdmin
-              ? "Todas las cuentas, la infraestructura y el pulso de la red en un solo sitio. Los cambios se aplican al instante en el servidor."
-              : "Vista de consulta de las cuentas y la red. Puedes desconectar sesiones; los planes, roles y claves son cosa de administración."}
-          </p>
+        <div className="jn-adm-cab-sello" aria-hidden>
+          <span className="jn-adm-cab-aro" />
+          <b className="mono">JN</b>
+          <i className="jn-adm-cab-punto" />
         </div>
+
+        <div className="jn-adm-cab-txt">
+          <span className="migas mono">panel / gestión / {esAdmin ? "administración" : "moderación"} · {sesion?.cargo || yo?.rol}</span>
+          <h1>Sala de mando <em className="mono">{esAdmin ? "root" : "mod"}</em></h1>
+          <p className="jn-adm-cab-saludo">
+            {saludoDia()}, <b>{sesion?.nombre || "bienvenido"}</b>.{" "}
+            {esAdmin
+              ? "Cada cifra sale del servidor y cada cambio se aplica al instante; el registro local es solo tuyo."
+              : "Vista de consulta: puedes desconectar sesiones, pero los planes, roles y claves son cosa de administración."}
+          </p>
+          <div className="jn-adm-cab-meta mono">
+            <span><Reloj /></span>
+            <span>{new Date().toLocaleDateString("es-ES", { weekday: "long", day: "2-digit", month: "long" })}</span>
+            <span>{m.total} cuentas</span>
+            <span>{m.redAbierta} circuitos abiertos</span>
+          </div>
+        </div>
+
         <div className="jn-adm-cab-acciones">
-          <span className={`chip ${error ? "muerto" : "vivo"} mono`} title={ultima ? `actualizado ${hora(ultima)}` : "cargando"}>
+          <span className={`chip ${error ? "muerto" : "vivo"} mono jn-adm-latido`}
+            title={ultima ? `actualizado ${hora(ultima)}` : "cargando"}>
             {error ? "◌ SIN DATOS" : `● EN VIVO${ultima ? ` · ${hora(ultima)}` : ""}`}
           </span>
           <button className="btn" type="button" onClick={() => trae(true)} disabled={cargando} aria-label="Actualizar ahora">
@@ -430,6 +563,10 @@ export default function Admin({ yo, aviso }) {
               ⬇ CSV
             </button>
           )}
+          <button className="btn jn-adm-cerrar" type="button" onClick={alCerrar}
+            title="Cerrar la sala en este navegador">
+            🔒 Cerrar
+          </button>
         </div>
       </header>
 
@@ -438,6 +575,8 @@ export default function Admin({ yo, aviso }) {
           <button key={t.id} type="button" role="tab" aria-selected={tab === t.id}
             className={tab === t.id ? "on" : ""} onClick={() => setTab(t.id)}>
             <span aria-hidden>{t.ico}</span> {t.txt}
+            {t.id === "usuarios" && m.total > 0 && <em className="jn-adm-tab-n mono">{m.total}</em>}
+            {t.id === "nodos" && listaNodos.length > 0 && <em className="jn-adm-tab-n mono">{listaNodos.length}</em>}
           </button>
         ))}
       </div>
@@ -454,25 +593,26 @@ export default function Admin({ yo, aviso }) {
       {tab === "resumen" && (
         <div className="jn-adm-panel" role="tabpanel">
           <div className="jn-adm-kpis">
-            <div className="jn-adm-kpi" data-tono="info">
+            <div className="jn-adm-kpi" data-tono="info" title={`${m.rol.admin} administración · ${m.rol.moderador} moderación · ${m.rol.usuario} usuarios`}>
               <span className="mono">cuentas totales</span>
-              <b className="mono">{m.total || "—"}</b>
+              <b className="mono"><Contador valor={m.total || "—"} /></b>
               <small>{m.rol.admin} admin · {m.rol.moderador} mod · {m.rol.usuario} usuarios</small>
             </div>
-            <div className="jn-adm-kpi" data-tono="ok">
+            <div className="jn-adm-kpi" data-tono="ok" title="Cuentas con la red encendida ahora mismo">
               <span className="mono">conectados ahora</span>
-              <b className="mono">{dash?.usuarios?.activos ?? m.activos ?? "—"}</b>
+              <b className="mono"><Contador valor={dash?.usuarios?.activos ?? m.activos ?? "—"} /></b>
               <small>{m.redAbierta} con circuito abierto</small>
             </div>
-            <div className="jn-adm-kpi" data-tono="aviso">
+            <div className="jn-adm-kpi" data-tono="aviso" title="Nodos que responden al latido">
               <span className="mono">nodos vivos</span>
-              <b className="mono">{dash?.nodos?.vivos ?? (listaNodos.length || "—")}</b>
+              <b className="mono"><Contador valor={dash?.nodos?.vivos ?? (listaNodos.length || "—")} /></b>
               <small>{dash ? `${dash.nodos_ahora ?? "—"} en total · ${dash.equipos_conectados ?? 0} equipos` : `${listaNodos.length} registrados`}</small>
             </div>
-            <div className="jn-adm-kpi" data-tono="acento">
+            <div className="jn-adm-kpi jn-adm-kpi-chispa" data-tono="acento" title={`${m.hoy} hoy · ${m.mes} en los últimos 30 días`}>
               <span className="mono">altas esta semana</span>
-              <b className="mono">{m.semana}</b>
+              <b className="mono"><Contador valor={m.semana} /></b>
               <small>{m.hoy} hoy · {m.mes} en 30 días</small>
+              <Chispa serie={semanas.map((s) => s.n)} />
             </div>
           </div>
 
@@ -570,8 +710,11 @@ export default function Admin({ yo, aviso }) {
       {tab === "usuarios" && (
         <div className="jn-adm-panel" role="tabpanel">
           <div className="jn-adm-filtros">
-            <input className="campo" type="search" placeholder="⌕ buscar por email, alias o id…"
-              value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar cuentas" />
+            <div className="jn-adm-busca">
+              <input ref={buscaRef} className="campo" type="search" placeholder="⌕ buscar por email, alias o id…"
+                value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar cuentas" />
+              <kbd className="mono" title="Pulsa / en cualquier momento">/</kbd>
+            </div>
             <select className="campo mono" value={fRol} onChange={(e) => setFRol(e.target.value)} aria-label="Filtrar por rol">
               <option value="todos">todos los roles</option>
               <option value="usuario">☺ usuarios</option>
@@ -596,6 +739,12 @@ export default function Admin({ yo, aviso }) {
               <option value="email">↕ email</option>
               <option value="plan">↕ plan</option>
             </select>
+            {filtrosActivos > 0 && (
+              <button className="btn jn-adm-limpiar" type="button" onClick={limpiaFiltros}
+                title="Quitar la búsqueda y los filtros">
+                ✕ limpiar {filtrosActivos}
+              </button>
+            )}
           </div>
 
           <Revela className="tarjeta jn-adm-tarjeta">
@@ -620,7 +769,7 @@ export default function Admin({ yo, aviso }) {
                   </thead>
                   <tbody>
                     {fichas.map((u) => (
-                      <FilaUsuario key={u.id} u={u} esAdmin={esAdmin} aviso={aviso} anota={anota}
+                      <FilaUsuario key={u.id} u={u} esAdmin={esAdmin} aviso={aviso} anota={anota} onCopia={copia}
                         onCambio={cambiaUsuario}
                         onBorrado={(id) => setUsuarios((us) => us.filter((x) => x.id !== id))} />
                     ))}
@@ -819,4 +968,21 @@ export default function Admin({ yo, aviso }) {
       )}
     </div>
   );
+}
+
+/* La sala se abre con la llave y se cierra desde la cabecera. Al cerrar se
+   desmonta el contenido entero: se dejan de pedir datos y no queda ninguna
+   cifra a la vista en un navegador compartido. */
+export default function Admin({ yo, aviso }) {
+  const [sesion, setSesion] = useState(leeSesion);
+
+  function cierra() {
+    cierraSesion();
+    setSesion(null);
+    aviso?.("sala cerrada · la llave sigue siendo tuya", "ok");
+  }
+
+  if (!sesion) return <PuertaAdmin yo={yo} aviso={aviso} onEntra={setSesion} />;
+
+  return <SalaMando yo={yo} aviso={aviso} sesion={sesion} alCerrar={cierra} />;
 }

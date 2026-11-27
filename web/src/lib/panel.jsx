@@ -191,7 +191,7 @@ export const TITULOS_PANEL = {
   contacto: ["Contacto", "habla con el equipo"],
   estado: ["Estado del servicio", "medido ahora, no una promesa"],
   organizacion: ["Panel de empresa", "estructura de organización"],
-  admin: ["Administración", "cuentas, red y estadísticas"],
+  admin: ["Sala de mando", "cuentas, red y estadísticas"],
 };
 
 export const ICONOS_PANEL = {
