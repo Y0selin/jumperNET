@@ -10,9 +10,12 @@
        (#/panel/admin). La carpeta del sitio sale del propio camino de esta
        página, así que funciona en cualquier subcarpeta. */
     (function () {
-      var base = location.pathname.replace(/[^/]*$/, "");
-      var ruta = location.pathname.slice(base.length).replace(/\/+$/, "");
-      location.replace(base + "#/" + ruta);
+      /* En un site de proyecto la primera carpeta es el repositorio
+         (/jumperNET/); el resto es la ruta que se pidió. */
+      var trozos = location.pathname.split("/").filter(Boolean);
+      var raiz = trozos.length ? "/" + trozos[0] + "/" : "/";
+      var ruta = trozos.slice(1).join("/");
+      location.replace(raiz + "#/" + ruta);
     })();
   </script>
 </head>
